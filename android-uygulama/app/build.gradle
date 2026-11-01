@@ -1,0 +1,64 @@
+plugins {
+    id 'com.android.application'
+}
+
+def ksProps = new Properties()
+def ksFile = rootProject.file('keystore.properties')
+if (ksFile.exists()) ksFile.withInputStream { ksProps.load(it) }
+
+android {
+    namespace 'com.kenarnotu.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.kenarnotu.app'
+        minSdk 26
+        targetSdk 34
+        versionCode 12
+        versionName '2.5.2'
+    }
+
+    signingConfigs {
+        release {
+            storeFile rootProject.file(ksProps.getProperty('storeFile', 'kenar-notu.keystore'))
+            storePassword ksProps.getProperty('storePassword')
+            keyAlias ksProps.getProperty('keyAlias')
+            keyPassword ksProps.getProperty('keyPassword')
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+        debug {
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    packaging {
+        resources {
+            excludes += ['/META-INF/{AL2.0,LGPL2.1}', 'META-INF/DEPENDENCIES']
+        }
+    }
+
+    androidResources {
+        // Web uygulamasının klasörlerini olduğu gibi pakete al
+        ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { outputFileName = "KenarNotu-${variant.versionName}.apk" }
+    }
+}
+
+dependencies {
+    // El yazısı tanıma (cihazda; Türkçe ve İngilizce modeller ilk kullanımda bir kez indirilir)
+    implementation 'com.google.mlkit:digital-ink-recognition:19.0.0'
+}

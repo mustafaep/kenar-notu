@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_bg">#18245C</color>
+    <color name="bg">#ECEFF5</color>
+    <color name="chrome">#FFFFFF</color>
+
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/chrome</item>
+        <item name="android:navigationBarColor">@color/chrome</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorAccent">#2F5BEA</item>
+    </style>
+</resources>

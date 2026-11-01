@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Kenar Notu</title>
+<meta name="description" content="Galaxy Tab ve S Pen için PDF not alma uygulaması">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+  <!-- Kitaplık -->
+  <section class="view lib" id="libView">
+    <nav class="rail" aria-label="Kitaplık">
+      <div class="logo" id="railLogo"></div>
+      <div class="nav" id="navMain"></div>
+      <div class="nav" id="navFolders"></div>
+      <div class="nav" id="navCloud"></div>
+      <div class="pencard" id="penCard"></div>
+    </nav>
+    <main class="lib-main" id="libMain">
+      <div class="lib-in">
+        <nav class="crumbs libcrumbs" id="libCrumbs" aria-label="Klasör yolu" hidden></nav>
+        <div class="lib-head">
+          <h1 id="libTitle">Tüm notlar</h1>
+          <label class="search" for="q"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="q" type="search" placeholder="Notlarda ara" autocomplete="off"></label>
+          <div class="selectw"><select id="sortSel" aria-label="Sıralama"><option value="updated">Son düzenlenen</option><option value="opened">Son açılan</option><option value="name">Ada göre</option><option value="created">Oluşturma tarihi</option></select><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+          <button class="btn" id="selBtn" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/></svg><span>Seç</span></button>
+          <button class="btn primary" id="newBtn" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Yeni</button>
+        </div>
+        <div id="libContent"></div>
+        <p class="notice" id="storeNote"></p>
+      </div>
+    </main>
+  </section>
+
+  <!-- Düzenleyici -->
+  <section class="view" id="edView" hidden>
+    <header class="ebar">
+      <div class="e-back"><button class="ibtn" id="backBtn" type="button" aria-label="Kitaplığa dön"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><button class="ibtn" id="pagesBtn" type="button" aria-label="Sayfalar" title="Sayfalar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></button></div>
+      <div class="e-title"><input id="titleIn" type="text" aria-label="Not adı" autocomplete="off"><button class="status" id="status" type="button"></button></div>
+      <div class="e-tools" id="tools"></div>
+      <div class="e-acts">
+        <button class="ibtn" id="undoBtn" type="button" aria-label="Geri al"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg></button>
+        <button class="ibtn" id="redoBtn" type="button" aria-label="Yinele"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg></button>
+        <button class="ibtn" id="moreBtn" type="button" aria-label="Ayarlar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></button>
+        <button class="btn primary small exbtn" id="exportBtn" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19h14"/></svg><span>Kaydet</span></button>
+      </div>
+    </header>
+    <div class="ebody">
+      <aside class="ppanel" id="ppanel" hidden>
+        <div class="ptabs" id="ptabs" role="tablist"></div>
+        <div class="pfind" id="pfind" hidden></div>
+        <div class="plist" id="plist"></div>
+        <div class="pfoot" id="pfoot">
+          <button class="ibtn" id="pAdd" type="button" aria-label="Sayfa ekle" title="Sayfa ekle"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="ibtn" id="pGrid" type="button" aria-label="Tüm sayfalar" title="Tüm sayfalar (ızgara)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button>
+          <button class="ibtn" id="pMark" type="button" aria-label="Yer imi" title="Bu sayfaya yer imi"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a1 1 0 011 1v15l-6-4-6 4V5a1 1 0 011-1z"/></svg></button>
+          <button class="ibtn" id="pDel" type="button" aria-label="Sayfayı sil" title="Bu sayfayı sil"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg></button>
+        </div>
+      </aside>
+      <div class="stage" id="stage">
+        <div id="paper">
+          <div id="world"></div>
+          <canvas class="ov" id="hlc"></canvas>
+          <canvas class="ov" id="inkc"></canvas>
+          <canvas class="ov" id="livec"></canvas>
+        </div>
+        <div id="stickw"></div>
+        <div id="selw"></div>
+        <div id="ui">
+          <div class="cursor" id="cursor" hidden></div>
+          <div class="floaty pager" id="pager">1 / 1</div>
+          <button class="floaty addend" id="addEnd" type="button" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Sayfa ekle</span></button>
+          <div class="floaty rochip" id="roChip" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg><span>Okuma modu</span><button class="btn small" id="roOff" type="button">Kapat</button></div>
+          <div class="floaty zoomctl" id="zoomCtl">
+            <button class="ibtn" id="zOut" type="button" aria-label="Uzaklaştır"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg></button>
+            <output id="zLbl" title="Genişliğe sığdır">100%</output>
+            <button class="ibtn" id="zIn" type="button" aria-label="Yakınlaştır"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg></button>
+          </div>
+          <div class="floaty selbar" id="selbar" hidden>
+            <button class="btn" id="sDel" type="button">Sil</button>
+            <button class="btn" id="sDup" type="button">Çoğalt</button>
+            <button class="btn" id="sCol" type="button">Renk</button>
+            <button class="btn" id="sHand" type="button" title="El yazısını metne çevir ve düzelt">Yazıya dök</button>
+            <button class="ibtn" id="sSmall" type="button" aria-label="Küçült" title="Küçült"></button>
+            <button class="ibtn" id="sBig" type="button" aria-label="Büyüt" title="Büyüt"></button>
+            <button class="btn" id="sDone" type="button">Bitti</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<div id="pop" class="pop" hidden></div>
+<input type="file" id="fileIn" accept="application/pdf,.pdf" hidden>
+<input type="file" id="imgIn" accept="image/*" hidden>
+
+<script src="config.js"></script>
+<script src="vendor/pdfjs/pdf.min.js"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/msal-browser.min.js"></script>
+<script src="js/util.js"></script>
+<script src="js/ink.js"></script>
+<script src="js/pdfio.js"></script>
+<script src="js/onedrive.js"></script>
+<script src="js/library.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/pages.js"></script>
+<script src="js/sticky.js"></script>
+<script src="js/capture.js"></script>
+<script src="js/textsel.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/hand.js"></script>
+<script src="js/speak.js"></script>
+<script src="js/split.js"></script>
+<script src="js/native.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

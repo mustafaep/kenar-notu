@@ -1,0 +1,22 @@
+# İmzalama anahtarı ve şifreleri asla depoya girmez
+*.keystore
+*.jks
+keystore.properties
+
+# Android / Gradle
+android-uygulama/local.properties
+android-uygulama/.gradle/
+android-uygulama/build/
+android-uygulama/app/build/
+android-uygulama/.tools/
+android-uygulama/.idea/
+*.apk
+
+# Web uygulamasının APK içindeki kopyası (APK-OLUSTUR.bat üst klasörden doldurur)
+android-uygulama/app/src/main/assets/www/
+
+# Yerel
+_to_delete/
+.DS_Store
+Thumbs.db
+desktop.ini

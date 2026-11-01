@@ -1,0 +1,291 @@
+KENAR NOTU — ANDROID KURULUM NOTLARI
+=====================================
+Sürüm 2.4.3 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
+
+
+A) APK'YI OLUŞTURMA (bilgisayarda, bir kez)
+-------------------------------------------
+1. "android-uygulama" klasöründeki APK-OLUSTUR.bat dosyasına çift tıklayın.
+2. Betik gerekenleri kendisi bulur ya da indirir:
+   - Java 17 (yoksa Eclipse Temurin indirilir, ~190 MB)
+   - Android SDK (Android Studio kuruluysa onu kullanır, yoksa ~150 MB komut satırı araçları indirilir)
+   - Gradle ve Android derleme eklentisi (ilk seferde, ~300 MB)
+   İlk derleme 5–10 dakika sürebilir; sonrakiler 1 dakikadan kısadır.
+3. Bitince APK şu adrese kopyalanır ve klasör açılır:
+   C:\Users\porta\OneDrive\Apk Dosyalar\KenarNotu-2.4.3.apk
+
+   Windows "Bu uygulama bilgisayarınızı korudu" derse: "Ek bilgi" → "Yine de çalıştır".
+
+
+B) TABLETE YÜKLEME
+------------------
+1. Samsung "Otomatik Engelleyici"yi geçici olarak kapatın (One UI 6 ve üstü):
+   Ayarlar → Güvenlik ve gizlilik → Otomatik Engelleyici → Kapalı
+   (Açıksa mağaza dışından uygulama yüklenmez. Kurulumdan sonra yeniden açabilirsiniz.)
+2. Tablette OneDrive uygulamasını açın → "Apk Dosyalar" klasörü → KenarNotu-2.4.3.apk dosyasına dokunun.
+   OneDrive dosyayı indirip yükleyiciyi açar.
+3. "Bilinmeyen uygulamalar" uyarısı çıkarsa: "Ayarlar" → "Bu kaynaktan izin ver" seçeneğini açın, geri dönün.
+4. "Yükle"ye dokunun. Google Play Protect uyarı verirse "Daha fazla ayrıntı" → "Yine de yükle".
+5. Ana ekranda Kenar Notu simgesi belirir.
+
+İpucu: Uygulamayı ilk açtığınızda ⋯ (Ayarlar) → "S Pen testi" alanına kalemle dokunun; basınç,
+eğim ve yan tuş değerlerinin değiştiğini görmelisiniz. Avuç içi yanlışlıkla çizim yapıyorsa
+"Parmakla çizim" ayarını "Yalnız S Pen" yapın.
+
+
+C) ONEDRIVE BAĞLANTISI — KAYIT GEREKMEZ
+--------------------------------------
+Android uygulaması OneDrive'a tabletteki OneDrive uygulaması üzerinden bağlanır.
+Microsoft Entra'da uygulama kaydı yapmanız GEREKMEZ (kişisel hesaplar için o yol Microsoft
+tarafından kapatıldı; ekranda gördüğünüz "Dizin dışında uygulama oluşturma ... kullanım dışı" hatası budur).
+
+Bir kez yapılacaklar:
+1. Tablete Play Store'dan "Microsoft OneDrive" uygulamasını kurun ve hesabınızla giriş yapın.
+
+OneDrive'daki bir PDF'i açmak:
+1. Kenar Notu → "OneDrive'dan aç".
+2. Açılan dosya seçicide sol menüden (☰) "OneDrive"ı seçin, klasörünüze gidip PDF'e dokunun.
+   (OneDrive listede yoksa: seçicinin sağ üstündeki ⋮ menüsünden "Depolamayı göster" ya da
+   sol menüde OneDrive'ı etkinleştirin.)
+3. Yazdığınız her şey birkaç saniye içinde ve notu kapatırken AYNI PDF'e kaydedilir.
+   Durum satırında "OneDrive'a kaydedildi" yazar. OneDrive uygulaması dosyayı arka planda buluta yükler.
+
+Tabletteki bir notu OneDrive'a kaydetmek:
+- Not açıkken "Kaydet" → "OneDrive'a kaydet…" → seçicide OneDrive'ı ve klasörü seçin → "Kaydet".
+  Bundan sonraki değişiklikler bu dosyaya yazılır.
+
+Bilmeniz gerekenler:
+- Dosya siz açtıktan sonra başka bir cihazda değiştiyse uygulama üzerine sormadan yazmaz;
+  "Üzerine yaz", "Notlu kopya kaydet" ya da "Vazgeç" seçeneklerini sunar.
+- Notlar PDF'e kalıcı olarak işlenir; bilgisayarda açtığınızda görünürler. Düzenlenebilir katmanlar
+  (silinebilir çizgiler, taşınabilir metinler) bu tablette kalır.
+- OneDrive uygulamasında bir PDF'e "Birlikte aç → Kenar Notu" ile dokunursanız dosya tablete kopyalanır;
+  OneDrive'a geri yazmak için PDF'i Kenar Notu'nun içinden "OneDrive'dan aç" ile açın.
+- Samsung "Dosyalarım" uygulamasına bağlı OneDrive ya da Google Drive da aynı şekilde çalışır.
+
+Web sürümü (tarayıcı) için Microsoft kaydı gerekir; kişisel hesapla bunu yapmak için önce ücretsiz
+bir Azure hesabıyla dizin oluşturmanız gerekir. Tablette APK'yı kullanıyorsanız buna gerek yok.
+
+
+D) GÜNCELLEME VE YEDEK
+----------------------
+- Yeni sürümü yüklemek için yeni APK'yı eskisinin üzerine kurun; notlarınız korunur.
+- Güncellemelerin kurulabilmesi için APK hep aynı anahtarla imzalanmalıdır. "android-uygulama" klasöründeki
+  kenar-notu.keystore ve keystore.properties dosyalarını SİLMEYİN ve kimseyle paylaşmayın.
+  Bu dosyalar kaybolursa uygulamayı kaldırıp yeniden kurmanız gerekir (tablette tutulan notlar silinir).
+- Tablette tutulan notlar uygulamanın kendi deposundadır; uygulamayı kaldırırsanız silinir.
+  OneDrive'a bağlı notlar dosyanın içinde güvende kalır. Önemli notları OneDrive'a bağlayın ya da
+  "Kaydet → PDF olarak indir" ile dışa alın.
+
+
+E) KULLANIM İPUÇLARI
+--------------------
+- Otomatik kayıt: Her değişiklik anında tablete kaydedilir. OneDrive'a bağlı dosyalar birkaç saniye
+  sonra ve not kapatılırken dosyanın kendisine de yazılır. Ayrıca "Kaydet" demenize gerek yok.
+- Kaldığınız yer: Her not en son baktığınız sayfa ve yakınlaştırmayla açılır. Kitaplıkta "s. 10/146" gibi görünür.
+- S Pen yan tuşu: Tuşa basılı tutarak yazarsanız silgi çalışır (ayarlardan Seçim/Fosforlu da yapılabilir).
+  Çalışmıyorsa: Ayarlar → Gelişmiş özellikler → S Pen → Air command → "Kalem tuşuyla aç" seçeneğini kapatın.
+- PDF'ten metin kopyalama: Bir kelimeye PARMAKLA basılı tutun, kelime seçilir. Parmağınızı kaldırmadan
+  sürükleyerek seçimi genişletin. Bıraktığınızda Kopyala / Fosforla / Paylaş çıkar.
+  (Taranmış, yani resim olan PDF'lerde seçilebilir metin yoktur.)
+- Ekran görüntüsü: Yakalama düğmesi → alanı çizin → "Galeriye kaydet". Görüntü Galeri'de
+  "Kenar Notu" albümüne düşer; konum sorulmaz.
+- OneDrive'a yazılamazsa: Durum satırına dokunun. Uygulama hatayı gösterir ve iki yol sunar:
+  "Yeni dosya olarak kaydet" (OneDrive'da klasör seçersiniz, sonraki kayıtlar o dosyaya gider)
+  ya da "OneDrive uygulamasıyla yükle".
+
+
+G) YENİ (2.2.0)
+--------------
+- Claude ile kelime anlamı: Ayarlar (sol menü) → "Yapay zekâyı bağla" → console.anthropic.com → API Keys
+  bölümünden aldığınız anahtarı yapıştırın → "Test et" → "Kaydet". Model: Haiku 5.5 (claude-haiku-5-5).
+  Sonra PDF'te kelimeye parmakla basılı tutun → "Anlamı". Yanıt bağlama göre Türkçe gelir;
+  "Sayfaya not ekle" anlamı sayfanın kenarına yazar. Alttaki kutuya kendi sorunuzu da yazabilirsiniz.
+  Anahtar yalnızca tablette saklanır; ücret API hesabınızdan düşer (kelime başına çok küçük bir tutar).
+- Yan yana belge: Araç çubuğundaki iki sütun simgesi → sağda ikinci bir panel açılır. Orada başka bir PDF'i,
+  OneDrive dosyasını ya da boş bir notu açıp yazabilirsiniz. Aradaki çizgiyi sürükleyerek genişliği ayarlayın;
+  sağ alttaki × ile kapatın. Aynı not iki tarafta birden açılmaz.
+- Araç çubuğunu düzenleme: ⋯ → "Araç çubuğunu düzenle". Araçları açıp kapatın, oklarla sıralayın;
+  son renkler ve favori kalemler satırlarını gizleyebilirsiniz.
+- Favori kalem silme: Araç çubuğundaki favori kaleme basılı tutun → "Favorilerden kaldır"
+  (ya da "Araç çubuğunu düzenle" listesinden "Kaldır").
+- PDF renklerini ters çevirme: ⋯ → "PDF renklerini ters çevir" (gece okuma). İsterseniz araç çubuğuna da
+  ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
+
+
+O) YENİ (2.5.2) — düzeltilen yazıyı taşıma/silme, karalayarak silme, kalem stilleri
+---------------------------------------------------------------------------------
+- Düzeltilen yazı (ve her metin kutusu, görsel):
+  · Kalemle ya da parmakla üzerine basılı tutun (yarım saniye) → seçilir; bırakmadan sürükleyerek taşıyın.
+    Köşedeki yuvarlak kulpla büyütün/küçültün. Seçim çubuğu: Sil · Çoğalt · Renk · A− / A+ · Bitti.
+  · Silgi artık metin kutularını da siler (silginin değdiği kutu tümüyle silinir; Geri al ile döner).
+  · Sonuç çubuğuna "Seç" (taşı/büyüt) ve "Sil" düğmeleri eklendi.
+- Karalayarak sil: yazının üzerini kalemle zikzak çizerek karalayın (en az 3-4 kez ileri-geri) → altındaki yazı
+  silinir, karalama çizgisi kalmaz. Altında yazı yoksa çizgi normal kalır (gölgelendirme yapabilirsiniz).
+  Kapatmak için: kalem paneli → "Karalayarak sil".
+- Kalem stilleri (Favoriler): araç çubuğunda yeni "Stiller" düğmesi. Hazır ders notu stilleri eklendi:
+  Sayfa başlığı (Kalam Bold 30) · Bölüm başlığı (Kalam Bold 19) · Terim (yeşil, Kalam Bold 13,5) ·
+  Anlamı (turkuaz, Kalam 13,5) · İngilizce örnek (koyu mavi, Kalam 12,5) · Türkçe çeviri (gri-yeşil, Kalam Light 11,5, ↳) ·
+  İpucu (mor, Kalam 11,5, ★) · Hatalı (kırmızı, Kalam 12, ✗) · Doğru (yeşil, Kalam 12, ✓) · Düzeltme açıklaması (koyu kırmızı, Kalam Light 11,5).
+  Bir stil seçince kalem o renge geçer; el yazısı düzeltildiğinde metin o yazı tipi, kalınlık ve boyutla yazılır
+  (↳ ★ ✗ ✓ işaretleri başa otomatik eklenir). Metin aracı da aynı stili kullanır.
+  Boyutlar: uygulamada sayfa birimi zaten PDF noktasıdır (A4 = 595 × 842 pt), bu yüzden pt değerleri birebir aynıdır.
+  Başka bir renge dokunmak stili kapatır. Stile basılı tutarak favorilerden kaldırabilirsiniz;
+  "Hazır stilleri geri yükle" silinenleri geri getirir.
+
+
+N) DÜZELTME (2.5.1) — OneDrive'da "Dosya 1.pdf", "Dosya 2.pdf"… kopyaları
+----------------------------------------------------------------------
+Sebep: OneDrive kaydedilen dosyayı arka planda yükler. Yükleme bitmeden aynı dosyaya ikinci kez yazılınca
+(otomatik kayıt + "Kaydet" + notu kapatma üst üste gelince ya da yazma bir hata verip tekrar denenince)
+OneDrive bunu çakışma sayıp dosyanın yanına "… 1.pdf", "… 2.pdf" diye yeni kopyalar oluşturuyordu.
+Düzeltme:
+- Önceki yükleme bitmeden aynı dosyaya yeniden yazılmaz; durum satırında
+  "OneDrive önceki kaydı yüklüyor · bitince kaydedilecek" yazar ve kayıt kendiliğinden yapılır.
+- Not değişmediyse dosya yeniden yüklenmez ("Kaydet"e tekrar basmak kopya oluşturmaz).
+- Yazma sırasında hata olursa uygulama aynı veriyi ikinci kez göndermez.
+- OneDrive'a otomatik kayıt, son değişiklikten 30 sn sonra yapılır (büyük PDF'ler her dakika yeniden yüklenmesin).
+- "OneDrive uygulamasıyla kopya yükle" düğmesi bilerek kopya oluşturur (adı buna göre değişti).
+Güncellemeden sonra: notu açıp bir kez "Kaydet"e dokunun; notlarınız asıl dosyaya (ör. "English Grammar in Use.pdf") yazılır.
+Eski kopyaları OneDrive'dan silebilirsiniz.
+
+
+M) YENİ (2.5.0) — el yazısını düzelt, sesli okuma, tasarım düzeltmeleri
+--------------------------------------------------------------------
+Bu sürüm ilk kez internete bağlanıp birkaç kütüphane indirerek derlenir (Google ML Kit); APK-OLUSTUR.bat'ı
+yine aynı şekilde çalıştırın. Derleme hata verirse ekrandaki son kırmızı satırları Claude'a iletin.
+
+- El yazısını düzelt: kalem simgesine tekrar dokunun → panelin en altındaki "El yazısını düzelt".
+  · Kapalı / Düğmeyle / Otomatik.
+    Düğmeyle: bir satır yazıp kalemi kaldırınca yazının sağında "Düzelt" çıkar; dokununca satır metne çevrilir.
+    Otomatik: yazmayı bırakıp 1-2 saniye bekleyince satır kendiliğinden metne çevrilir.
+  · Dil: Otomatik (Türkçe ve İngilizce karışık yazılabilir; "toplantıda deadline konuştuk" gibi),
+    ya da Türkçe / İngilizce'ye sabitleyin.
+  · Düzeltilen metnin yazı tipi (El yazısı / Yalın / Tırnaklı) ve Metin boyutu (%50-%200).
+  · İlk açışta Türkçe ve İngilizce el yazısı modelleri bir kez indirilir (yaklaşık 40 MB, Wi-Fi önerilir);
+    sonra internetsiz çalışır. Yazım denetimi Samsung Klavye'nin sözlüklerini kullanır: Ayarlar → Genel yönetim →
+    Samsung Klavye ayarları → Diller ve türler bölümünde Türkçe ve English (UK/US) ekli olmalı.
+  · Sonuç çubuğu: TR/EN rozeti (dokununca diğer dilde yeniden okur), A− / A+ (küçült/büyüt),
+    hoparlör (sesli oku), "Geri al" (mürekkep geri gelir).
+  · Daha önce yazdıklarınız için: Kement ile seçin → seçim çubuğunda "Yazıya dök". Seçim çubuğundaki A− / A+
+    her seçimi (çizim, metin, görsel) küçültüp büyütür.
+  · İngilizce dil bilgisini de düzelt (isteğe bağlı): bağlı yapay zekâ (Gemini/Claude) ile; internet gerekir.
+    (Gönderdiğiniz dosyadaki Gemini Nano düzeltmesi bu sürüme eklenmedi: beta kütüphanesi derlemeyi bozabilir.)
+- Sesli okuma: PDF'te bir kelimeye parmakla basılı tutun → kelime İngiliz İngilizcesi kadın sesiyle okunur.
+  Seçim çubuğunda "Dinle" (uzun seçimler için), sözlük penceresinin başlığında hoparlör düğmesi var.
+  Ayarlar → "Sesli okuma": aç/kapat, İngilizce ses seçimi, konuşma hızı, "Dene".
+  İngiliz sesi listede yoksa "Ses ayarları" → tercih edilen motor (Samsung ya da Google) →
+  İngilizce (Birleşik Krallık) ses paketini indirin. Türkçe harf içeren kelimeler Türkçe sesle okunur.
+- Tasarım düzeltmeleri: başlık daha az kesiliyor; koyu temada kalem türü simgeleri ve koyu renk düğmesi
+  görünür; ekran görüntüsü simgesi diğerleriyle aynı renkte; sayfa küçük resimlerindeki ⋮ düğmesi resmin içinde;
+  sözlükte alıntı 3 satıra kısaldı (dokununca açılır), kalem alanındaki düğme "Yazıya dök" oldu;
+  "Örnek" rozeti küçük resmin altına taşındı.
+
+
+L) DÜZELTME (2.4.3) — sürekli "dosya değişmiş" uyarısı
+----------------------------------------------------
+- OneDrive, uygulamanın kaydettiği dosyayı buluta yüklemeyi bitirince dosyanın tarihini değiştiriyor; uygulama bunu
+  "başka bir yerde değiştirilmiş" sanıyordu. Artık uygulama kendi yazdığı sürümleri tanıyor ve yalnızca dosya
+  gerçekten başka bir yerde (bilgisayar, başka cihaz) değiştirildiğinde sorar.
+- Güncellemeden sonraki ilk kayıtta bir kez daha sorabilir; "Üzerine yaz" deyin, sonrası sessiz çalışır.
+- Uyarı penceresinde "Bu dosya için bir daha sorma" seçeneği de var: işaretlerseniz o dosyaya her zaman
+  tabletteki notlu sürüm yazılır.
+
+
+K) DÜZELTME (2.4.2) — "Expected instance of …" hatası
+---------------------------------------------------
+- Bazı PDF'ler (özellikle kitaplar) düzenleme kısıtlamalı olarak şifrelenmiş ya da iç yapısı hasarlıdır.
+  Uygulamanın kaydetme motoru bunları işleyemiyordu: ya "Expected instance of e, but got instance of
+  undefined" hatası çıkıyordu ya da (şifreli dosyalarda) sayfalar boş kaydedilebiliyordu.
+- Artık kaydetmeden önce böyle bir PDF'in şifresi çözülüp onarılıyor (qpdf, internetsiz çalışır). Kaydedilen
+  dosyada düzenleme kısıtlaması kalmaz; içerik ve metin aynen korunur. Yine de okunamayan tek tek sayfalar
+  olursa yalnızca o sayfalar görüntü olarak kaydedilir ve size kaç sayfa olduğu söylenir.
+- Önceki bir sürümle şifreli bir PDF'i OneDrive'a kaydettiyseniz ve sayfaları boş göründüyse: OneDrive'da
+  dosyaya sağ tıklayın → "Sürüm geçmişi" → önceki sürümü geri yükleyin, sonra notu bu sürümle yeniden kaydedin.
+
+
+J) DÜZELTMELER (2.4.1)
+---------------------
+- Yan yana belgede üstteki çubuk artık hangi tarafa dokunduysanız o belgeyi gösterir: başlık, kayıt durumu,
+  Kaydet, Sayfalar düğmesi ve geri al o belgeye uygulanır. ⋯ ayarları (tema, yakınlaştırma düğmeleri,
+  renkleri ters çevirme, okuma modu) iki tarafta birden geçerli olur.
+- OneDrive "salt okunur" dosyalar: OneDrive bir dosyanın üzerine yazmaya izin vermiyorsa (paylaşılan dosya ya da
+  seçicide "Son kullanılanlar"/"Dosyalarım" üzerinden seçilmiş dosya) uygulama artık sürekli hata vermez.
+  Durum satırında "Salt okunur · kaydetmek için dokunun" yazar → "Yeni dosya olarak kaydet" ile OneDrive'da bir
+  klasör seçin; sonraki kayıtlar o dosyaya otomatik yazılır.
+  En sorunsuz yol: "+ Yeni → OneDrive'dan aç" dedikten sonra seçicide sol menüden (☰) "OneDrive"ı seçip dosyaya
+  oradan gidin.
+- Açık bir klasördeyken OneDrive'dan, kitaplıkta zaten olan bir dosyayı yeniden açarsanız not o klasöre taşınır.
+- Yapışkan notlar sayfanın dışına taşmaz; sayfanın altına konan not yukarı itilir. Bir notu başlığından tutup
+  başka bir sayfaya sürükleyebilirsiniz (Geri al ile geri gelir).
+
+
+I) YENİ (2.4.0)
+--------------
+- OneDrive kaydı düzeltmeleri:
+  · "OneDrive'a kaydediliyor…" artık takılı kalmaz. OneDrive uygulaması 2 dakika içinde yanıt vermezse kayıt
+    durdurulur, durum satırı "yazılamadı" olur; dokununca "Yeni dosya olarak kaydet" ya da
+    "OneDrive uygulamasıyla yükle" seçenekleri çıkar.
+  · Kayıt sürerken durum satırında geçen süre görünür; 20 saniyeyi geçerse dokunarak ayrıntıya bakabilirsiniz.
+  · Kayıt sürerken yazdıklarınız kaybolmaz; bir sonraki kayıtta dosyaya eklenir. Aynı anda iki kayıt çakışmaz.
+  · Notu kapatınca kitaplığa hemen dönersiniz; kayıt arka planda biter (kartta dönen ok simgesi). Bitmeden aynı
+    notu açarsanız uygulama önce kaydın bitmesini bekler.
+  · Hâlâ yazılamıyorsa: tablette OneDrive uygulamasını açıp oturumun açık olduğunu kontrol edin. Dosya
+    "Çevrimdışı kullanılabilir" değilse OneDrive önce dosyayı indirir; büyük PDF'lerde ilk kayıt uzun sürebilir.
+- Kitaplıktaki "PDF ekle / OneDrive'dan aç / Boş not" kutuları kaldırıldı; hepsi sağ üstteki "+ Yeni" menüsünde.
+- Alanı çevrele (yapay zekâ): Araç çubuğundaki yıldızlı kement simgesi. S Pen ile bir paragrafın ya da
+  cümlelerin etrafına daire çizin → "Açıkla", "Çevir", "Not yapıştır" ya da "Kopyala".
+  Taranmış sayfa veya el yazısıysa alanın görüntüsü yapay zekâya gönderilir.
+- Yapışkan not: Araç çubuğundaki not kâğıdı simgesi (ya da çevrelenen alanda "Not yapıştır").
+  · Başlığından sürükleyin, sağ alt köşesinden genişletin, gövdesine dokunup yazın.
+  · "−" ile küçük bir simgeye dönüşür; simgeye dokununca yeniden açılır. ⋮ menüsünde renk, kopyala, çoğalt, sil.
+  · Sözlük penceresindeki "Yapışkan not" düğmesi yanıtı seçtiğiniz alanın üzerine yapıştırır
+    (örn. makalenin Abstract kısmını çevrele → Çevir → Yapışkan not).
+  · Yapışkan notlar dışa aktarılan PDF'te ve küçük resimlerde görünür; arama da onların içinde arar.
+- Çeviri ve açıklamalarda önemli terimlerin orijinali parantez içinde verilir: "fotosentez (photosynthesis)".
+  Türkçeden İngilizceye çeviride terimlerin Türkçesi parantezde gelir. Kısaltmalar, formüller ve kaynak
+  gösterimleri ([12], Smith et al., 2020) çevrilmez.
+
+
+H) YENİ (2.3.0)
+--------------
+- Sayfalar paneli artık sol üstte (dört kare simgesi). Dört sekmesi var:
+  Sayfalar (küçük resimler) · İçindekiler (PDF'in bölümleri) · Yer imleri · Ara.
+  Küçük resmin ⋮ menüsünden ya da basılı tutarak: önüne/sonrasına sayfa ekle, çoğalt, yer imi,
+  yukarı/aşağı/başa/sona taşı, sayfayı temizle, sil. Listenin sonundaki "Sayfa ekle" ile not sonuna sayfa eklenir.
+  Belgenin en altına kaydırınca da "Sayfa ekle" düğmesi çıkar. Silinen sayfa Geri al ile geri gelir.
+- Tüm sayfalar ızgarası: panelin altındaki çapraz ok simgesi (ya da ⋯ → "Tüm sayfalar").
+  Sayfaya dokunun: o sayfaya gider. Basılı tutup sürükleyin: sayfanın yerini değiştirir.
+  "Seç" ile birden çok sayfayı seçip silebilir, çoğaltabilir ya da yer imi ekleyebilirsiniz.
+- Belgede ara: Sayfalar paneli → büyüteç (klavyede Ctrl+F). PDF metninde ve sayfaya yazdığınız metin
+  kutularında arar; sonuca dokununca kelime sayfada işaretlenir. El yazısı ve taranmış sayfalar aranamaz.
+- Klasörler: Kitaplıkta sol menü → "Klasörler" yanındaki + ya da "Yeni → Klasör". Klasörün içinde alt klasör
+  açabilirsiniz. Bir notu taşımak için notun ⋮ menüsü → "Klasöre taşı". Birden çok not için "Seç"e dokunun
+  (ya da nota basılı tutun), notları işaretleyin → "Klasöre taşı". Klasör silinince içindeki notlar silinmez, üst klasöre geçer.
+  "Tüm notlar" Samsung Notes'taki gibi bütün notları gösterir; kartın altında hangi klasörde olduğu yazar.
+- ⋯ menüsü artık ikinci dokunuşta kapanır (kalem ayarları da aynı şekilde).
+- Yakınlaştırma düğmelerini gizleme: ⋯ → "Yakınlaştırma düğmeleri" (ya da Kitaplık → Ayarlar). Sayfa numarası da kapatılabilir.
+- Okuma modu: ⋯ → "Okuma modu". Kalem ve parmak yalnızca kaydırır; yanlışlıkla çizim olmaz. Üstteki "Kapat" ile çıkın.
+- Yan yana belge: Sağdaki belgenin kendi araç çubuğu yok; üstteki ana araç çubuğu iki tarafta da çalışır.
+  Hangi tarafa dokunduysanız (üstünde mavi çizgi görünür) kalem, geri al/yinele, görsel ekleme ve ekran
+  görüntüsü o tarafta çalışır. Sağ belgenin sol üstündeki küçük çipten: sayfalar, başka belge aç, kaydet, kapat.
+- Sözlük penceresi:
+  · Başlığından sürükleyerek taşıyın, kenar ve köşelerinden boyutlandırın, ⤢ ile tam ekran yapın. Boyut hatırlanır.
+  · Yazı kutusu artık çok satırlı; uzun sorular tamamen görünür (Enter gönderir).
+  · Uzun yanıtlar kesilmez; yine de kesilirse "Devam et" çıkar. Uzun bir cümle/paragraf seçtiğinizde
+    kelime biçimi yerine özet + Türkçe çeviri + önemli kavramlar gelir.
+  · Kalemle yazma: yazı kutusunun solundaki kalem düğmesi → açılan alana S Pen ile yazın; kalemi kaldırıp
+    bir saniye bekleyince yazı metne çevrilip kutuya eklenir. (Samsung Klavye'nin el yazısı modu da çalışır.)
+  · PDF'te metin seçince yeni "Çevir" düğmesi: seçilen metni Türkçeye çevirir (Türkçeyse İngilizceye).
+- Gemini seçeneği (ücretsiz katman): Sözlük → ⚙ → Sağlayıcı "Gemini" → aistudio.google.com adresinde
+  Google hesabınızla "Get API key" → "Create API key" → anahtarı yapıştırın → "Test et" → "Kaydet".
+  Model: gemini-3.5-flash-lite (hızlı). Gemini öğrenci üyeliği gerekmez; bu anahtar ayrı ve ücretsizdir.
+  Ücretsiz katmanda günlük kullanım sınırı vardır ve Google bu istekleri ürünlerini geliştirmek için kullanabilir;
+  gizli belgeler için Claude'u tercih edin.
+
+
+F) BİLİNEN SINIRLAR
+-------------------
+- S Pen'in Bluetooth uzaktan kumanda hareketleri (Air Actions) desteklenmez.
+- Parola korumalı PDF'ler açılmaz.
+- Kurşun kalemin doku görünümü dışa aktarılan PDF'te düz gri çıkar.
