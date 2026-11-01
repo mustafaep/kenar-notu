@@ -156,6 +156,8 @@ function redrawInk() {
 function paintCommitted(pv, s) { const ctx = s.t === 'hl' ? hlx : inkx; ctx.save(); pageTransform(ctx, pv); clipPage(ctx, pv); paintStroke(ctx, s); ctx.restore(); }
 
 /* ---------- metin ve görsel katmanı ---------- */
+/* metin kutusunun en geniş hâli: düzenlenen sayfada sağ boşluk korunur (t.mw), yoksa sayfa kenarına kadar */
+const tMaxW = (pv, t) => t.mw ? Math.max(40, Math.min(t.mw, pv.meta.w - t.x - 2)) : Math.max(40, pv.meta.w - t.x - 6);
 function styleTbox(el, t) { Object.assign(el.style, { left: t.x + 'px', top: t.y + 'px', fontSize: t.size + 'px', color: t.color, fontFamily: FONTS[t.font] || FONTS.sans, fontWeight: String(tWeight(t)) }); }
 function styleIbox(el, im) { Object.assign(el.style, { left: im.x + 'px', top: im.y + 'px', width: im.w + 'px', height: im.h + 'px' }); }
 function renderLayer(pv) {
@@ -164,7 +166,7 @@ function renderLayer(pv) {
   for (const im of A.i || []) { const el = h('img', { class: 'ibox', src: im.src, alt: '', draggable: 'false' }); styleIbox(el, im); pv.tl.append(el); pv.imap.set(im.id, el); }
   for (const t of A.t) {
     const el = h('div', { class: 'tbox' }); el.textContent = t.text; el.dataset.id = t.id; styleTbox(el, t);
-    el.style.maxWidth = Math.max(40, pv.meta.w - t.x - 6) + 'px';
+    el.style.maxWidth = tMaxW(pv, t) + 'px';
     pv.tl.append(el); pv.tmap.set(t.id, el);
     if (!t.w) { t.w = el.offsetWidth; t.h = el.offsetHeight; }
   }
@@ -1221,7 +1223,7 @@ function commitSel() {
   const pid = sel.pv.meta.id, A = ann(pid), b = snap(pid), k = Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
   const nids = new Set(), ntids = new Set(), niids = new Set();
   A.s = A.s.map(s => { if (!sel.ids.has(s)) return s; const ns = transformStroke(s, m); nids.add(ns); return ns; });
-  A.t = A.t.map(t => { if (!sel.tids.has(t)) return t; const q = xf(m, t.x, t.y); const nt = { ...t, x: q.x, y: q.y, size: t.size * k, w: (t.w || 20) * k, h: (t.h || 20) * k, ink: null }; ntids.add(nt); return nt; });
+  A.t = A.t.map(t => { if (!sel.tids.has(t)) return t; const q = xf(m, t.x, t.y); const nt = { ...t, x: q.x, y: q.y, size: t.size * k, w: (t.w || 20) * k, h: (t.h || 20) * k, ink: null }; if (t.mw) nt.mw = t.mw * k; ntids.add(nt); return nt; });
   A.i = A.i.map(im => { if (!sel.iids.has(im)) return im; const c = xf(m, im.x + im.w / 2, im.y + im.h / 2); const ni = { ...im, x: c.x - im.w * k / 2, y: c.y - im.h * k / 2, w: im.w * k, h: im.h * k }; niids.add(ni); return ni; });
   sel.ids = nids; sel.tids = ntids; sel.iids = niids; sel.m = [1, 0, 0, 1, 0, 0];
   renderLayer(sel.pv); sel.bb = selBBox(sel); buildSelDom();
@@ -1296,7 +1298,7 @@ function beginEdit(pv, t, el) {
 }
 function placeGrip() { const E = ed.editing; if (!E || !E.grip) return; const inv = 1 / ed.view.z; E.grip.style.left = (E.pv.x + E.t.x - 34 * inv) + 'px'; E.grip.style.top = (E.pv.y + E.t.y) + 'px'; }
 function startGrip(e) { const E = ed.editing; if (!E) return; ed.ptrs.set(e.pointerId, { g: 'grip', w0: toWorld(e.clientX, e.clientY), x0: E.t.x, y0: E.t.y }); }
-function moveGrip(e, st) { const E = ed.editing; if (!E) return; const w = toWorld(e.clientX, e.clientY); E.t.x = clamp(st.x0 + w.x - st.w0.x, 0, E.pv.meta.w - 10); E.t.y = clamp(st.y0 + w.y - st.w0.y, 0, E.pv.meta.h - 10); E.el.style.left = E.t.x + 'px'; E.el.style.top = E.t.y + 'px'; E.el.style.maxWidth = Math.max(40, E.pv.meta.w - E.t.x - 6) + 'px'; placeGrip(); }
+function moveGrip(e, st) { const E = ed.editing; if (!E) return; const w = toWorld(e.clientX, e.clientY); E.t.x = clamp(st.x0 + w.x - st.w0.x, 0, E.pv.meta.w - 10); E.t.y = clamp(st.y0 + w.y - st.w0.y, 0, E.pv.meta.h - 10); E.el.style.left = E.t.x + 'px'; E.el.style.top = E.t.y + 'px'; E.el.style.maxWidth = tMaxW(E.pv, E.t) + 'px'; placeGrip(); }
 function endGrip() { const E = ed.editing; if (E) E.el.focus(); }
 function finishText() {
   const E = ed.editing; if (!E) return; ed.editing = null;

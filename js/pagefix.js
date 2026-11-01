@@ -6,6 +6,7 @@
    numaralı blokların metnini döndürür, düzen bozulmaz.
    Sağlayıcı: önce Gemini (ayarlardan değiştirilebilir); anahtar yoksa, günlük sınır dolduysa ya da hata olursa Claude.
    Sonuç önce önizlenir (Uygula / Vazgeç); istenirse sayfadan çıkınca kendiliğinden çalışır.
+   Not sayfalarında (ayar "Örnekteki gibi düzenle") sayfa baştan, kalem stilleriyle dizilir: bkz. pagelayout.js.
    ========================================================= */
 const PF = { panel: null, badges: [], job: null, fixedVer: new Map(), lastPage: 0, chip: null, autoT: 0 };
 const PF_GEMINI_DEFAULT = 'gemini-3.8-flash', PF_CLAUDE_DEFAULT = 'claude-sonnet-5-5';
@@ -33,9 +34,10 @@ function pfBlocks(pv) {
   const lines = textInk.length ? splitLines(textInk) : [];
   let P = null;
   for (const l of lines) {
-    const lh = Math.max(14, l.lineH);
-    if (P && l.bb.y0 - P.last.y1 < lh * 1.3 && Math.abs(l.bb.x0 - P.bb.x0) < lh * 3) { P.strokes.push(...l.strokes); P.bb = bbUnion(P.bb, l.bb); P.last = l.bb; P.lines.push(l); }
-    else { P = { kind: 'ink', strokes: [...l.strokes], bb: { ...l.bb }, last: l.bb, lines: [l] }; blocks.push(P); }
+    // yalnızca aynı renkle, hizalı ve dar aralıkla süren satırlar aynı bloktur (terim, anlamı, örnek ayrı kalır)
+    const lh = Math.max(14, l.lineH), col = (plInkColors(l.strokes)[0] || '');
+    if (P && P.col === col && l.bb.y0 - P.last.y1 < lh * .9 && Math.abs(l.bb.x0 - P.bb.x0) < lh * 1.5) { P.strokes.push(...l.strokes); P.bb = bbUnion(P.bb, l.bb); P.last = l.bb; P.lines.push(l); }
+    else { P = { kind: 'ink', strokes: [...l.strokes], bb: { ...l.bb }, last: l.bb, lines: [l], col }; blocks.push(P); }
   }
   for (const t of A.t) if (t.text && t.text.trim()) blocks.push({ kind: 'text', t, bb: { x0: t.x, y0: t.y, x1: t.x + (t.w || 20), y1: t.y + (t.h || 20) } });
   blocks.sort((a, b) => (a.bb.y0 - b.bb.y0) || (a.bb.x0 - b.bb.x0));
@@ -45,8 +47,8 @@ function pfBlocks(pv) {
 function pfHasInk(pv) { const A = ed.note && ed.note.ann[pv.meta.id]; return !!(A && A.s.some(s => s.t !== 'hl')); }
 
 /* ---------- sayfa görüntüsü (numaralı bloklarla) ---------- */
-async function pfImage(pv, blocks) {
-  const c = await renderThumb(pv.meta, ann(pv.meta.id), ed.pdf, 1300);
+async function pfImage(pv, blocks, width = 1300) {
+  const c = await renderThumb(pv.meta, ann(pv.meta.id), ed.pdf, width);
   const s = c.width / pv.meta.w, g = c.getContext('2d');
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.font = 'bold 22px Onest, Arial, sans-serif'; g.textBaseline = 'middle';
@@ -75,20 +77,20 @@ function pfProviders() {
   const order = P.first === 'claude' ? [cla, gem] : [gem, cla];
   return P.fallback === false ? order.slice(0, 1) : order;
 }
-function pfParse(text) {
+function pfParse(text, check = j => Array.isArray(j.blocks)) {
   let t = (text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
   const a = t.indexOf('{'), b = t.lastIndexOf('}'); if (a < 0 || b <= a) return null;
-  try { const j = JSON.parse(t.slice(a, b + 1)); return j && Array.isArray(j.blocks) ? j : null; } catch (e) { return null; }
+  try { const j = JSON.parse(t.slice(a, b + 1)); return j && check(j) ? j : null; } catch (e) { return null; }
 }
-async function pfAsk(parts, onStep) {
+async function pfAsk(parts, onStep, o = {}) {
   const notes = [];
   if (!navigator.onLine) throw Object.assign(new Error('İnternet bağlantısı yok. Sayfa bağlantı gelince düzeltilebilir.'), { code: 'offline' });
   for (const pr of pfProviders()) {
     if (!pr.ok) { notes.push(pr.name + ' anahtarı yok'); continue; }
     if (onStep) onStep(pr);
     try {
-      const { text } = await pr.run({ system: PAGEFIX_SYSTEM, messages: [{ role: 'user', content: parts }], maxTokens: 6000 });
-      const j = pfParse(text);
+      const { text } = await pr.run({ system: o.system || PAGEFIX_SYSTEM, messages: [{ role: 'user', content: parts }], maxTokens: o.maxTokens || 6000 });
+      const j = pfParse(text, o.check);
       if (j) return { j, by: pr, notes };
       notes.push(pr.name + ' yanıtı okunamadı');
     } catch (e) {
@@ -100,9 +102,11 @@ async function pfAsk(parts, onStep) {
 }
 
 /* ---------- çalıştır ---------- */
+const pfLayoutMode = pv => pv.meta.k !== 'pdf' && S.pageFix.mode !== 'inplace';
 async function pageFixRun(pv, opts = {}) {
   if (PF.job && !PF.job.items) { toast('Bir sayfa zaten düzeltiliyor…', 1600); return null; }
   if (PF.chip) { PF.chip.remove(); PF.chip = null; } pfClose();
+  if (pfLayoutMode(pv)) return plRun(pv, opts);
   const blocks = pfBlocks(pv);
   if (!blocks.length) { if (!opts.quiet) toast('Bu sayfada düzeltilecek yazı yok', 1800); return null; }
   const job = PF.job = { pv, blocks, ver: ed.pageVer.get(pv.meta.id) || 0 };
@@ -132,13 +136,15 @@ async function pageFixStart(pv = currentPage()) {
   closePop();
   const job = await pageFixRun(pv);
   if (!job) return;
-  if (S.pageFix.review === false) { pfApply(job, job.items.filter(x => x.on)); return; }
+  if (S.pageFix.review === false) { pfApplyJob(job); return; }
   pfOpen(job);
 }
 window.pageFixStart = pageFixStart;
+const pfApplyJob = job => job.mode === 'layout' ? plApply(job) : pfApply(job, job.items.filter(x => x.on));
 
 /* ---------- önizleme penceresi ---------- */
 function pfOpen(job) {
+  if (job.mode === 'layout') { plOpen(job); return; }
   pfClose(true);
   PF.job = job;
   const list = h('div', { class: 'pflist' });
@@ -210,13 +216,13 @@ async function pfAuto(pv) {
   if (!job) return;
   const n = job.items.filter(x => x.on).length;
   if (!n) { PF.job = null; return; }
-  if (S.pageFix.review === false) { pfApply(job, job.items.filter(x => x.on)); return; }
+  if (S.pageFix.review === false) { pfApplyJob(job); return; }
   pfReadyChip(job, n);
 }
 function pfReadyChip(job, n) {
   if (PF.chip) PF.chip.remove();
   const no = ed.pvs.indexOf(job.pv) + 1;
-  PF.chip = h('div', { class: 'floaty pfchip' }, icon(IC.fixText), h('span', null, 'Sayfa ' + no + ': ' + n + ' öneri hazır'),
+  PF.chip = h('div', { class: 'floaty pfchip' }, icon(IC.fixText), h('span', null, 'Sayfa ' + no + ': ' + (job.mode === 'layout' ? 'düzenleme hazır' : n + ' öneri hazır')),
     h('button', { class: 'btn small primary', type: 'button', onclick: () => { PF.chip.remove(); PF.chip = null; if (ed.pvs[ed.curPage - 1] !== job.pv) { goToPage(ed.pvs.indexOf(job.pv)); } setTimeout(() => pfOpen(job), 250); } }, 'Gör'),
     h('button', { class: 'ibtn', type: 'button', 'aria-label': 'Kapat', onclick: () => { PF.chip.remove(); PF.chip = null; PF.job = null; } }, icon(IC.close)));
   PF.chip.addEventListener('pointerdown', e => e.stopPropagation());
@@ -281,6 +287,9 @@ function pageFixSettingsRows() {
   return [
     h('span', { class: 'lbl' }, 'Sayfayı düzelt'),
     h('p', { class: 'notice' }, 'Sayfanın tamamını okuyup el yazısını metne çevirir ve bağlama bakarak düzeltir. Önce önizleme gösterilir.'),
+    h('div', { class: 'field' }, 'Not sayfalarında', segRow([['layout', 'Stillerle düzenle'], ['inplace', 'Yerinde düzelt']], P.mode || 'layout', v => { P.mode = v; saveSettings(); }, 'Not sayfalarında')),
+    h('p', { class: 'notice' }, 'Stillerle düzenle: sayfadaki yazı ve kalem stillerin yapay zekâya gönderilir; sayfa başlık, terim : anlamı, örnek, ↳ çeviri, ★ ipucu düzeninde baştan dizilir. Sığmayan kısım sonraki sayfaya geçer. PDF sayfalarında her zaman yerinde düzeltilir.'),
+    toggleRow('pfFixes', 'Düzeltmeleri sayfanın sonuna yaz', P.fixes !== false, v => { P.fixes = v; saveSettings(); }, 'Kırmızı kalemle: ✗ yazdığın · ✓ doğrusu · kısa açıklama'),
     segRow([['gemini', 'Önce Gemini'], ['claude', 'Önce Claude']], P.first || 'gemini', v => { P.first = v; saveSettings(); }, 'İlk tercih'),
     toggleRow('pfFallback', 'Olmazsa diğerini kullan', P.fallback !== false, v => { P.fallback = v; saveSettings(); }, 'Anahtar yoksa, günlük sınır dolduysa ya da hata olursa'),
     h('label', { class: 'field' }, 'Gemini modeli', h('div', { class: 'selectw' }, gsel, icon(IC.chev))),

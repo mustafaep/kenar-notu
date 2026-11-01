@@ -63,9 +63,12 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
   yapay zekâ el yazısının görüntüsüne ve önceki metne bakıp düzeltir.
 
 **Sayfayı düzelt (yapay zekâ)**
-- Sayfadaki bütün el yazısı ve metin kutuları tek seferde, bağlama bakılarak düzeltilir. Sayfada numaralı etiketler,
-  yanda her bloğun önerisi çıkar; düzenleyip istediklerini uygularsın (tek adımda geri alınır).
-- Düzeltilen metin, el yazısının rengine uyan kalem stiliyle yazılır; büyük çizimler olduğu gibi kalır.
+- Not sayfasındaki bütün yazı (her satır ayrı, mürekkep renkleriyle) ve kalem stillerim yapay zekâya gidiyor; sayfa
+  kelime defteri düzeninde baştan diziliyor: bölüm başlığı (sarı vurgulu) · **terim** : anlamı · girintili örnek cümle ·
+  ↳ Türkçe çeviri · ★ ipucu. Yakın yazılmış satırlar tek cümle sayılmıyor; stil önce yazdığım renge göre seçiliyor.
+- Bulunan hatalar sayfanın sonuna "Kırmızı kalem · düzeltmeler" olarak yazılıyor (✗ yazdığım · ✓ doğrusu · açıklama).
+- Yanda önizleme ve satır satır düzenleme (stil değiştir, metni düzelt, satırı çıkar); sığmayan kısım sonraki sayfaya geçiyor.
+- PDF sayfalarında yazılar yerinde düzeltiliyor; numaralı etiketlerle her bloğun önerisi gösteriliyor.
 - Önce **Gemini**; anahtar yoksa, günlük sınır dolduysa ya da hata verirse **Claude Sonnet**. Sıra, modeller ve
   "sayfadan çıkınca kendiliğinden hazırla" seçeneği Ayarlar'dan değiştirilir.
 
@@ -126,6 +129,7 @@ js/                  Uygulama kodu
   pdfio.js           PDF okuma ve notlu PDF üretme (pdf-lib, qpdf)
   hand.js            El yazısını düzelt
   pagefix.js         Sayfayı düzelt (Gemini → Claude)
+  pagelayout.js      Sayfayı kalem stilleriyle düzenleme (yerleşim, önizleme)
   flow.js            Boşlukları kapat, sayfaları birleştir
   speak.js           Sesli okuma
   ai.js              Sözlük, çeviri, sohbet (Gemini / Claude)

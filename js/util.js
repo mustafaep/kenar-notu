@@ -189,7 +189,7 @@ const DEF = {
   lastTool: 'pen', panelOpen: false, libView: 'all', sort: 'updated',
   hand: { mode: 'off', lang: 'auto', font: 'hand', scale: 100, grammar: false, asked: false, style: null, ai: 'off' },
   voice: { hold: true, rate: 0.95, name: '', lang: 'en-GB' }, favSeed: 0,
-  pageFix: { first: 'gemini', fallback: true, gmodel: '', cmodel: '', when: 'manual', review: true }
+  pageFix: { first: 'gemini', fallback: true, gmodel: '', cmodel: '', when: 'manual', review: true, mode: 'layout', fixes: true }
 };
 /* Ders notu kalem stilleri: kalem rengi + düzeltilen yazının yazı tipi/boyutu.
    Sayfa birimi PDF noktasıdır (A4 = 595 × 842 pt), bu yüzden pt değerleri birebir kullanılır. */

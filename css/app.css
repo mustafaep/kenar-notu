@@ -590,3 +590,21 @@ html:not(.embed) .sidechip{display:none}
 .pfchip svg.i{width:20px;height:20px;color:var(--accent)}
 .pfchip.busy{padding:8px 14px}
 .pfchip .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--accent);border-right-color:transparent;animation:spin 1s linear infinite}
+
+/* sayfayı stillerle düzenle */
+.plsegw{padding:8px 12px 0}
+.plseg{width:100%}
+.plseg button{flex:1}
+.plbody{flex:1;overflow:auto;min-height:0}
+.plprev{padding:10px 12px 14px;display:flex;flex-direction:column;align-items:stretch;gap:8px;min-height:120px}
+.plprev>.spin{align-self:center;margin-top:40px}
+.plpage{width:100%;height:auto;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.25),0 0 0 1px var(--line);background:#fff}
+.plsep{font:600 12px var(--f-ui);color:var(--muted);text-align:center;padding-top:4px}
+.pllist{overflow:visible}
+.plrow .pft{gap:5px}
+.plrow.ind1 .pft{padding-left:12px}
+.plrow.ind2 .pft{padding-left:24px}
+.plsel{align-self:flex-start;max-width:100%;border:1px solid var(--line);border-radius:8px;background:var(--chrome);padding:3px 8px;font:600 12px var(--f-ui)}
+.pllist textarea{font-size:16px}
+.pldraw b{font:600 14px var(--f-ui)}
+.plhint{flex:1;align-self:center;color:var(--muted);font:12px var(--f-ui)}

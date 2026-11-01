@@ -113,6 +113,30 @@ G) YENİ (2.2.0)
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
 
 
+R) YENİ (2.5.5) — sayfayı kalem stillerinle düzenleme (örnek kelime defteri düzeni)
+---------------------------------------------------------------------------------
+- Not sayfalarında "Sayfayı düzelt" artık sayfayı baştan, kalem stillerinle dizer. Yapay zekâya sayfadaki bütün
+  yazı (her el yazısı satırı ayrı, mürekkep renkleriyle) ve Stiller listendeki renkler/yazı tipleri gönderilir.
+  Yapay zekâ her satırın görevini belirler; uygulama şu düzende yerleştirir:
+    Bölüm başlığı (altında sarı fosforlu vurgu)
+    terim : anlamı          (aynı satırda: terim yeşil kalın, anlamı turkuaz)
+       İngilizce örnek
+          ↳ Türkçe çeviri
+       ★ ipucu (önemli kısımlar kalın)
+  · Yakın yazılmış satırlar artık tek cümle sayılmıyor: terim, anlamı, örnek, çeviri ve ipucu ayrı satırlar olarak kalır.
+    Stil seçiminde önce yazdığın renge bakılır (yeşil = Terim, turkuaz = Anlamı, gri-yeşil = Türkçe çeviri…).
+  · Sağdaki panel: "Önizleme" sayfanın düzenlenmiş hâlini gösterir; "Satırlar" her satırın stilini ve metnini
+    değiştirmeye ya da satırı çıkarmaya yarar; "Düzeltmeler" yapay zekânın bulduğu hatalardır.
+  · Düzeltmeler (isteğe bağlı) sayfanın sonuna "Kırmızı kalem · düzeltmeler" başlığıyla yazılır:
+    ✗ yazdığın · ✓ doğrusu · kısa açıklama. Kapatmak için: Ayarlar → Sayfayı düzelt → "Düzeltmeleri sayfanın sonuna yaz".
+  · Sığmayan satırlar sonraki boş not sayfasına, yoksa yeni eklenen sayfaya geçer. Büyük çizimler yazının
+    arasında ait oldukları yere taşınır (panelden kapatırsan yerinde kalır). Tek Geri al ile hepsi geri döner.
+  · Düzenlenen metinler normal metin kutularıdır: basılı tutup taşıyabilir, silebilir, büyütebilirsin.
+- Eski davranış (yazıları yerinde düzeltmek) için: Ayarlar → Sayfayı düzelt → Not sayfalarında "Yerinde düzelt".
+  PDF sayfalarında her zaman yerinde düzeltilir (notlar basılı metnin yanında kalır).
+- Yerinde düzeltmede de farklı renkteki ya da girintili satırlar artık aynı bloğa katılmıyor.
+
+
 Q) YENİ (2.5.4) — sayfanın tamamını yapay zekâyla düzeltme, sayfaları birleştirme (boşlukları kapat)
 -----------------------------------------------------------------------------------------------------
 - Sayfayı düzelt: sayfadaki bütün el yazısı ve metin kutuları tek seferde okunur, bağlama bakılarak düzeltilir.
