@@ -49,7 +49,6 @@ final class HandwritingCorrector {
 
     interface Done { void run(JSONObject result); }
     private interface EvalDone { void run(Eval e); }
-    private interface SpellDone { void run(Spell s); }
 
     static final String[] TAGS = {"tr-TR", "en-US"};
     static final String[] CODES = {"tr", "en"};
@@ -167,28 +166,59 @@ final class HandwritingCorrector {
             rc = RecognitionContext.builder().setPreContext(pre).setWritingArea(new WritingArea(w, h)).build();
         } catch (Exception e) { done.run(fail(id, "Bağlam oluşturulamadı")); return; }
 
-        final List<Eval> evals = new ArrayList<>();
-        evalChain(usable, 0, ink, rc, evals, () -> {
-            Eval best = null;
-            for (Eval e : evals) if (e != null && (best == null || penalty(e) < penalty(best))) best = e;
-            if (best == null) { done.run(fail(id, "Yazı tanınamadı")); return; }
-            final Eval chosen = best;
-            applyCorrections(chosen, (corrected, kept) -> {
-                lastLanguage = chosen.lang;
-                JSONObject o = new JSONObject();
-                try {
-                    o.put("id", id); o.put("ok", true);
-                    o.put("lang", CODES[chosen.lang]);
-                    o.put("text", chosen.text);
-                    o.put("corrected", corrected);
-                    o.put("kept", new JSONArray(kept));
-                    o.put("alts", new JSONArray(chosen.alts));
-                    o.put("spell", chosen.spell.available);
-                    o.put("typos", chosen.spell.typos.size());
-                } catch (Exception ignored) { }
-                done.run(o);
-            });
+        // Diller AYNI ANDA tanınır (önceden sırayla)
+        final Eval[] evals = new Eval[2];
+        final int[] left = {usable.size()};
+        final Runnable all = () -> finish(id, evals, done);
+        for (final int l : usable) {
+            bestCandidate(l, ink, rc, e -> { evals[l] = e; if (--left[0] == 0) all.run(); });
+        }
+    }
+
+    /** En olası dili seçer, o dilde düzeltir ve sonucu hazırlar. */
+    private void finish(final String id, final Eval[] evals, final Done done) {
+        Eval best = null;
+        for (Eval e : evals) if (e != null && (best == null || penalty(e) < penalty(best))) best = e;
+        if (best == null) { done.run(fail(id, "Yazı tanınamadı")); return; }
+        final Eval chosen = best;
+        applyCorrections(chosen, (corrected, kept) -> {
+            lastLanguage = chosen.lang;
+            JSONObject o = new JSONObject();
+            try {
+                o.put("id", id); o.put("ok", true);
+                o.put("lang", CODES[chosen.lang]);
+                o.put("text", chosen.text);
+                o.put("corrected", corrected);
+                o.put("kept", new JSONArray(kept));
+                o.put("alts", new JSONArray(chosen.alts));
+                o.put("spell", chosen.spell.available);
+                o.put("typos", chosen.spell.typos.size());
+            } catch (Exception ignored) { }
+            done.run(o);
         });
+    }
+
+    /**
+     * Yalnızca metin (el yazısı yok): ayrı düşmüş parçalar birleştirilince yazım düzeltmesi için.
+     * İstek: {"id","text","mode":"auto|tr|en"} — sonuç biçimi recognize ile aynı.
+     */
+    void correctText(final JSONObject req, final Done done) {
+        final String id = req.optString("id");
+        final String text = req.optString("text", "").trim();
+        if (text.length() == 0) { done.run(fail(id, "Metin boş")); return; }
+        String mode = req.optString("mode", "auto");
+        final List<Integer> langs = new ArrayList<>();
+        if ("tr".equals(mode)) langs.add(TR);
+        else if ("en".equals(mode)) langs.add(EN);
+        else { langs.add(TR); langs.add(EN); }
+        final Eval[] evals = new Eval[2];
+        final int[] left = {langs.size()};
+        for (final int l : langs) {
+            lanes[l].submit(Collections.singletonList(text), sp -> {
+                evals[l] = new Eval(l, text, sp.get(0), Collections.singletonList(text));
+                if (--left[0] == 0) finish(id, evals, done);
+            });
+        }
     }
 
     private static Ink buildInk(JSONArray strokes) throws Exception {
@@ -210,11 +240,6 @@ final class HandwritingCorrector {
         return ib.build();
     }
 
-    private void evalChain(final List<Integer> langs, final int k, final Ink ink, final RecognitionContext rc, final List<Eval> out, final Runnable end) {
-        if (k >= langs.size()) { end.run(); return; }
-        bestCandidate(langs.get(k), ink, rc, e -> { out.add(e); evalChain(langs, k + 1, ink, rc, out, end); });
-    }
-
     /** Bir dilin en fazla 3 adayını yazım denetiminden geçirip en az hatalı olanı seçer. */
     private void bestCandidate(final int lang, Ink ink, RecognitionContext rc, final EvalDone done) {
         recognizers[lang].recognize(ink, rc)
@@ -228,20 +253,18 @@ final class HandwritingCorrector {
                         }
                     } catch (Exception ignored) { }
                     if (cands.isEmpty()) { done.run(null); return; }
-                    final List<Eval> evs = new ArrayList<>();
-                    spellEach(lang, cands, 0, evs, () -> {
+                    // tüm adaylar TEK istekte denetlenir
+                    lanes[lang].submit(cands, spells -> {
                         Eval best = null;
-                        for (Eval e : evs) if (best == null || e.spell.typos.size() < best.spell.typos.size()) best = e; // eşitlikte ML Kit sırası korunur
+                        for (int i = 0; i < cands.size(); i++) {
+                            Eval e = new Eval(lang, cands.get(i), spells.get(i), cands);
+                            if (best == null || e.spell.typos.size() < best.spell.typos.size()) best = e; // eşitlikte ML Kit sırası korunur
+                            if (e.spell.available && e.spell.typos.isEmpty()) break;
+                        }
                         done.run(best);
                     });
                 })
                 .addOnFailureListener(e -> { lastError = String.valueOf(e.getMessage()); done.run(null); });
-    }
-
-    private void spellEach(final int lang, final List<String> cands, final int k, final List<Eval> out, final Runnable end) {
-        if (k >= cands.size()) { end.run(); return; }
-        final String t = cands.get(k);
-        spellCheck(t, LOCALES[lang], s -> { out.add(new Eval(lang, t, s, cands)); spellEach(lang, cands, k + 1, out, end); });
     }
 
     /** Düşük ceza = o dil daha olası. */
@@ -252,50 +275,88 @@ final class HandwritingCorrector {
         return p;
     }
 
-    /* ---------- yazım denetimi (sistemin denetleyicisi; Samsung Klavye'de TR ve EN dil paketleri gerekir) ---------- */
+    /* ---------- yazım denetimi (sistemin denetleyicisi; Samsung Klavye'de TR ve EN dil paketleri gerekir) ----------
+       Her dil için tek bir oturum açık tutulur (her denetimde yeniden bağlanmak yavaştı). İstekler sıraya girer,
+       aynı anda biri işlenir. Denetleyici 1,5 sn içinde yanıt vermezse birkaç dakika boyunca beklenmez. */
+    private interface SpellsDone { void run(List<Spell> spells); }
 
-    private void spellCheck(final String text, Locale locale, final SpellDone done) {
-        final int words = countWords(text);
-        final boolean[] finished = {false};
-        final SpellCheckerSession[] holder = {null};
-        try {
-            TextServicesManager tsm = (TextServicesManager) ctx.getSystemService(Context.TEXT_SERVICES_MANAGER_SERVICE);
-            SpellCheckerSession.SpellCheckerSessionListener listener = new SpellCheckerSession.SpellCheckerSessionListener() {
-                @Override public void onGetSuggestions(SuggestionsInfo[] results) { }
-                @Override public void onGetSentenceSuggestions(SentenceSuggestionsInfo[] results) {
-                    if (finished[0]) return;
-                    finished[0] = true;
-                    List<Typo> typos = new ArrayList<>();
-                    if (results != null) for (SentenceSuggestionsInfo si : results) {
-                        if (si == null) continue;
-                        for (int i = 0; i < si.getSuggestionsCount(); i++) {
-                            SuggestionsInfo info = si.getSuggestionsInfoAt(i);
-                            if (info == null) continue;
-                            if ((info.getSuggestionsAttributes() & SuggestionsInfo.RESULT_ATTR_LOOKS_LIKE_TYPO) == 0) continue;
-                            int st = si.getOffsetAt(i), len = si.getLengthAt(i);
-                            if (st < 0 || len <= 0 || st + len > text.length()) continue;
-                            typos.add(new Typo(st, st + len, info.getSuggestionsCount() > 0 ? info.getSuggestionAt(0) : null));
-                        }
-                    }
-                    close(holder[0]);
-                    done.run(new Spell(true, words, typos));
+    private final class SpellLane {
+        final int lang;
+        SpellCheckerSession session;
+        final java.util.ArrayDeque<Object[]> queue = new java.util.ArrayDeque<>();
+        Object[] cur;            // {List<String> texts, SpellsDone cb, Runnable timeout}
+        long brokenUntil = 0;
+        final SpellCheckerSession.SpellCheckerSessionListener listener = new SpellCheckerSession.SpellCheckerSessionListener() {
+            @Override public void onGetSuggestions(SuggestionsInfo[] results) { }
+            @Override public void onGetSentenceSuggestions(SentenceSuggestionsInfo[] results) {
+                Object[] j = cur; if (j == null) return;
+                cur = null; main.removeCallbacks((Runnable) j[2]);
+                deliver(j, parse(texts(j), results));
+                next();
+            }
+        };
+        SpellLane(int lang) { this.lang = lang; }
+        @SuppressWarnings("unchecked") List<String> texts(Object[] j) { return (List<String>) j[0]; }
+        void deliver(Object[] j, List<Spell> r) { try { ((SpellsDone) j[1]).run(r); } catch (Exception ignored) { } }
+        void submit(List<String> texts, SpellsDone cb) { queue.add(new Object[]{new ArrayList<>(texts), cb, null}); if (cur == null) next(); }
+        void closeSession() { HandwritingCorrector.close(session); session = null; }
+        void next() {
+            while (cur == null && !queue.isEmpty()) {
+                final Object[] j = queue.poll();
+                if (System.currentTimeMillis() < brokenUntil) { deliver(j, unavailable(texts(j))); continue; }
+                if (session == null) {
+                    try {
+                        TextServicesManager tsm = (TextServicesManager) ctx.getSystemService(Context.TEXT_SERVICES_MANAGER_SERVICE);
+                        // false: kullanıcının klavye dili ne olursa olsun istenen dilin (tr ya da en) sözlüğü kullanılır
+                        session = tsm == null ? null : tsm.newSpellCheckerSession(null, LOCALES[lang], listener, false);
+                    } catch (Exception e) { session = null; }
                 }
-            };
-            // false: kullanıcının klavye dili ne olursa olsun istenen dilin (tr ya da en) sözlüğü kullanılır
-            holder[0] = tsm == null ? null : tsm.newSpellCheckerSession(null, locale, listener, false);
-        } catch (Exception e) { holder[0] = null; }
-        if (holder[0] == null) { finished[0] = true; done.run(new Spell(false, words, Collections.<Typo>emptyList())); return; }
-        try {
-            holder[0].getSentenceSuggestions(new TextInfo[]{new TextInfo(text)}, 3);
-        } catch (Exception e) {
-            finished[0] = true; close(holder[0]); done.run(new Spell(false, words, Collections.<Typo>emptyList())); return;
+                if (session == null) { brokenUntil = System.currentTimeMillis() + 10 * 60000L; deliver(j, unavailable(texts(j))); continue; }
+                List<String> t = texts(j);
+                TextInfo[] tis = new TextInfo[t.size()];
+                for (int i = 0; i < tis.length; i++) tis[i] = new TextInfo(t.get(i));
+                cur = j;
+                j[2] = (Runnable) () -> {
+                    if (cur != j) return;
+                    cur = null; closeSession(); brokenUntil = System.currentTimeMillis() + 3 * 60000L;
+                    deliver(j, unavailable(texts(j)));
+                    next();
+                };
+                try {
+                    session.getSentenceSuggestions(tis, 3);
+                } catch (Exception e) {
+                    cur = null; closeSession(); deliver(j, unavailable(t)); continue;
+                }
+                main.postDelayed((Runnable) j[2], 1500);
+            }
         }
-        // Bazı denetleyiciler hiç yanıt vermeyebilir: 2,5 sn sonra denetleyicisiz devam et
-        main.postDelayed(() -> {
-            if (finished[0]) return;
-            finished[0] = true; close(holder[0]);
-            done.run(new Spell(false, words, Collections.<Typo>emptyList()));
-        }, 2500);
+    }
+
+    private final SpellLane[] lanes = {new SpellLane(TR), new SpellLane(EN)};
+
+    private static List<Spell> unavailable(List<String> texts) {
+        List<Spell> r = new ArrayList<>();
+        for (String t : texts) r.add(new Spell(false, countWords(t), Collections.<Typo>emptyList()));
+        return r;
+    }
+
+    private static List<Spell> parse(List<String> texts, SentenceSuggestionsInfo[] results) {
+        List<Spell> out = new ArrayList<>();
+        for (int k = 0; k < texts.size(); k++) {
+            String text = texts.get(k);
+            SentenceSuggestionsInfo si = results != null && k < results.length ? results[k] : null;
+            List<Typo> typos = new ArrayList<>();
+            if (si != null) for (int i = 0; i < si.getSuggestionsCount(); i++) {
+                SuggestionsInfo info = si.getSuggestionsInfoAt(i);
+                if (info == null) continue;
+                if ((info.getSuggestionsAttributes() & SuggestionsInfo.RESULT_ATTR_LOOKS_LIKE_TYPO) == 0) continue;
+                int st = si.getOffsetAt(i), len = si.getLengthAt(i);
+                if (st < 0 || len <= 0 || st + len > text.length()) continue;
+                typos.add(new Typo(st, st + len, info.getSuggestionsCount() > 0 ? info.getSuggestionAt(0) : null));
+            }
+            out.add(new Spell(si != null || results != null, countWords(text), typos));
+        }
+        return out;
     }
 
     private static void close(SpellCheckerSession s) { try { if (s != null) s.close(); } catch (Exception ignored) { } }
@@ -310,7 +371,8 @@ final class HandwritingCorrector {
     private void applyCorrections(final Eval e, final Corrected done) {
         if (!e.spell.available || e.spell.typos.isEmpty()) { done.run(e.text, Collections.<String>emptyList()); return; }
         int other = e.lang == TR ? EN : TR;
-        spellCheck(e.text, LOCALES[other], otherCheck -> {
+        lanes[other].submit(Collections.singletonList(e.text), list -> {
+            Spell otherCheck = list.get(0);
             List<String> kept = new ArrayList<>();
             StringBuilder sb = new StringBuilder(e.text);
             List<Typo> sorted = new ArrayList<>(e.spell.typos);
@@ -341,5 +403,6 @@ final class HandwritingCorrector {
 
     void close() {
         for (DigitalInkRecognizer r : recognizers) { try { if (r != null) r.close(); } catch (Exception ignored) { } }
+        for (SpellLane l : lanes) l.closeSession();
     }
 }

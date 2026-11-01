@@ -55,7 +55,12 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
 - Android'de tamamen cihazda çalışır (Google ML Kit el yazısı tanıma + Samsung Klavye'nin yazım denetleyicisi).
   Web'de bağlı yapay zekâ ile çalışır.
 - Kapalı / Düğmeyle / Otomatik modları; TR/EN düğmesiyle diğer dilde yeniden okuma; A− / A+; Geri al.
-- Daha önce yazılanlar için: kement ile seç → "Yazıya dök".
+- Alt satıra geçen yazı aynı paragrafta kalır; düzeltilmiş bir metnin yanına ya da altına yazılan devam, o metnin
+  hemen arkasına eklenir ve hizalı kalır.
+- Daha önce yazılanlar için: kement ile seç → "Yazıya dök". Ayrı düşmüş parçalar için: kement ile seç →
+  **Hizala ve düzelt** (parçalar okuma sırasıyla tek, sola hizalı metinde birleşir ve yeniden düzeltilir).
+- İsteğe bağlı **yapay zekâ ile son düzeltme** (Kapalı / Uzun cümlelerde / Her zaman): cihazdaki sonuç hemen yazılır,
+  yapay zekâ el yazısının görüntüsüne ve önceki metne bakıp düzeltir.
 
 **Kalem stilleri**
 | Stil | Renk | Yazı tipi |

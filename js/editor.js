@@ -1161,7 +1161,7 @@ function selBBox(sel) {
 }
 function setSel(pv, ids, tids, iids) {
   ed.sel = { pv, ids, tids, iids: iids || new Set(), m: [1, 0, 0, 1, 0, 0] }; ed.sel.bb = selBBox(ed.sel);
-  buildSelDom(); requestFrame(true); $('#selbar').hidden = false; $('#sCol').hidden = !ids.size && !tids.size; $('#sHand').hidden = ![...ids].some(x => x.t !== 'hl'); placeSelbar();
+  buildSelDom(); requestFrame(true); $('#selbar').hidden = false; $('#sCol').hidden = !ids.size && !tids.size; { const ink = [...ids].some(x => x.t !== 'hl'), nt = tids.size; const al = nt >= 2 || (nt >= 1 && ink); $('#sAlign').hidden = !al; $('#sHand').hidden = !ink || al; } placeSelbar();
 }
 function buildSelDom() {
   $$('.selg', selw).forEach(n => n.remove());
@@ -1218,7 +1218,7 @@ function commitSel() {
   const pid = sel.pv.meta.id, A = ann(pid), b = snap(pid), k = Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
   const nids = new Set(), ntids = new Set(), niids = new Set();
   A.s = A.s.map(s => { if (!sel.ids.has(s)) return s; const ns = transformStroke(s, m); nids.add(ns); return ns; });
-  A.t = A.t.map(t => { if (!sel.tids.has(t)) return t; const q = xf(m, t.x, t.y); const nt = { ...t, x: q.x, y: q.y, size: t.size * k, w: (t.w || 20) * k, h: (t.h || 20) * k }; ntids.add(nt); return nt; });
+  A.t = A.t.map(t => { if (!sel.tids.has(t)) return t; const q = xf(m, t.x, t.y); const nt = { ...t, x: q.x, y: q.y, size: t.size * k, w: (t.w || 20) * k, h: (t.h || 20) * k, ink: null }; ntids.add(nt); return nt; });
   A.i = A.i.map(im => { if (!sel.iids.has(im)) return im; const c = xf(m, im.x + im.w / 2, im.y + im.h / 2); const ni = { ...im, x: c.x - im.w * k / 2, y: c.y - im.h * k / 2, w: im.w * k, h: im.h * k }; niids.add(ni); return ni; });
   sel.ids = nids; sel.tids = ntids; sel.iids = niids; sel.m = [1, 0, 0, 1, 0, 0];
   renderLayer(sel.pv); sel.bb = selBBox(sel); buildSelDom();

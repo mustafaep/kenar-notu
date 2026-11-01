@@ -113,6 +113,26 @@ G) YENİ (2.2.0)
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
 
 
+P) YENİ (2.5.3) — daha hızlı ve uzun cümlelerde daha doğru el yazısı düzeltme
+-----------------------------------------------------------------------------
+- Hız: Türkçe ve İngilizce aynı anda tanınıyor; yazım denetleyicisine her dil için tek bağlantı açık tutuluyor
+  ve tüm adaylar tek seferde denetleniyor; denetleyici yanıt vermezse her seferinde beklenmiyor.
+- Alt satıra geçen yazı aynı paragrafta kalıyor ve tek metin kutusuna yazılıyor.
+- Yan yana devam: daha önce düzeltilmiş bir metnin sağına (ya da hemen altına) yazdığınız devam, artık ayrı
+  kutu olmuyor; düzeltilince o metnin hemen arkasına eklenir ve hizalı kalır. Metin el yazınızdan kısa olsa da
+  uygulama el yazınızın nerede bittiğini hatırlar.
+- Düğmeyle modunda başka yere yazmaya geçince önceki satırlar kaybolmaz: düğme "Düzelt (2)" olur, hepsini düzeltir.
+- Otomatik modda kalemi satır sonunda (sağ kenarda) bırakırsanız alt satıra geçeceğiniz düşünülüp biraz daha beklenir.
+- Tanıma motoruna gerçek satır yüksekliği ve öncesindeki metin veriliyor (küçük/büyük harf ve noktalama daha doğru).
+- Hizala ve düzelt: ayrı düşmüş parçaları (metin kutuları ve düzeltilmemiş el yazısı) kement ile seçin →
+  seçim çubuğunda "Hizala ve düzelt". Parçalar okuma sırasına göre tek, sola hizalı metinde birleşir; çok yakın
+  parçalar (bölünmüş kelime) bitişik yazılır, satır aralığı büyükse yeni paragraf açılır; ardından yeniden düzeltilir.
+- Yapay zekâ ile son düzeltme (isteğe bağlı): kalem paneli → El yazısını düzelt → "Yapay zekâ ile son düzeltme":
+  Kapalı / Uzun cümlelerde (6 kelime ve üzeri) / Her zaman. Cihazdaki sonuç hemen yazılır, yapay zekâ el yazısının
+  görüntüsüne ve önceki metne bakıp birkaç saniye içinde düzeltir. Bağlı yapay zekâ (Gemini/Claude) ve internet gerekir.
+  (Eski "İngilizce dil bilgisini de düzelt" ayarı açıksa "Her zaman"a geçirildi.)
+
+
 O) YENİ (2.5.2) — düzeltilen yazıyı taşıma/silme, karalayarak silme, kalem stilleri
 ---------------------------------------------------------------------------------
 - Düzeltilen yazı (ve her metin kutusu, görsel):

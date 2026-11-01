@@ -565,3 +565,4 @@ html:not(.embed) .sidechip{display:none}
 .styleitem .st{display:flex;flex-direction:column;min-width:0;line-height:1.15}
 .styleitem .sample{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .styleitem small{color:#566074;margin-top:2px}
+.handbar.aibusy .hinfo small{color:var(--accent)}

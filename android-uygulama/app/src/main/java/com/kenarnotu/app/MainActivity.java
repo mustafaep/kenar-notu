@@ -533,6 +533,15 @@ public class MainActivity extends Activity {
             });
         }
 
+        @JavascriptInterface
+        public void inkCorrectText(final String json) {
+            runOnUiThread(() -> {
+                JSONObject req;
+                try { req = new JSONObject(json); } catch (Exception e) { return; }
+                ensureCorrector().correctText(req, r -> js("__inkResult", r.toString()));
+            });
+        }
+
         /* ---- sesli okuma ---- */
         @JavascriptInterface
         public String speak(final String text, final String lang, final float rate, final String voice) {
