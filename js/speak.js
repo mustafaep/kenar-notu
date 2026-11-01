@@ -65,7 +65,7 @@ function voiceLabel(v) {
   const short = v.name.replace(/^(en|tr)[-_][A-Za-z]{2}[-_]?/i, '').replace(/-local$|-network$/i, '').slice(0, 26);
   return `${g} · ${v.lang} · ${where}${short ? ' · ' + short : ''}`;
 }
-function voiceSettingsRows() {
+function voiceSettingsGroups() {
   const sel = h('select', { 'aria-label': 'İngilizce ses', style: { width: '100%' } });
   const fill = () => {
     const en = TTS.voices.filter(v => /^en/i.test(v.lang) && v.installed !== false)
@@ -80,13 +80,15 @@ function voiceSettingsRows() {
   setTimeout(() => { if (sel.isConnected) ttsLoadVoices(); }, 1200);
   sel.addEventListener('change', () => { S.voice.name = sel.value; saveSettings(); speakText('Hello! This is how I sound.', { lang: 'en-GB' }); });
   return [
-    h('span', { class: 'lbl' }, 'Sesli okuma'),
-    toggleRow('setVoice', 'Kelimeye basılı tutunca sesli oku', S.voice.hold, v => { S.voice.hold = v; saveSettings(); }, 'Seçim çubuğundaki “Dinle” her zaman çalışır'),
-    h('label', { class: 'field' }, 'İngilizce ses', h('div', { class: 'selectw' }, sel, icon(IC.chev))),
-    rangeRow('setRate', 'Konuşma hızı', 50, 150, 5, Math.round((S.voice.rate || 1) * 100), v => '%' + Math.round(v), v => { S.voice.rate = v / 100; saveSettings(); }),
-    h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-      h('button', { class: 'btn small', type: 'button', onclick: () => speakText('Hello! This is how I sound.', { lang: 'en-GB' }) }, icon(IC.speak), 'Dene'),
-      TTS_NATIVE() ? h('button', { class: 'btn small', type: 'button', onclick: () => { try { KenarNative.ttsSettings(); } catch (e) { } } }, icon(IC.gear), 'Ses ayarları') : null),
-    h('p', { class: 'notice' }, TTS_NATIVE() ? 'İngiliz sesi listede yoksa “Ses ayarları”ndan tercih edilen motorun (Samsung ya da Google) İngilizce (Birleşik Krallık) ses paketini indirin.' : 'Tarayıcıdaki sesler kullanılır; İngiliz kadın sesi varsa otomatik seçilir.')
+    sGroup(null, [
+      toggleRow('setVoice', 'Kelimeye basılı tutunca sesli oku', S.voice.hold, v => { S.voice.hold = v; saveSettings(); }, 'Seçim çubuğundaki “Dinle” her zaman çalışır')
+    ]),
+    sGroup('Ses', [
+      sRow('İngilizce ses', null, h('div', { class: 'selectw' }, sel, icon(IC.chev)), true),
+      rangeRow('setRate', 'Konuşma hızı', 50, 150, 5, Math.round((S.voice.rate || 1) * 100), v => '%' + Math.round(v), v => { S.voice.rate = v / 100; saveSettings(); }),
+      h('div', { class: 'sbtns' },
+        h('button', { class: 'btn small', type: 'button', onclick: () => speakText('Hello! This is how I sound.', { lang: 'en-GB' }) }, icon(IC.speak), 'Dene'),
+        TTS_NATIVE() ? h('button', { class: 'btn small', type: 'button', onclick: () => { try { KenarNative.ttsSettings(); } catch (e) { } } }, icon(IC.gear), 'Ses ayarları') : null)
+    ], TTS_NATIVE() ? 'İngiliz sesi listede yoksa “Ses ayarları”ndan tercih edilen motorun (Samsung ya da Google) İngilizce (Birleşik Krallık) ses paketini indirin.' : 'Tarayıcıdaki sesler kullanılır; İngiliz kadın sesi varsa otomatik seçilir.')
   ];
 }

@@ -276,26 +276,29 @@ function pfApply(job, sel) {
 window.pageFixReset = () => { clearTimeout(PF.autoT); pfClose(); if (PF.chip) { PF.chip.remove(); PF.chip = null; } PF.fixedVer.clear(); PF.lastPage = 0; };
 
 /* ---------- ayarlar ---------- */
-function pageFixSettingsRows() {
+function pageFixSettingsGroups() {
   const c = aiCfg(), P = S.pageFix;
-  const keys = h('p', { class: 'notice' }, 'Gemini anahtarı: ' + (c.gkey ? 'var' : 'yok') + ' · Claude anahtarı: ' + (c.key ? 'var' : 'yok') + '. Sayfanın görüntüsü seçilen sağlayıcıya gönderilir.');
-  const gsel = h('select', { 'aria-label': 'Gemini modeli', style: { width: '100%' } }, ...G_MODELS.map(([v, l]) => h('option', { value: v }, l)));
+  const gsel = h('select', { 'aria-label': 'Gemini modeli' }, ...G_MODELS.map(([v, l]) => h('option', { value: v }, l)));
   gsel.value = P.gmodel || PF_GEMINI_DEFAULT; if (gsel.value !== (P.gmodel || PF_GEMINI_DEFAULT)) gsel.append(h('option', { value: P.gmodel }, P.gmodel)), gsel.value = P.gmodel;
   gsel.addEventListener('change', () => { P.gmodel = gsel.value; saveSettings(); });
-  const csel = h('select', { 'aria-label': 'Claude modeli', style: { width: '100%' } }, ...AI_MODELS.map(([v, l]) => h('option', { value: v }, l)));
+  const csel = h('select', { 'aria-label': 'Claude modeli' }, ...AI_MODELS.map(([v, l]) => h('option', { value: v }, l)));
   csel.value = P.cmodel || PF_CLAUDE_DEFAULT; csel.addEventListener('change', () => { P.cmodel = csel.value; saveSettings(); });
+  const selw = s => h('div', { class: 'selectw' }, s, icon(IC.chev));
   return [
-    h('span', { class: 'lbl' }, 'Sayfayı düzelt'),
-    h('p', { class: 'notice' }, 'Sayfanın tamamını okuyup el yazısını metne çevirir ve bağlama bakarak düzeltir. Önce önizleme gösterilir.'),
-    h('div', { class: 'field' }, 'Not sayfalarında', segRow([['layout', 'Stillerle düzenle'], ['inplace', 'Yerinde düzelt']], P.mode || 'layout', v => { P.mode = v; saveSettings(); }, 'Not sayfalarında')),
-    h('p', { class: 'notice' }, 'Stillerle düzenle: sayfadaki yazı ve kalem stillerin yapay zekâya gönderilir; sayfa başlık, terim : anlamı, örnek, ↳ çeviri, ★ ipucu düzeninde baştan dizilir. Sığmayan kısım sonraki sayfaya geçer. PDF sayfalarında her zaman yerinde düzeltilir.'),
-    toggleRow('pfFixes', 'Düzeltmeleri sayfanın sonuna yaz', P.fixes !== false, v => { P.fixes = v; saveSettings(); }, 'Kırmızı kalemle: ✗ yazdığın · ✓ doğrusu · kısa açıklama'),
-    segRow([['gemini', 'Önce Gemini'], ['claude', 'Önce Claude']], P.first || 'gemini', v => { P.first = v; saveSettings(); }, 'İlk tercih'),
-    toggleRow('pfFallback', 'Olmazsa diğerini kullan', P.fallback !== false, v => { P.fallback = v; saveSettings(); }, 'Anahtar yoksa, günlük sınır dolduysa ya da hata olursa'),
-    h('label', { class: 'field' }, 'Gemini modeli', h('div', { class: 'selectw' }, gsel, icon(IC.chev))),
-    h('label', { class: 'field' }, 'Claude modeli', h('div', { class: 'selectw' }, csel, icon(IC.chev))),
-    h('div', { class: 'field' }, 'Ne zaman düzeltilsin', segRow([['manual', 'Ben isteyince'], ['leave', 'Sayfadan çıkınca']], P.when || 'manual', v => { P.when = v; saveSettings(); }, 'Ne zaman düzeltilsin')),
-    toggleRow('pfReview', 'Uygulamadan önce önizle', P.review !== false, v => { P.review = v; saveSettings(); }, 'Kapalıysa öneriler doğrudan uygulanır (Geri al ile dönülür)'),
-    keys
+    sGroup('Düzen', [
+      sRow('Not sayfalarında', 'Stillerle düzenle: sayfa başlık · terim : anlamı · örnek · ↳ çeviri · ★ ipucu düzeninde baştan dizilir. PDF sayfaları her zaman yerinde düzeltilir.',
+        segRow([['layout', 'Stillerle düzenle'], ['inplace', 'Yerinde düzelt']], P.mode || 'layout', v => { P.mode = v; saveSettings(); }, 'Not sayfalarında'), true),
+      toggleRow('pfFixes', 'Düzeltmeleri sayfanın sonuna yaz', P.fixes !== false, v => { P.fixes = v; saveSettings(); }, 'Kırmızı kalemle: ✗ yazdığın · ✓ doğrusu · kısa açıklama'),
+      toggleRow('pfReview', 'Uygulamadan önce önizle', P.review !== false, v => { P.review = v; saveSettings(); }, 'Kapalıysa doğrudan uygulanır (Geri al ile dönülür)')
+    ]),
+    sGroup('Ne zaman', [
+      sRow('Sayfa ne zaman düzeltilsin', 'Sayfadan çıkınca: yazdığın sayfadan çıktığında arka planda hazırlanır', segRow([['manual', 'Ben isteyince'], ['leave', 'Sayfadan çıkınca']], P.when || 'manual', v => { P.when = v; saveSettings(); }, 'Ne zaman'), true)
+    ]),
+    sGroup('Yapay zekâ', [
+      sRow('İlk tercih', null, segRow([['gemini', 'Önce Gemini'], ['claude', 'Önce Claude']], P.first || 'gemini', v => { P.first = v; saveSettings(); }, 'İlk tercih'), true),
+      toggleRow('pfFallback', 'Olmazsa diğerini kullan', P.fallback !== false, v => { P.fallback = v; saveSettings(); }, 'Anahtar yoksa, günlük sınır dolduysa ya da hata olursa'),
+      sRow('Gemini modeli', null, selw(gsel)),
+      sRow('Claude modeli', null, selw(csel))
+    ], 'Gemini anahtarı: ' + (c.gkey ? 'var' : 'yok') + ' · Claude anahtarı: ' + (c.key ? 'var' : 'yok') + '. Sayfanın görüntüsü seçilen sağlayıcıya gönderilir.')
   ];
 }

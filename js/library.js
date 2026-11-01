@@ -304,30 +304,6 @@ async function copyImage(blob) {
 }
 
 /* ---------- ayarlar ---------- */
-function openSettings() {
-  const body = h('div', { class: 'col', style: { display: 'flex', flexDirection: 'column', gap: '14px' } },
-    h('span', { class: 'lbl' }, 'Görünüm'),
-    segRow([['system', 'Sistem'], ['light', 'Açık'], ['dark', 'Koyu']], S.prefs.theme, v => { S.prefs.theme = v; saveSettings(); applyTheme(); }, 'Tema'),
-    h('span', { class: 'lbl' }, 'OneDrive'),
-    h('p', { class: 'notice' }, OD.signedIn() ? `${OD.accountName()} hesabına bağlı.` : OD.clientId() ? 'Uygulama kimliği kayıtlı, giriş yapılmadı.' : 'Henüz bağlanmadı.'),
-    h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-      h('button', { class: 'btn small', type: 'button', onclick: () => { closeM(); openOneDrive(); } }, icon(IC.cloud), OD.signedIn() ? 'Dosyalara göz at' : 'Bağlan'),
-      OD.clientId() ? h('button', { class: 'btn small', type: 'button', onclick: async () => { await OD.logout(); S.od.clientId = ''; saveSettings(); try { localStorage.setItem('kn.settings', JSON.stringify(S)); } catch (e) { } await OD.init(); closeM(); refreshRail(); toast('OneDrive ayarı sıfırlandı'); } }, 'Uygulama kimliğini sıfırla') : null),
-    toggleRow('setAuto', 'OneDrive’a otomatik eşitle', S.od.auto, v => { S.od.auto = v; saveSettings(); }),
-    h('span', { class: 'lbl' }, 'Yapay zekâ (sözlük, çeviri, el yazısı)'),
-    h('p', { class: 'notice' }, aiReady() ? 'Bağlı · ' + aiName() + ' · ' + aiModel() : 'Bağlı değil. Claude ya da ücretsiz Gemini anahtarı girin.'),
-    h('div', null, h('button', { class: 'btn small', type: 'button', onclick: () => { closeM(); aiSettingsModal(); } }, icon(IC.spark), aiReady() ? 'Ayarları değiştir' : 'Yapay zekâyı bağla')),
-    ...(window.pageFixSettingsRows ? pageFixSettingsRows() : []),
-    h('span', { class: 'lbl' }, 'Düzenleyici'),
-    toggleRow('setZoom', 'Yakınlaştırma düğmeleri', S.prefs.zoomCtl, v => { S.prefs.zoomCtl = v; saveSettings(); }, 'Sağ alttaki − % + kontrolü'),
-    toggleRow('setPager', 'Sayfa numarası göstergesi', S.prefs.pager, v => { S.prefs.pager = v; saveSettings(); }),
-    ...(window.voiceSettingsRows ? voiceSettingsRows() : []),
-    h('span', { class: 'lbl' }, 'Depolama'),
-    h('p', { class: 'notice', id: 'storeInfo' }, Store.ok ? 'Notlar bu tabletin tarayıcı deposunda tutulur.' : 'Tarayıcı depolaması kapalı; notlar yalnızca bu oturumda kalır.'));
-  const closeM = modal({ title: 'Ayarlar', body, actions: [{ label: 'Kapat', kind: 'primary' }] });
-  try { navigator.storage.estimate().then(e => { const el = $('#storeInfo'); if (el && e.usage != null) el.textContent += ` Kullanılan: ${fmtSize(e.usage)}.`; }); } catch (e) { }
-}
-
 /* ---------- örnek not ---------- */
 async function seedSample() {
   const t = Date.now() - 60000;

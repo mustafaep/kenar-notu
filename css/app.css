@@ -1,6 +1,6 @@
 /* Kenar Notu · masa ve kağıt: mürekkep laciverdi çerçeve, kraliyet mavisi eylem, mercan kenar çizgisi */
 :root{
-  --brand:#18245C; --brand-text:#18245C; --accent:#2F5BEA; --accent-ink:#FFFFFF; --accent-soft:#E3E9FB;
+  --brand:#18245C; --brand-text:#18245C; --accent:#2F5BEA; --accent-ink:#FFFFFF; --accent-soft:#E3E9FB; --seg-on:#FFFFFF;
   --coral:#EE5A43; --coral-ink:#B93A26; --coral-soft:#FCE7E3;
   --bg:#ECEFF5; --desk:#DDE2EC; --chrome:#FFFFFF; --chrome-2:#F1F4F9; --ink:#1A2033; --muted:#566074; --line:#D6DCE6;
   --ok:#1F7A45; --ok-soft:#DDF3E6; --warn:#8A4B00; --warn-soft:#FFF0D6; --danger:#BF3329;
@@ -14,7 +14,7 @@
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --brand-text:#E7EAF1; --accent:#7D9BFF; --accent-ink:#0B1233; --accent-soft:rgba(125,155,255,.17);
+  --brand-text:#E7EAF1; --accent:#7D9BFF; --accent-ink:#0B1233; --accent-soft:rgba(125,155,255,.17); --seg-on:#3A4252;
   --coral-ink:#FF8C76; --coral-soft:rgba(238,90,67,.18);
   --bg:#12151C; --desk:#0C0F14; --chrome:#1B1F28; --chrome-2:#262B36; --ink:#E7EAF1; --muted:#A0AABA; --line:#323947;
   --ok:#5CD290; --ok-soft:rgba(92,210,144,.15); --warn:#FFB55C; --warn-soft:rgba(255,181,92,.15); --danger:#FF7B70;
@@ -22,7 +22,7 @@
   --shadow-sm:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.3); --shadow:0 2px 6px rgba(0,0,0,.4),0 18px 40px rgba(0,0,0,.5);
   --page-shadow:0 1px 2px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.4); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --brand-text:#E7EAF1; --accent:#7D9BFF; --accent-ink:#0B1233; --accent-soft:rgba(125,155,255,.17);
+  --brand-text:#E7EAF1; --accent:#7D9BFF; --accent-ink:#0B1233; --accent-soft:rgba(125,155,255,.17); --seg-on:#3A4252;
   --coral-ink:#FF8C76; --coral-soft:rgba(238,90,67,.18);
   --bg:#12151C; --desk:#0C0F14; --chrome:#1B1F28; --chrome-2:#262B36; --ink:#E7EAF1; --muted:#A0AABA; --line:#323947;
   --ok:#5CD290; --ok-soft:rgba(92,210,144,.15); --warn:#FFB55C; --warn-soft:rgba(255,181,92,.15); --danger:#FF7B70;
@@ -58,7 +58,7 @@ small{display:block;font-size:12px;color:var(--muted);font-weight:400}
 .seg{display:flex;background:var(--chrome-2);border-radius:11px;padding:3px;gap:2px}
 .seg button{flex:1;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;background:transparent;border-radius:8px;min-height:38px;padding:0 10px;font-size:14px;color:var(--muted)}
 .seg button svg.i{width:18px;height:18px}
-.seg button.on{background:var(--chrome);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.14)}
+.seg button.on{background:var(--seg-on);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.14)}
 .lbl{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .range{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 12px}
 .range label{font-size:14px}
@@ -608,3 +608,76 @@ html:not(.embed) .sidechip{display:none}
 .pllist textarea{font-size:16px}
 .pldraw b{font:600 14px var(--f-ui)}
 .plhint{flex:1;align-self:center;color:var(--muted);font:12px var(--f-ui)}
+
+/* ---------- Ayarlar (2.5.6) ---------- */
+.setback{padding:20px}
+.setwin{width:min(960px,100%);height:min(760px,100%);max-height:100%;display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto minmax(0,1fr);background:var(--chrome);border-radius:22px;box-shadow:var(--shadow);overflow:hidden}
+.sethead{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:12px 12px 12px 18px;border-bottom:1px solid var(--line)}
+.sethead .ico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:none}
+.sethead h2{flex:1;margin:0;font:700 21px var(--f-display)}
+.setnav{display:flex;flex-direction:column;gap:2px;padding:12px 10px;border-right:1px solid var(--line);overflow:auto}
+.setnav button{display:flex;align-items:center;gap:12px;min-height:46px;padding:0 12px;border:0;border-radius:12px;background:none;color:var(--ink);font:500 15px var(--f-ui);text-align:left;flex:none}
+.setnav button svg.i{width:20px;height:20px;color:var(--muted);flex:none}
+.setnav button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.setnav button.on svg.i{color:var(--accent)}
+.setver{margin-top:auto;padding:12px 12px 4px;font-size:12px;color:var(--muted)}
+.setmain{overflow:auto;padding:22px 26px 32px;background:var(--bg);-webkit-overflow-scrolling:touch}
+.sethd{margin:0 0 18px 2px}
+.sethd h3{margin:0;font:700 22px var(--f-display)}
+.sethd p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.sgroup{margin:0 0 22px}
+.sgroup>h4{margin:0 0 8px 4px;font:600 12px var(--f-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.scard{background:var(--chrome);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.scard>*{margin:0;padding:12px 16px}
+.scard>*+*{border-top:1px solid var(--line)}
+.srow{display:flex;align-items:center;gap:14px;min-height:56px}
+.srow.stack{flex-direction:column;align-items:stretch;gap:10px}
+.stext{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.stext b{font:500 15px var(--f-ui);color:var(--ink)}
+.stext small{font-size:13px;line-height:1.4;color:var(--muted)}
+.srow>.selectw{flex:0 1 260px;min-width:180px}
+.srow.stack>.selectw{flex:none}
+.srow .selectw select{width:100%}
+.scard>.toggle{min-height:56px;font-size:15px}
+.scard>.toggle small{display:block;font-size:13px;line-height:1.4;color:var(--muted);margin-top:2px}
+.scard>.range{padding-top:14px;padding-bottom:10px}
+.scard>.range label{font-size:15px}
+.sbtns{display:flex;gap:8px;flex-wrap:wrap}
+.sfoot{margin:8px 6px 0;font-size:13px;line-height:1.5;color:var(--muted)}
+.sfoot .btn{margin-top:6px}
+.penpad{min-height:120px;touch-action:none;display:flex;align-items:flex-end;background:repeating-linear-gradient(0deg,transparent 0 27px,var(--line) 27px 28px)}
+.penpad .readout{width:100%}
+@media (max-width:760px){
+  .setback{padding:0}
+  .setwin{width:100%;height:100%;border-radius:0;grid-template-columns:1fr;grid-template-rows:auto auto minmax(0,1fr)}
+  .setnav{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:8px 10px;gap:4px}
+  .setnav button{min-height:40px;padding:0 12px;white-space:nowrap}
+  .setver{display:none}
+  .setmain{padding:18px 14px 28px}
+  .srow{flex-wrap:wrap}
+  .srow>.selectw{flex:1 1 100%}
+}
+
+/* ---------- ⋯ paneli ---------- */
+.mpanel{gap:12px!important}
+.mside{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:var(--accent-soft);color:var(--accent);font-size:13px}
+.mside b{font-weight:600}
+.mside svg.i{width:18px;height:18px;flex:none}
+.mtiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mtile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:78px;padding:8px 4px;border:1px solid var(--line);border-radius:14px;background:var(--chrome);color:var(--ink);font:500 13px/1.25 var(--f-ui);text-align:center}
+.mtile .ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.mtile .ico svg.i{width:19px;height:19px}
+.mtile:active{background:var(--chrome-2)}
+.mtoggles{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.mtoggles .toggle{padding:6px 12px;min-height:52px}
+.mtoggles .toggle+.toggle{border-top:1px solid var(--line)}
+.mtoggles .toggle small{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.mfoot{display:flex;gap:8px}
+.mfoot .btn{flex:1}
+
+/* ---------- yan belge altta (dik konum) ---------- */
+.ebody.split-below{flex-direction:column}
+.ebody.split-below .sidepane{min-width:0;min-height:220px;width:100%!important;border-left:0;border-top:1px solid var(--line)}
+.ebody.split-below .split-handle{left:0;right:0;top:-9px;bottom:auto;width:auto;height:18px;cursor:row-resize}
+.ebody.split-below .split-handle i{width:56px;height:5px}
+@media (orientation:portrait) and (min-width:761px){.setwin{height:min(1000px,100%)}}

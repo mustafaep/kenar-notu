@@ -113,6 +113,23 @@ G) YENİ (2.2.0)
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
 
 
+S) YENİ (2.5.6) — yeni Ayarlar ekranı, sağ belgede sayfa düzenleme, dik konumda alt alta belge
+------------------------------------------------------------------------------------------------
+- Ayarlar yeniden düzenlendi: solda bölümler (Görünüm · S Pen ve dokunma · El yazısı · Sayfayı düzelt ·
+  Sesli okuma · Yapay zekâ · OneDrive ve depolama), sağda o bölümün ayarları gruplu kartlar hâlinde.
+  Kitaplıkta sol menü → Ayarlar; düzenleyicide ⋯ → "Tüm ayarlar". S Pen testi de buraya taşındı.
+- ⋯ paneli sadeleşti: üstte işlem kutucukları (Sayfayı düzelt, Boşlukları kapat, Tüm sayfalar, Belgede ara,
+  Sözlük, Yan yana belge, Tam ekran), altında dört hızlı ayar, en altta "Araç çubuğu" ve "Tüm ayarlar".
+- Metnin devamına ekle artık açılıp kapatılabiliyor: Ayarlar → El yazısı → "Metnin devamına ekle"
+  (ayrıca ⋯ → Hızlı ayarlar ve kalem panelindeki El yazısını düzelt bölümü). Kapalıyken her düzeltme ayrı metin kutusu olur.
+- Yan yana belgede sağ taraf: sağdaki belgeye dokunup ⋯ açınca panelin üstünde "Sağdaki belge" yazar ve
+  Sayfayı düzelt / Boşlukları kapat o belgede çalışır. Araç çubuğundaki "Sayfayı düzelt" düğmesi ve sağ belgenin
+  sol üstündeki çipin ⋯ menüsü de aynı işlemleri sunar. Önizleme paneli sağ belgenin içinde açılır.
+- Tablet dik tutulunca ikinci belge yanda değil altta açılır; aradaki çizgiyi sürükleyerek yüksekliği ayarlayın.
+  Ayar: Ayarlar → Görünüm → "İkinci belgenin yeri": Otomatik / Hep yanda / Hep altta.
+- Koyu temada seçili düğmeler daha belirgin.
+
+
 R) YENİ (2.5.5) — sayfayı kalem stillerinle düzenleme (örnek kelime defteri düzeni)
 ---------------------------------------------------------------------------------
 - Not sayfalarında "Sayfayı düzelt" artık sayfayı baştan, kalem stillerinle dizer. Yapay zekâya sayfadaki bütün

@@ -216,7 +216,7 @@ async function runGroup(g, auto) {
   const bb = live.reduce((b, s) => bbUnion(b, strokeBB(s)), null);
   if (auto && (lines.some(l => l.bb.y1 - l.bb.y0 > 150) || (live.length < 2 && bb.x1 - bb.x0 < 40))) return; // çizim ya da tek işaret olabilir
   const lh = medianLineH(lines);
-  const cont = findContinuation(g.pv, lines[0].bb, lh);
+  const cont = S.hand.cont !== false ? findContinuation(g.pv, lines[0].bb, lh) : null;
   HW.busy++; showHandBusy(g.pv, bb);
   try {
     const r = await handRecognizeLines(lines.map(l => l.strokes.map(strokePts)), S.hand.lang, cont ? cont.text : '', { lineH: lh, pageW: g.pv.meta.w });
@@ -469,12 +469,12 @@ function scaleSelBy(k) {
 }
 
 /* ---------- kalem panelindeki ayarlar ---------- */
-function handSettingsRows() {
+function handStatusNote() {
   const st = h('p', { class: 'notice handst' });
   const showSt = () => {
     if (!st.isConnected && HW.onStatus === showSt) { HW.onStatus = null; return; }
     st.innerHTML = '';
-    if (S.hand.mode === 'off') { st.textContent = 'Kalemle yazdığınız satırlar metne çevrilir; yazım hataları düzeltilir. Türkçe ve İngilizce karışık yazılabilir. Bir metnin yanına ya da altına yazdığınız devam, o metne eklenir.'; return; }
+    if (S.hand.mode === 'off') { st.textContent = 'Kalemle yazdığınız satırlar metne çevrilir; yazım hataları düzeltilir. Türkçe ve İngilizce karışık yazılabilir.' + (S.hand.cont !== false ? ' Bir metnin yanına ya da altına yazdığınız devam, o metne eklenir.' : ''); return; }
     if (HW_NATIVE()) {
       const s = HW.status || {};
       const ok = s.tr === 'ready' && s.en === 'ready', dl = s.tr === 'downloading' || s.en === 'downloading';
@@ -485,10 +485,18 @@ function handSettingsRows() {
     } else st.textContent = aiReady() ? 'Bu tarayıcıda el yazısı ' + aiName() + ' ile okunur (internet gerekir).' : 'Bu tarayıcıda el yazısını okumak için yapay zekâyı bağlayın.';
   };
   HW.onStatus = showSt;
-  handCheckModels();
+  handCheckModels(); showSt();
+  st._show = showSt;
+  return st;
+}
+function handAiNote() {
   const aiNote = h('p', { class: 'notice' });
   const showAi = () => { aiNote.textContent = (S.hand.ai || 'off') === 'off' ? 'Yalnızca cihazdaki tanıma ve yazım denetimi kullanılır.' : 'Cihazdaki sonuç hemen yazılır; ' + (aiReady() ? aiName() : 'bağlı yapay zekâ') + ' el yazısının görüntüsüne ve önceki metne bakıp birkaç saniye içinde son düzeltmeyi yapar' + (S.hand.ai === 'long' ? ' (6 kelime ve üzeri)' : '') + '. İnternet gerekir.' + (aiReady() ? '' : ' Önce yapay zekâyı bağlayın (Sözlük → ⚙).'); };
-  showAi();
+  showAi(); aiNote._show = showAi;
+  return aiNote;
+}
+function handSettingsRows() {
+  const st = handStatusNote(), showSt = st._show, aiNote = handAiNote(), showAi = aiNote._show;
   const rows = h('div', { class: 'col handset' },
     h('hr', { class: 'sep' }), h('div', { class: 'lbl' }, 'El yazısını düzelt'),
     segRow([['off', 'Kapalı'], ['button', 'Düğmeyle'], ['auto', 'Otomatik']], S.hand.mode, v => { S.hand.mode = v; saveSettings(); handReset(); if (v !== 'off' && HW_NATIVE()) { const s = HW.status || {}; if (s.tr !== 'ready' || s.en !== 'ready') try { KenarNative.inkPrepare(); } catch (e) { } } showSt(); }),
@@ -497,13 +505,33 @@ function handSettingsRows() {
     h('small', { class: 'segcap' }, 'Düzeltilen metnin yazı tipi'),
     segRow([['hand', 'El yazısı'], ['kalam', 'Kalam'], ['sans', 'Yalın'], ['serif', 'Tırnaklı']], S.hand.font, v => { S.hand.font = v; saveSettings(); }),
     rangeRow('hScale', 'Metin boyutu', 50, 200, 5, S.hand.scale, v => '%' + Math.round(v), v => { S.hand.scale = v; saveSettings(); }),
+    toggleRow('hCont', 'Metnin devamına ekle', S.hand.cont !== false, v => { S.hand.cont = v; saveSettings(); showSt(); }, 'Düzeltilmiş bir metnin yanına ya da altına yazdığın devam o metne eklenir'),
     S.hand.style ? h('p', { class: 'notice' }, 'Seçili kalem stili: ' + S.hand.style.name + ' (' + (FONT_LABEL[S.hand.style.font] || '') + ' ' + String(S.hand.style.size).replace('.', ',') + ' pt). Yazı tipi ve boyut bu stilden gelir; araç çubuğundaki stil düğmesinden değiştirin.') : null,
     h('small', { class: 'segcap' }, 'Yapay zekâ ile son düzeltme (isteğe bağlı)'),
     segRow([['off', 'Kapalı'], ['long', 'Uzun cümlelerde'], ['always', 'Her zaman']], S.hand.ai || 'off', v => { S.hand.ai = v; saveSettings(); showAi(); }),
     aiNote,
     st);
-  showSt();
   return rows;
+}
+/* Ayarlar ekranı için */
+function handSettingsGroups() {
+  const st = handStatusNote(), showSt = st._show, aiNote = handAiNote(), showAi = aiNote._show;
+  st.className = 'sfoot handst'; aiNote.className = 'sfoot';
+  return [
+    sGroup('Mod', [
+      sRow('El yazısını düzelt', 'Kalemle yazdığın satırlar metne çevrilir, yazım hataları düzeltilir', segRow([['off', 'Kapalı'], ['button', 'Düğmeyle'], ['auto', 'Otomatik']], S.hand.mode, v => { S.hand.mode = v; saveSettings(); handReset(); if (v !== 'off' && HW_NATIVE()) { const s = HW.status || {}; if (s.tr !== 'ready' || s.en !== 'ready') try { KenarNative.inkPrepare(); } catch (e) { } } showSt(); }), true),
+      sRow('Dil', null, segRow([['auto', 'Otomatik'], ['tr', 'Türkçe'], ['en', 'İngilizce']], S.hand.lang, v => { S.hand.lang = v; saveSettings(); }), true)
+    ], st),
+    sGroup('Düzeltilen metin', [
+      sRow('Yazı tipi', S.hand.style ? 'Seçili kalem stili kullanılıyor: ' + S.hand.style.name : null, segRow([['hand', 'El yazısı'], ['kalam', 'Kalam'], ['sans', 'Yalın'], ['serif', 'Tırnaklı']], S.hand.font, v => { S.hand.font = v; saveSettings(); }), true),
+      rangeRow('sHScale', 'Metin boyutu', 50, 200, 5, S.hand.scale, v => '%' + Math.round(v), v => { S.hand.scale = v; saveSettings(); }),
+      toggleRow('sHCont', 'Metnin devamına ekle', S.hand.cont !== false, v => { S.hand.cont = v; saveSettings(); showSt(); }, 'Düzeltilmiş bir metnin yanına ya da altına yazdığın devam, ayrı kutu olmadan o metnin arkasına eklenir'),
+      toggleRow('sScratch', 'Karalayarak sil', S.feel.scratch !== false, v => { S.feel.scratch = v; saveSettings(); }, 'Yazının üzerini zikzakla karalayınca silinir')
+    ]),
+    sGroup('Yapay zekâ ile son düzeltme', [
+      sRow('Ne zaman', null, segRow([['off', 'Kapalı'], ['long', 'Uzun cümlelerde'], ['always', 'Her zaman']], S.hand.ai || 'off', v => { S.hand.ai = v; saveSettings(); showAi(); }), true)
+    ], aiNote)
+  ];
 }
 
 /* seçim çubuğu düğmeleri */

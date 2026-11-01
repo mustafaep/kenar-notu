@@ -21,7 +21,8 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
   Bilmediğim kelimeye basılı tutunca İngiliz kadın sesiyle telaffuzunu dinliyorum, sözlük penceresinde anlamına bakıyorum.
 - **Kelime ve ders notu tutmak.** Hazır kalem stilleriyle (Terim · Anlamı · İngilizce örnek · Türkçe çeviri ·
   İpucu · Hatalı/Doğru) her not aynı düzende ve renklerde oluyor.
-- **Kitap ile defteri yan yana açmak.** Solda PDF, sağda boş kareli sayfa; tek araç çubuğu iki tarafta da çalışıyor.
+- **Kitap ile defteri yan yana açmak.** Solda PDF, sağda boş kareli sayfa; tek araç çubuğu iki tarafta da çalışıyor,
+  sayfa düzeltme de sağdaki defterde çalışıyor. Tableti dik tutunca defter alta geçiyor.
 - **Ekrandan parça almak.** Bir tablonun ya da şeklin ekran görüntüsünü alıp not sayfama yapıştırıyorum.
 - **Bilgisayarla eşitlemek.** Dosyalar OneDrive'da; tablette notladığım PDF bilgisayarımdaki aynı dosyada güncelleniyor.
 
@@ -56,7 +57,7 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
   Web'de bağlı yapay zekâ ile çalışır.
 - Kapalı / Düğmeyle / Otomatik modları; TR/EN düğmesiyle diğer dilde yeniden okuma; A− / A+; Geri al.
 - Alt satıra geçen yazı aynı paragrafta kalır; düzeltilmiş bir metnin yanına ya da altına yazılan devam, o metnin
-  hemen arkasına eklenir ve hizalı kalır.
+  hemen arkasına eklenir ve hizalı kalır (Ayarlar → El yazısı → "Metnin devamına ekle" ile kapatılabilir).
 - Daha önce yazılanlar için: kement ile seç → "Yazıya dök". Ayrı düşmüş parçalar için: kement ile seç →
   **Hizala ve düzelt** (parçalar okuma sırasıyla tek, sola hizalı metinde birleşir ve yeniden düzeltilir).
 - İsteğe bağlı **yapay zekâ ile son düzeltme** (Kapalı / Uzun cümlelerde / Her zaman): cihazdaki sonuç hemen yazılır,
@@ -105,7 +106,8 @@ olduğu için (A4 = 595 × 842 pt) boyutlar birebir aynıdır.
   sürükleyerek sıralama, sayfa ekleme/çoğaltma/silme.
 - Yapışkan notlar, metin kutuları, görsel ekleme, bölge ekran görüntüsü.
 - Kitaplıkta klasörler, favoriler, son açılanlar, çoklu seçim.
-- Yan yana iki belge; açık/koyu tema; okuma modu; PDF renklerini ters çevirme.
+- Yan yana iki belge (dik tutunca alt alta); açık/koyu tema; okuma modu; PDF renklerini ters çevirme.
+- Bölümlere ayrılmış Ayarlar ekranı (Görünüm, S Pen, El yazısı, Sayfayı düzelt, Sesli okuma, Yapay zekâ, OneDrive).
 - Şifreli (düzenleme kısıtlı) ya da hasarlı PDF'ler kaydederken onarılır (qpdf).
 
 **OneDrive**
@@ -128,6 +130,7 @@ js/                  Uygulama kodu
   pages.js           Sayfa paneli, tüm sayfalar, arama
   pdfio.js           PDF okuma ve notlu PDF üretme (pdf-lib, qpdf)
   hand.js            El yazısını düzelt
+  settings.js        Ayarlar ekranı
   pagefix.js         Sayfayı düzelt (Gemini → Claude)
   pagelayout.js      Sayfayı kalem stilleriyle düzenleme (yerleşim, önizleme)
   flow.js            Boşlukları kapat, sayfaları birleştir

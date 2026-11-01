@@ -14,13 +14,24 @@ function otherNoteId() {
   } catch (e) { return null; }
 }
 function toolbarSplitState() { $$('.tool[data-item="split"]').forEach(b => b.classList.toggle('on', splitOpen())); }
-function applySplitW() { if (splitEl) splitEl.style.width = Math.round(clamp(S.splitW || .42, .25, .75) * 100) + '%'; }
+/* yan belge: yatayda sağda, dikte (ya da ayar "Hep altta") altta */
+function splitBelow() { const p = S.prefs.splitPos || 'auto'; return p === 'below' || (p === 'auto' && innerHeight > innerWidth); }
+function applySplitW() {
+  if (!splitEl) return;
+  const below = splitBelow(), eb = $('#edView .ebody');
+  eb.classList.toggle('split-below', below);
+  splitEl.style.width = below ? '' : Math.round(clamp(S.splitW || .42, .25, .75) * 100) + '%';
+  splitEl.style.height = below ? Math.round(clamp(S.splitH || .48, .25, .75) * 100) + '%' : '';
+  const hd = splitEl.querySelector('.split-handle'); if (hd) hd.setAttribute('aria-orientation', below ? 'horizontal' : 'vertical');
+}
+window.applySplitW = applySplitW;
+addEventListener('resize', () => { if (splitOpen()) applySplitW(); });
 function toggleSplit(openId) { if (EMBED) return; if (splitOpen()) closeSplit(); else openSplit(openId); }
 function openSplit(openId) {
   if (EMBED) return;
   if (!splitEl) {
     const iframe = h('iframe', { title: 'Yan belge', src: location.pathname + '?embed=1' + (openId ? '#open=' + openId : ''), allow: 'clipboard-write' });
-    const handle = h('div', { class: 'split-handle', title: 'Genişliği ayarlamak için sürükleyin', role: 'separator', 'aria-orientation': 'vertical' }, h('i'));
+    const handle = h('div', { class: 'split-handle', title: 'Boyutu ayarlamak için sürükleyin', role: 'separator', 'aria-orientation': 'vertical' }, h('i'));
     const closeBtn = h('button', { class: 'ibtn split-close', type: 'button', 'aria-label': 'Yan belgeyi kapat', title: 'Yan belgeyi kapat', onclick: closeSplit }, icon(IC.close));
     splitEl = h('div', { class: 'sidepane' }, handle, iframe, closeBtn);
     $('#edView .ebody').append(splitEl);
@@ -28,7 +39,8 @@ function openSplit(openId) {
       e.preventDefault(); try { handle.setPointerCapture(e.pointerId); } catch (er) { }
       handle.classList.add('drag'); document.body.classList.add('split-dragging');
       const box = $('#edView .ebody').getBoundingClientRect();
-      const mv = ev => { S.splitW = clamp((box.right - ev.clientX) / box.width, .25, .75); applySplitW(); };
+      const below = splitBelow();
+      const mv = ev => { if (below) S.splitH = clamp((box.bottom - ev.clientY) / box.height, .25, .75); else S.splitW = clamp((box.right - ev.clientX) / box.width, .25, .75); applySplitW(); };
       const up = () => { handle.classList.remove('drag'); document.body.classList.remove('split-dragging'); handle.removeEventListener('pointermove', mv); saveSettings(); };
       handle.addEventListener('pointermove', mv);
       handle.addEventListener('pointerup', up, { once: true }); handle.addEventListener('pointercancel', up, { once: true });
@@ -82,6 +94,8 @@ if (EMBED) {
       { label: 'Başka belge aç', icon: IC.notes, onClick: () => closeEditor() },
       od ? { label: 'Şimdi kaydet', icon: IC.cloudOk, sub: od.name || '', onClick: syncNow } : { label: 'OneDrive’a kaydet…', icon: IC.cloud, onClick: () => openOneDrive({ mode: 'save', note: ed.note, bytes: ed.pdfBytes }) },
       { label: 'PDF olarak indir', icon: IC.dl, onClick: () => exportNote(ed.note, ed.pdfBytes) },
+      { label: 'Sayfayı düzelt', icon: IC.fixText, sub: 'Yapay zekâ ile oku ve düzenle', onClick: () => pageFixStart() },
+      flowCan(ed.pvs.indexOf(currentPage())) && ed.pvs.indexOf(currentPage()) < ed.pvs.length - 1 ? { label: 'Boşlukları kapat', icon: IC.upArrow, sub: 'Sonraki not sayfaları buradan devam eder', onClick: () => flowPages() } : null,
       { label: 'Tüm sayfalar', icon: IC.gridI, onClick: openPgrid },
       { label: 'Belgede ara', icon: IC.search, onClick: () => { S.panelTab = 'find'; setPanel(true); } },
       '-',
@@ -138,7 +152,7 @@ if (EMBED) {
   { const b3 = toolbarAction; toolbarAction = (id, b) => {
     const w = activeSide();
     if (w && id === 'image') { sideImage = w; $('#imgIn').click(); return; }
-    if (w && ['capture', 'find', 'pgrid', 'sticky'].includes(id)) { w.toolbarAction(id); return; }
+    if (w && ['capture', 'find', 'pgrid', 'sticky', 'pagefix'].includes(id)) { w.toolbarAction(id); return; }
     b3(id, b);
     if (['invert', 'readonly'].includes(id)) { const sw = sideWin(); if (sw && sw.__syncView) sw.__syncView(); }
   }; }

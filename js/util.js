@@ -182,12 +182,12 @@ const DEF = {
   text: { font: 'sans', size: 16, color: '#1a2033', bold: false, wt: 0 },
   capture: { mode: 'rect' },
   feel: { pressure: .75, stab: .2, tilt: true, shape: true, scratch: true },
-  prefs: { finger: 'auto', side: 'eraser', twoTap: true, hover: true, penSeen: false, theme: 'system', invert: false, zoomCtl: true, pager: true, readOnly: false },
-  toolbar: null, splitW: 0.42, dictBox: null, folders: [], panelTab: 'pages',
+  prefs: { finger: 'auto', side: 'eraser', twoTap: true, hover: true, penSeen: false, theme: 'system', invert: false, zoomCtl: true, pager: true, readOnly: false, splitPos: 'auto' },
+  toolbar: null, splitW: 0.42, splitH: 0.48, dictBox: null, folders: [], panelTab: 'pages',
   od: { clientId: '', saveMode: 'overwrite', auto: true },
   fav: [], recent: ['#1a2033', '#c92a2a', '#2f5bea', '#2f9e44', '#ffd43b'],
   lastTool: 'pen', panelOpen: false, libView: 'all', sort: 'updated',
-  hand: { mode: 'off', lang: 'auto', font: 'hand', scale: 100, grammar: false, asked: false, style: null, ai: 'off' },
+  hand: { mode: 'off', lang: 'auto', font: 'hand', scale: 100, grammar: false, asked: false, style: null, ai: 'off', cont: true },
   voice: { hold: true, rate: 0.95, name: '', lang: 'en-GB' }, favSeed: 0,
   pageFix: { first: 'gemini', fallback: true, gmodel: '', cmodel: '', when: 'manual', review: true, mode: 'layout', fixes: true }
 };
@@ -251,6 +251,13 @@ function rangeRow(id, label, min, max, step, val, fmt, onInput) {
   const inp = h('input', { type: 'range', id, min, max, step, value: val });
   inp.addEventListener('input', () => { const v = parseFloat(inp.value); out.textContent = fmt(v); onInput(v); });
   return h('div', { class: 'range' }, h('label', { for: id }, label), out, inp);
+}
+/* Ayarlar ekranı: gruplu kartlar */
+function sGroup(title, rows, foot) {
+  return h('section', { class: 'sgroup' }, title ? h('h4', null, title) : null, h('div', { class: 'scard' }, ...rows.filter(Boolean)), foot ? (typeof foot === 'string' ? h('p', { class: 'sfoot' }, foot) : foot) : null);
+}
+function sRow(label, sub, control, stack) {
+  return h('div', { class: 'srow' + (stack ? ' stack' : '') }, h('div', { class: 'stext' }, h('b', null, label), sub ? h('small', null, sub) : null), control || null);
 }
 function toggleRow(id, label, val, onChange, sub) {
   const inp = h('input', { type: 'checkbox', id, role: 'switch', class: 'switch' }); inp.checked = !!val;

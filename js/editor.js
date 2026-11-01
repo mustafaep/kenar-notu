@@ -599,32 +599,33 @@ $('#exportBtn').addEventListener('click', () => {
 });
 $('#moreBtn').addEventListener('click', () => openPop($('#moreBtn'), settingsPanel, () => { ed.readout = null; }));
 function settingsPanel() {
-  const ro = h('div', { class: 'readout' }); ed.readout = ro; renderReadout(null);
-  return h('div', { class: 'col' },
-    h('h3', null, 'S Pen ve dokunma'),
-    h('div', { class: 'lbl' }, 'Parmakla çizim'),
-    segRow([['auto', 'Otomatik'], ['pen', 'Yalnız S Pen'], ['finger', 'Parmak da çizer']], S.prefs.finger, v => { S.prefs.finger = v; saveSettings(); }),
-    h('div', { class: 'lbl' }, 'S Pen yan tuşu'),
-    segRow([['eraser', 'Silgi'], ['lasso', 'Seçim'], ['hl', 'Fosforlu'], ['off', 'Kapalı']], S.prefs.side, v => { S.prefs.side = v; saveSettings(); }),
-    toggleRow('sTwo', 'İki parmakla dokun: geri al', S.prefs.twoTap, v => { S.prefs.twoTap = v; saveSettings(); }),
-    toggleRow('sHover', 'Havada imleç', S.prefs.hover, v => { S.prefs.hover = v; saveSettings(); if (!v) hideCursor(); }, 'Kalem yaklaşınca uç boyutunu gösterir'),
-    h('div', { class: 'lbl' }, 'S Pen testi'), ro,
-    h('div', { class: 'lbl' }, 'Görünüm'),
-    segRow([['system', 'Sistem'], ['light', 'Açık'], ['dark', 'Koyu']], S.prefs.theme, v => { S.prefs.theme = v; saveSettings(); applyTheme(); }),
-    toggleRow('sInvert', 'PDF renklerini ters çevir', S.prefs.invert, v => setInvert(v), 'Beyaz sayfalar koyu olur; gece okumak için'),
-    toggleRow('sRead', 'Okuma modu', S.prefs.readOnly, v => setReadOnly(v), 'Kalem ve parmak yalnızca kaydırır; yanlışlıkla çizilmez'),
-    toggleRow('sZoom', 'Yakınlaştırma düğmeleri', S.prefs.zoomCtl, v => { S.prefs.zoomCtl = v; saveSettings(); applyViewPrefs(); }, 'Sağ alttaki − % + kontrolü'),
-    toggleRow('sPager', 'Sayfa numarası', S.prefs.pager, v => { S.prefs.pager = v; saveSettings(); applyViewPrefs(); }, 'Alttaki “3 / 12” göstergesi'),
-    toggleRow('sVoice', 'Basılı tutunca sesli oku', S.voice.hold, v => { S.voice.hold = v; saveSettings(); }, 'Parmakla kelimeye basılı tutun · İngiliz kadın sesi'),
-    h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-      h('button', { type: 'button', class: 'btn small', onclick: () => openPop($('#moreBtn'), toolbarEditor) }, icon(IC.gear), 'Araç çubuğunu düzenle'),
-      h('button', { type: 'button', class: 'btn small', onclick: () => { closePop(); pageFixStart(); } }, icon(IC.fixText), 'Sayfayı düzelt'),
-      window.flowCan && flowCan(ed.pvs.indexOf(currentPage())) ? h('button', { type: 'button', class: 'btn small', onclick: () => { closePop(); flowPages(); } }, icon(IC.upArrow), 'Boşlukları kapat') : null,
-      h('button', { type: 'button', class: 'btn small', onclick: () => { closePop(); openDict(''); } }, icon(IC.spark), 'Sözlük'),
-      h('button', { type: 'button', class: 'btn small', onclick: () => { closePop(); toolbarAction('find'); } }, icon(IC.search), 'Belgede ara'),
-      h('button', { type: 'button', class: 'btn small', onclick: () => { closePop(); toolbarAction('pgrid'); } }, icon(IC.gridI), 'Tüm sayfalar'),
-      EMBED ? null : h('button', { type: 'button', class: 'btn small', onclick: () => { closePop(); toggleSplit(); } }, icon(IC.split), 'Yan yana belge')),
-    h('button', { type: 'button', class: 'btn small', onclick: async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (e) { toast('Tam ekran bu görünümde kullanılamıyor.'); } closePop(); } }, icon(IC.full), 'Tam ekran'));
+  ed.readout = null;
+  // yan yana belgede sağ taraf etkinse sayfa işlemleri orada çalışır
+  const W = (typeof activeSide === 'function' && activeSide()) || window, side = W !== window, E = W.__ed || ed;
+  let cur = null; try { cur = W.currentPage(); } catch (e) { }
+  const canFlow = !!(W.flowCan && cur && W.flowCan(E.pvs.indexOf(cur)));
+  const tile = (ic, label, fn) => h('button', { type: 'button', class: 'mtile', onclick: () => { closePop(); fn(); } }, h('span', { class: 'ico' }, icon(ic)), h('span', null, label));
+  const full = async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (e) { toast('Tam ekran bu görünümde kullanılamıyor.'); } };
+  return h('div', { class: 'col mpanel' },
+    side ? h('div', { class: 'mside' }, icon(IC.split), h('span', null, 'Sağdaki belge: ', h('b', null, E.note ? E.note.name : ''))) : null,
+    h('div', { class: 'lbl' }, side ? 'Sağdaki sayfa' : 'Bu sayfa'),
+    h('div', { class: 'mtiles' },
+      tile(IC.fixText, 'Sayfayı düzelt', () => W.pageFixStart()),
+      canFlow ? tile(IC.upArrow, 'Boşlukları kapat', () => W.flowPages()) : null,
+      tile(IC.gridI, 'Tüm sayfalar', () => toolbarAction('pgrid')),
+      tile(IC.search, 'Belgede ara', () => toolbarAction('find')),
+      tile(IC.spark, 'Sözlük', () => openDict('')),
+      EMBED ? null : tile(IC.split, typeof splitOpen === 'function' && splitOpen() ? 'Yan belgeyi kapat' : 'Yan yana belge', () => toggleSplit()),
+      tile(IC.full, 'Tam ekran', full)),
+    h('div', { class: 'lbl' }, 'Hızlı ayarlar'),
+    h('div', { class: 'mtoggles' },
+      toggleRow('sRead', 'Okuma modu', S.prefs.readOnly, v => setReadOnly(v), 'Kalem ve parmak yalnızca kaydırır'),
+      toggleRow('sInvert', 'PDF renklerini ters çevir', S.prefs.invert, v => setInvert(v), 'Gece okumak için'),
+      toggleRow('sVoice', 'Basılı tutunca sesli oku', S.voice.hold, v => { S.voice.hold = v; saveSettings(); }, 'İngiliz kadın sesi'),
+      toggleRow('sCont', 'Metnin devamına ekle', S.hand.cont !== false, v => { S.hand.cont = v; saveSettings(); }, 'El yazısı düzeltilmiş metnin arkasına eklenir')),
+    h('div', { class: 'mfoot' },
+      h('button', { type: 'button', class: 'btn small', onclick: () => openPop($('#moreBtn'), toolbarEditor) }, icon(IC.gear), 'Araç çubuğu'),
+      h('button', { type: 'button', class: 'btn small primary', onclick: () => { closePop(); openSettings(); } }, icon(IC.gear), 'Tüm ayarlar')));
 }
 function renderReadout(e) {
   const ro = ed.readout; if (!ro) return;
