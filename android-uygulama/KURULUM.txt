@@ -113,6 +113,30 @@ G) YENİ (2.2.0)
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
 
 
+Q) YENİ (2.5.4) — sayfanın tamamını yapay zekâyla düzeltme, sayfaları birleştirme (boşlukları kapat)
+-----------------------------------------------------------------------------------------------------
+- Sayfayı düzelt: sayfadaki bütün el yazısı ve metin kutuları tek seferde okunur, bağlama bakılarak düzeltilir.
+  ⋯ menüsü → "Sayfayı düzelt" (ya da sayfa menüsü → "Sayfayı düzelt"; araç çubuğu düzenleme ile düğme olarak da eklenebilir).
+  · Sayfada numaralı kırmızı etiketler çıkar; sağdaki panelde her bloğun düzeltilmiş hâli görünür. Metni panelde
+    düzenleyebilir, istemediğiniz bloğu kapatabilirsiniz → "Uygula". Tek adımda Geri al ile dönülür.
+  · Düzeltilen metin, el yazısının rengine uyan kalem stilinde (Terim, Anlamı, İngilizce örnek…) ve yazdığınız
+    boyuta en yakın stil boyutunda yazılır. Büyük çizimler (ok, kutu, şekil) olduğu gibi kalır.
+  · Önce Gemini kullanılır. Gemini anahtarı yoksa, günlük/dakikalık sınır dolduysa ya da hata verirse Claude
+    (varsayılan Sonnet 5.5) kullanılır; panelin üstünde hangisinin kullanıldığı yazar.
+  · Ayarlar: Kitaplık → Ayarlar → "Sayfayı düzelt": Önce Gemini / Önce Claude, "Olmazsa diğerini kullan",
+    Gemini modeli, Claude modeli, Ne zaman düzeltilsin (Ben isteyince / Sayfadan çıkınca), "Uygulamadan önce önizle".
+    "Sayfadan çıkınca" seçiliyse yazdığınız sayfadan çıktığınızda düzeltme arka planda hazırlanır, altta
+    "Sayfa 1: n öneri hazır · Gör" çıkar.
+  · Anahtarlar Sözlük → ⚙ ekranında girilir (ikisini de girebilirsiniz). Sayfanın görüntüsü seçilen sağlayıcıya gönderilir.
+- Boşlukları kapat (sayfaları birleştir): düzeltilen yazı el yazınızdan küçük olduğu için sayfanın yarısı boş
+  kalıyorsa ⋯ menüsü → "Boşlukları kapat" (ya da sayfa menüsü). Bu sayfadan başlayarak ardışık not sayfalarındaki
+  satırlar yukarı toplanır, büyük boşluklar daraltılır ve sonraki sayfanın yazıları bu sayfadan devam eder.
+  Satırların sırası ve yatay yeri korunur. Sona boş kalan sayfalar için "Boş sayfaları sil" çıkar. Geri al ile döner.
+  · "Sayfayı düzelt" uygulandıktan sonra sayfada yer açıldıysa ve sonraki sayfa da not sayfasıysa altta
+    "Sonraki sayfa buradan devam etsin" önerisi çıkar.
+  · PDF sayfalarında yapılmaz (oradaki notlar basılı metnin yanında kalmalı); yapışkan notlar yerinde kalır.
+
+
 P) YENİ (2.5.3) — daha hızlı ve uzun cümlelerde daha doğru el yazısı düzeltme
 -----------------------------------------------------------------------------
 - Hız: Türkçe ve İngilizce aynı anda tanınıyor; yazım denetleyicisine her dil için tek bağlantı açık tutuluyor

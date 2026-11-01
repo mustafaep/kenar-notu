@@ -566,3 +566,27 @@ html:not(.embed) .sidechip{display:none}
 .styleitem .sample{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .styleitem small{color:#566074;margin-top:2px}
 .handbar.aibusy .hinfo small{color:var(--accent)}
+
+/* ---------- 2.5.4: sayfayı düzelt ---------- */
+.pfwin{position:absolute;right:16px;top:16px;bottom:16px;width:min(400px,calc(100% - 32px));z-index:9;display:flex;flex-direction:column;background:var(--chrome);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+.pfhead{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-bottom:1px solid var(--line)}
+.pfhead .ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:none}
+.pfhead .tt{flex:1;min-width:0;display:flex;flex-direction:column}
+.pfhead .tt b{font:700 16px var(--f-display)}
+.pfnote{margin:8px 14px 0}
+.pflist{flex:1;overflow:auto;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.pfrow{display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:12px;background:var(--chrome-2)}
+.pfrow.same{opacity:.65}
+.pfn{flex:none;min-width:24px;height:24px;border-radius:7px;background:#dc2626;color:#fff;font:700 13px var(--f-ui);display:grid;place-items:center;font-style:normal;margin-top:6px}
+.pft{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.pft textarea{width:100%;resize:none;border:1px solid var(--line);border-radius:9px;background:var(--chrome);padding:6px 8px;font:15px/1.35 var(--f-ui);color:var(--ink);outline:none;-webkit-user-select:text;user-select:text;overflow:hidden}
+.pft textarea:focus{border-color:var(--accent)}
+.pfrow .switch{margin-top:4px}
+.pffoot{display:flex;justify-content:flex-end;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.pfbadge{position:absolute;z-index:6;min-width:24px;height:24px;padding:0 6px;border:0;border-radius:7px;background:#dc2626;color:#fff;font:700 13px var(--f-ui);box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
+.pfbadge.off{background:#8a8f99}
+.pfbadge.focus{outline:3px solid var(--accent);outline-offset:1px}
+.pfchip{left:50%;bottom:76px;transform:translateX(-50%);z-index:8;padding:4px 4px 4px 12px;gap:8px;font-size:14px}
+.pfchip svg.i{width:20px;height:20px;color:var(--accent)}
+.pfchip.busy{padding:8px 14px}
+.pfchip .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--accent);border-right-color:transparent;animation:spin 1s linear infinite}

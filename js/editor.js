@@ -59,7 +59,7 @@ function frame() {
   ed.frameReq = 0; if (!ed.note) return;
   updateVisible(false);
   if (ed.inkDirty) { ed.inkDirty = false; redrawInk(); }
-  updatePager(); placeSelbar(); placeGrip(); placeAddEnd(); placeAiBar(); if (window.placeHandUi) placeHandUi();
+  updatePager(); placeSelbar(); placeGrip(); placeAddEnd(); placeAiBar(); if (window.placeHandUi) placeHandUi(); if (window.placePageFixUi) placePageFixUi();
   if (TS.sel) textSelDraw();
 }
 function settle() { if (ed.note) { updateVisible(true); savePos(); } }
@@ -291,7 +291,7 @@ async function openNote(id) {
 }
 async function closeEditor() {
   if (ed.capture) captureEnd();
-  savePos(); textSelClear(); if (window.handReset) handReset(); if (window.speakStop) speakStop();
+  savePos(); textSelClear(); if (window.handReset) handReset(); if (window.pageFixReset) pageFixReset(); if (window.speakStop) speakStop();
   finishAll(); closePop(); clearTimeout(ed.syncT);
   const n = ed.note; if (!n) return;
   const pr = progress('Kaydediliyor…');
@@ -324,9 +324,9 @@ const TB_ITEMS = {
   lasso: { name: 'Kement seçimi', ic: IC.lasso, tool: true }, text: { name: 'Metin', ic: IC.text, tool: true },
   image: { name: 'Görsel ekle', ic: IC.image }, capture: { name: 'Ekran görüntüsü', ic: IC.capture }, invert: { name: 'Renkleri ters çevir', ic: IC.moon },
   dict: { name: 'Sözlük (yapay zekâ)', ic: IC.spark }, split: { name: 'Yan yana belge', ic: IC.split },
-  readonly: { name: 'Okuma modu', ic: IC.lock }, aisel: { name: 'Alanı çevrele (YZ)', ic: IC.aisel, tool: true }, sticky: { name: 'Yapışkan not', ic: IC.sticky }, find: { name: 'Belgede ara', ic: IC.search }, pgrid: { name: 'Tüm sayfalar', ic: IC.gridI }
+  readonly: { name: 'Okuma modu', ic: IC.lock }, aisel: { name: 'Alanı çevrele (YZ)', ic: IC.aisel, tool: true }, pagefix: { name: 'Sayfayı düzelt (YZ)', ic: IC.fixText }, sticky: { name: 'Yapışkan not', ic: IC.sticky }, find: { name: 'Belgede ara', ic: IC.search }, pgrid: { name: 'Tüm sayfalar', ic: IC.gridI }
 };
-const TB_DEFAULT = { order: ['pen', 'hl', 'eraser', 'lasso', 'aisel', 'text', 'sticky', 'image', 'capture', 'invert', 'dict', 'split', 'readonly', 'find', 'pgrid'], hidden: ['invert', 'dict', 'readonly', 'find', 'pgrid'], colors: true, favs: true };
+const TB_DEFAULT = { order: ['pen', 'hl', 'eraser', 'lasso', 'aisel', 'pagefix', 'text', 'sticky', 'image', 'capture', 'invert', 'dict', 'split', 'readonly', 'find', 'pgrid'], hidden: ['invert', 'dict', 'readonly', 'find', 'pgrid', 'pagefix'], colors: true, favs: true };
 function tbCfg() {
   const t = S.toolbar || {}; const order = (t.order || []).filter(k => TB_ITEMS[k]);
   TB_DEFAULT.order.forEach((k, i) => { if (order.includes(k)) return; const prev = TB_DEFAULT.order.slice(0, i).reverse().find(x => order.includes(x)); order.splice(prev ? order.indexOf(prev) + 1 : 0, 0, k); });
@@ -365,6 +365,7 @@ function toolbarAction(id, b) {
   else if (id === 'sticky') { finishAll(); addSticky(currentPage(), { edit: true }); }
   else if (id === 'find') { S.panelTab = 'find'; setPanel(true); }
   else if (id === 'pgrid') openPgrid();
+  else if (id === 'pagefix') pageFixStart();
 }
 function setReadOnly(on, quiet) {
   S.prefs.readOnly = !!on; saveSettings(); if (ed.note) finishAll();
@@ -615,6 +616,8 @@ function settingsPanel() {
     toggleRow('sVoice', 'Basılı tutunca sesli oku', S.voice.hold, v => { S.voice.hold = v; saveSettings(); }, 'Parmakla kelimeye basılı tutun · İngiliz kadın sesi'),
     h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
       h('button', { type: 'button', class: 'btn small', onclick: () => openPop($('#moreBtn'), toolbarEditor) }, icon(IC.gear), 'Araç çubuğunu düzenle'),
+      h('button', { type: 'button', class: 'btn small', onclick: () => { closePop(); pageFixStart(); } }, icon(IC.fixText), 'Sayfayı düzelt'),
+      window.flowCan && flowCan(ed.pvs.indexOf(currentPage())) ? h('button', { type: 'button', class: 'btn small', onclick: () => { closePop(); flowPages(); } }, icon(IC.upArrow), 'Boşlukları kapat') : null,
       h('button', { type: 'button', class: 'btn small', onclick: () => { closePop(); openDict(''); } }, icon(IC.spark), 'Sözlük'),
       h('button', { type: 'button', class: 'btn small', onclick: () => { closePop(); toolbarAction('find'); } }, icon(IC.search), 'Belgede ara'),
       h('button', { type: 'button', class: 'btn small', onclick: () => { closePop(); toolbarAction('pgrid'); } }, icon(IC.gridI), 'Tüm sayfalar'),

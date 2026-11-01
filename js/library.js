@@ -317,6 +317,7 @@ function openSettings() {
     h('span', { class: 'lbl' }, 'Yapay zekâ (sözlük, çeviri, el yazısı)'),
     h('p', { class: 'notice' }, aiReady() ? 'Bağlı · ' + aiName() + ' · ' + aiModel() : 'Bağlı değil. Claude ya da ücretsiz Gemini anahtarı girin.'),
     h('div', null, h('button', { class: 'btn small', type: 'button', onclick: () => { closeM(); aiSettingsModal(); } }, icon(IC.spark), aiReady() ? 'Ayarları değiştir' : 'Yapay zekâyı bağla')),
+    ...(window.pageFixSettingsRows ? pageFixSettingsRows() : []),
     h('span', { class: 'lbl' }, 'Düzenleyici'),
     toggleRow('setZoom', 'Yakınlaştırma düğmeleri', S.prefs.zoomCtl, v => { S.prefs.zoomCtl = v; saveSettings(); }, 'Sağ alttaki − % + kontrolü'),
     toggleRow('setPager', 'Sayfa numarası göstergesi', S.prefs.pager, v => { S.prefs.pager = v; saveSettings(); }),
