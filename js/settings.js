@@ -4,7 +4,7 @@
    Solda bölümler, sağda o bölümün ayarları (gruplu kartlar). Dar ekranda bölümler üstte yatay sekme olur.
    Düzenleyicideki ⋯ paneli yalnızca sık kullanılan işlemleri gösterir; ayrıntılar buradadır.
    ========================================================= */
-const APP_VERSION = '2.5.8';
+const APP_VERSION = '2.5.9';
 const SET_SECTIONS = [
   { id: 'view', name: 'Görünüm', ic: 'moon', lead: 'Tema, düzenleyici göstergeleri ve yan yana belge.' },
   { id: 'pen', name: 'S Pen ve dokunma', ic: 'pen', lead: 'Parmakla çizim, yan tuş ve hareketler.' },
@@ -12,6 +12,7 @@ const SET_SECTIONS = [
   { id: 'pagefix', name: 'Sayfayı düzelt', ic: 'fixText', lead: 'Sayfanın tamamını yapay zekâyla okuyup düzenleme.' },
   { id: 'voice', name: 'Sesli okuma', ic: 'speak', lead: 'Kelimeye basılı tutunca İngilizce okunuşu.' },
   { id: 'ai', name: 'Yapay zekâ', ic: 'spark', lead: 'Sözlük, çeviri, el yazısı ve sayfa düzeltme için bağlantı.' },
+  { id: 'usage', name: 'Harcama', ic: 'chart', lead: 'Yapay zekâ isteklerinin tahmini maliyeti; bu cihazda tutulur.' },
   { id: 'cloud', name: 'OneDrive ve depolama', ic: 'cloud', lead: 'Dosyaların nereye kaydedildiği.' }
 ];
 let setLast = 'view';
@@ -75,6 +76,7 @@ function setBuild(id, close) {
   if (id === 'hand') return window.handSettingsGroups ? handSettingsGroups() : [];
   if (id === 'pagefix') return window.pageFixSettingsGroups ? pageFixSettingsGroups() : [];
   if (id === 'voice') return window.voiceSettingsGroups ? voiceSettingsGroups() : [];
+  if (id === 'usage') return window.usageSettingsGroups ? usageSettingsGroups() : [];
   if (id === 'ai') {
     const c = aiCfg();
     return [

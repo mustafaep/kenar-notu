@@ -86,6 +86,11 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
 - Önce **Gemini**; anahtar yoksa, günlük sınır dolduysa ya da hata verirse **Claude Sonnet**. Sıra, modeller ve
   "sayfadan çıkınca kendiliğinden hazırla" seçeneği Ayarlar'dan değiştirilir.
 
+**Harcama (Ayarlar)**
+- Yapay zekâ isteklerinin tahmini maliyeti: bugün / bu ay / toplam, son 7 gün · 30 gün · 12 ay sütun grafiği
+  (dokununca değer, tablo görünümü), işleve ve modele göre dağılım, düşünme payı. Token sayıları yanıtlardan gelen
+  gerçek sayılar, tutar liste fiyatıyla; kayıt yalnızca cihazda. Sayfayı düzelt önizlemesinde işlemin maliyeti yazar.
+
 **Boşlukları kapat (not sayfalarını birleştir)**
 - Düzeltilen yazı el yazısından küçük olduğu için sayfada boşluk kalırsa: satırlar yukarı toplanır, büyük boşluklar
   daraltılır ve sonraki not sayfasının yazıları bu sayfadan devam eder. Boş kalan sayfalar tek dokunuşla silinir.
@@ -144,6 +149,7 @@ js/                  Uygulama kodu
   pdfio.js           PDF okuma ve notlu PDF üretme (pdf-lib, qpdf)
   hand.js            El yazısını düzelt
   settings.js        Ayarlar ekranı
+  usage.js           Harcama: token kaydı, fiyatlar, grafik
   pagefix.js         Sayfayı düzelt: sayfa seçici, Geliştir seçenekleri, sağlayıcılar (Gemini → Claude)
   pagelayout.js      Sayfaları okuma, geliştirme, çalışma kağıdı, görev → kalem stili, yerleşim, önizleme
   flow.js            Boşlukları kapat, sayfaları birleştir

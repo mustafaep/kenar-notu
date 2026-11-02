@@ -56,7 +56,7 @@ function handImage(strokes) {
 async function handAi(strokes, mode) {
   if (!aiReady()) throw Object.assign(new Error('Bu cihazda el yazısı tanıma yok; yapay zekâyı bağlayın'), { code: 'nokey' });
   const hint = mode === 'tr' ? ' Metin Türkçe.' : mode === 'en' ? ' Metin İngilizce.' : '';
-  const { text } = await aiStream({ system: HAND_FIX_SYSTEM + hint, messages: [{ role: 'user', content: [{ type: 'image', mime: 'image/png', data: handImage(strokes) }, { type: 'text', text: 'Bu el yazısını metne çevir ve yazım hatalarını düzelt.' }] }], maxTokens: 500 });
+  const { text } = await aiStream({ tag: 'hand', system: HAND_FIX_SYSTEM + hint, messages: [{ role: 'user', content: [{ type: 'image', mime: 'image/png', data: handImage(strokes) }, { type: 'text', text: 'Bu el yazısını metne çevir ve yazım hatalarını düzelt.' }] }], maxTokens: 500 });
   const t = cleanAi(text);
   if (!t) throw new Error('Yazı okunamadı');
   return { ok: true, lang: mode === 'tr' || mode === 'en' ? mode : HW_TR.test(t) ? 'tr' : 'en', text: t, corrected: t, kept: [], via: 'ai' };
@@ -64,7 +64,7 @@ async function handAi(strokes, mode) {
 /* Yapay zekâ ile son düzeltme: el yazısının görüntüsü + cihazın okuduğu metin (+ önceki metin bağlam olarak) */
 async function handAiFix(strokes, r, before) {
   if (!strokes || !strokes.length) {
-    const { text } = await aiStream({ system: MERGE_FIX_SYSTEM, messages: [{ role: 'user', content: (r.text || r.corrected) + (r.corrected && r.corrected !== r.text ? '\n\n(Yazım denetleyicisinin önerisi: ' + r.corrected + ')' : '') }], maxTokens: 900 });
+    const { text } = await aiStream({ tag: 'hand', system: MERGE_FIX_SYSTEM, messages: [{ role: 'user', content: (r.text || r.corrected) + (r.corrected && r.corrected !== r.text ? '\n\n(Yazım denetleyicisinin önerisi: ' + r.corrected + ')' : '') }], maxTokens: 900 });
     const t = cleanAi(text); return t && t.length < (r.corrected || '').length * 1.8 + 40 ? t : null;
   }
   const lines = [];
@@ -73,7 +73,7 @@ async function handAiFix(strokes, r, before) {
   if (r.corrected && r.corrected !== r.text) lines.push('Yazım denetleyicisinin önerisi: «' + r.corrected + '»');
   if (r.alts && r.alts.length > 1) lines.push('Diğer olasılıklar: ' + r.alts.slice(1, 3).map(a => '«' + a + '»').join(', '));
   lines.push('Düzeltilmiş metin:');
-  const { text } = await aiStream({ system: AI_FIX_SYSTEM, messages: [{ role: 'user', content: [{ type: 'image', mime: 'image/png', data: handImage(strokes) }, { type: 'text', text: lines.join('\n') }] }], maxTokens: 600 });
+  const { text } = await aiStream({ tag: 'hand', system: AI_FIX_SYSTEM, messages: [{ role: 'user', content: [{ type: 'image', mime: 'image/png', data: handImage(strokes) }, { type: 'text', text: lines.join('\n') }] }], maxTokens: 600 });
   const t = cleanAi(text);
   if (!t || t.length > (r.corrected || '').length * 1.8 + 30) return null;
   return t;

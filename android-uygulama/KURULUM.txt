@@ -113,6 +113,18 @@ G) YENİ (2.2.0)
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
 
 
+V) YENİ (2.5.9) — Ayarlar → Harcama: yapay zekâ maliyeti grafiği
+------------------------------------------------------------------
+- Ayarlar'da yeni "Harcama" bölümü: Bugün · Bu ay · Toplam kutuları; Son 7 gün / Son 30 gün / Son 12 ay sütun
+  grafiği (çubuğa dokununca o günün tutarı ve istek sayısı); "Tablo" düğmesiyle gün gün liste.
+- "Nereye harcandı": Sayfayı düzelt, Çalışma kağıdı, El yazısı, Sözlük/çeviri/sohbet ayrı ayrı (istek başına ortalama).
+- "Modeller": Gemini / Claude modeline göre istek, gönderilen ve yanıt token sayısı, düşünme payı, tutar.
+- Token sayıları her yanıtla gelen gerçek sayılardır; tutar istek anındaki liste fiyatıyla hesaplanır (tahmin;
+  kesin fatura için Google AI Studio ve Claude Console). Kayıt yalnızca bu cihazda tutulur; bu sürümle başlar.
+- "Gemini anahtarım ücretsiz katmanda" açılırsa kutularda ayrıca "ödediğin" tutar yazar.
+- Sayfayı düzelt önizlemesinin üst satırında o işlemin tahmini maliyeti görünür ("bu işlem ≈ 0,012 $").
+
+
 U) YENİ (2.5.8) — Geliştir: örnek cümle, kelimeleri anlat, çalışma kağıdı
 --------------------------------------------------------------------------
 - Sayfayı düzelt → sayfa seçme ekranında yeni "Geliştir" düğmeleri (isteğe bağlı; açılan düğmeler hatırlanır):

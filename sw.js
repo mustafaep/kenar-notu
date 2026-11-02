@@ -1,5 +1,5 @@
 /* Kenar Notu · çevrimdışı çalışma için hizmet çalışanı */
-const VERSION = 'kenar-notu-v2.5.8';
+const VERSION = 'kenar-notu-v2.5.9';
 const CORE = [
   './',
   'index.html',
@@ -26,6 +26,7 @@ const CORE = [
   'js/pagefix.js',
   'js/pagelayout.js',
   'js/flow.js',
+  'js/usage.js',
   'js/settings.js',
   'js/speak.js',
   'js/split.js',

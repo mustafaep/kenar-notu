@@ -173,7 +173,8 @@ async function plReadPage(job, pg, onStep) {
     const img = await plImage(pv, draws);
     pg.draws = draws;
     const res = await pfAsk([{ type: 'image', mime: 'image/jpeg', data: img }, { type: 'text', text: plPageText(job, pg) }], onStep,
-      { system: PL_SYSTEM, check: j => Array.isArray(j.items) || Array.isArray(j.lines), maxTokens: job.enrich ? 16000 : 9000, salvage: true });
+      { system: PL_SYSTEM, check: j => Array.isArray(j.items) || Array.isArray(j.lines), maxTokens: job.enrich ? 16000 : 9000, salvage: true, tag: 'pagefix' });
+    pg.spent = [...(pg.spent || []), ...(res.usage || [])];
     if (pg.tk !== tk) return false;
     const used = new Set();
     const items = (res.j.items || res.j.lines).map(x => {
@@ -193,6 +194,7 @@ async function plReadPage(job, pg, onStep) {
     PF.fixedVer.set(pv.meta.id, ver);
     return true;
   } catch (e) {
+    if (e.usage && e.usage.length) pg.spent = [...(pg.spent || []), ...e.usage];
     if (pg.tk !== tk) return false;
     throw e;
   } finally { if (pg.tk === tk) pg.reading = false; }
@@ -254,7 +256,8 @@ async function plSheetRead(job, onStep) {
   const tk = ++sh.tk; sh.reading = true; sh.err = null;
   try {
     if (!job.pages.some(pg => pg.items && pg.items.some(it => it.on && !it.draw))) throw new Error('Çalışma kağıdı için okunan yazı yok');
-    const res = await pfAsk([{ type: 'text', text: plSheetText(job) }], onStep, { system: PL_SHEET_SYSTEM, check: j => Array.isArray(j.items), maxTokens: 12000, salvage: true });
+    const res = await pfAsk([{ type: 'text', text: plSheetText(job) }], onStep, { system: PL_SHEET_SYSTEM, check: j => Array.isArray(j.items), maxTokens: 12000, salvage: true, tag: 'sheet' });
+    sh.spent = [...(sh.spent || []), ...(res.usage || [])];
     if (sh.tk !== tk) return false;
     const items = res.j.items.map(plSheetItem).filter(Boolean);
     if (!items.some(it => it.r !== 'gap' && it.r !== 'title')) throw new Error('Çalışma kağıdı boş geldi');
@@ -264,6 +267,7 @@ async function plSheetRead(job, onStep) {
       answers: (Array.isArray(res.j.answers) ? res.j.answers : []).map(plSheetItem).filter(it => it && it.r !== 'gap' && it.r !== 'title') });
     return true;
   } catch (e) {
+    if (e.usage && e.usage.length) sh.spent = [...(sh.spent || []), ...e.usage];
     if (sh.tk !== tk) return false;
     sh.err = e; sh.items = null; return false;
   } finally { if (sh.tk === tk) sh.reading = false; }
@@ -585,7 +589,9 @@ function plOpen(job) {
     title.textContent = job.dest === 'none' ? (sh.reading ? 'Çalışma kağıdı hazırlanıyor…' : sh.items ? 'Çalışma kağıdı hazır' : 'Çalışma kağıdı hazırlanamadı')
       : job.pages.length === 1 ? 'Sayfa ' + no(job.pages[0]) + ' · düzenlendi' : ok.length === job.pages.length ? ok.length + ' sayfa düzenlendi' : ok.length + ' / ' + job.pages.length + ' sayfa düzenlendi';
     const bys = ok.filter(pg => pg.by).map(pg => pg.by); if (sh && sh.by) bys.push(sh.by);
-    sub.textContent = [...new Map(bys.map(b => [b.id, b.name + ' · ' + pfModelName(b.id, b.model)])).values()].join(' + ');
+    const spent = window.usageSum ? usageSum([...job.pages.flatMap(pg => pg.spent || []), ...(sh && sh.spent || [])]) : null;
+    sub.textContent = [...new Map(bys.map(b => [b.id, b.name + ' · ' + pfModelName(b.id, b.model)])).values()].join(' + ')
+      + (spent && spent.usd ? ' · bu işlem ≈ ' + uzUsd(spent.usd) + (spent.paid < spent.usd ? ' (ödediğin ' + uzUsd(spent.paid) + ')' : '') : '');
     const n = ok.reduce((a, pg) => a + pg.items.filter(x => !x.draw).length, 0), nf = ok.reduce((a, pg) => a + pg.fixes.length, 0);
     if (segBtns.lines) segBtns.lines.textContent = 'Satırlar (' + n + ')';
     if (segBtns.fixes) { segBtns.fixes.textContent = 'Düzeltmeler (' + nf + ')'; segBtns.fixes.hidden = !nf || job.dest === 'none'; }

@@ -16,11 +16,11 @@ const aiCache = new Map();
 const gNoThink = new Set();
 
 /* İç ileti biçimi: { role: 'user'|'assistant', content: string | [{type:'text',text} | {type:'image',mime,data}] } */
-async function aiStream({ system, messages, maxTokens = 1200, onText, signal }) {
+async function aiStream({ system, messages, maxTokens = 1200, onText, signal, tag }) {
   const c = aiCfg();
   if (!aiReady(c)) throw Object.assign(new Error(aiName(c) + ' API anahtarı girilmedi.'), { code: 'nokey' });
   if (!navigator.onLine) throw Object.assign(new Error('İnternet bağlantısı yok.'), { code: 'offline' });
-  return c.provider === 'gemini' ? geminiStream(c, { system, messages, maxTokens, onText, signal }) : claudeStream(c, { system, messages, maxTokens, onText, signal });
+  return c.provider === 'gemini' ? geminiStream(c, { system, messages, maxTokens, onText, signal, tag }) : claudeStream(c, { system, messages, maxTokens, onText, signal, tag });
 }
 async function readSSE(r, onEvent) {
   const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = '';
@@ -36,7 +36,7 @@ async function readSSE(r, onEvent) {
     }
   }
 }
-async function claudeStream(c, { system, messages, maxTokens, onText, signal }) {
+async function claudeStream(c, { system, messages, maxTokens, onText, signal, tag }) {
   const msgs = messages.map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : m.content.map(p => p.type === 'image' ? { type: 'image', source: { type: 'base64', media_type: p.mime, data: p.data } } : { type: 'text', text: p.text }) }));
   const model = aiModel(c);
   const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -49,15 +49,18 @@ async function claudeStream(c, { system, messages, maxTokens, onText, signal }) 
     const nice = r.status === 401 ? 'Claude API anahtarı geçersiz. Ayarlardan kontrol edin.' : r.status === 404 ? 'Model bulunamadı: ' + model + '. Ayarlardan başka bir model seçin.' : r.status === 429 ? 'İstek sınırına ulaşıldı. Biraz sonra tekrar deneyin.' : r.status === 400 && /credit|balance/i.test(msg) ? 'Claude API hesabınızda kredi yok (console.anthropic.com → Billing). Ücretsiz Gemini’yi deneyebilirsiniz.' : msg;
     throw Object.assign(new Error(nice), { status: r.status });
   }
-  let text = '', stop = '';
-  await readSSE(r, ev => {
-    if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') { text += ev.delta.text; if (onText) onText(text); }
-    else if (ev.type === 'message_delta' && ev.delta && ev.delta.stop_reason) stop = ev.delta.stop_reason;
-    else if (ev.type === 'error') throw new Error((ev.error && ev.error.message) || 'Akış hatası');
-  });
-  return { text, cut: stop === 'max_tokens' };
+  let text = '', stop = '', inp = 0, out = 0;
+  try {
+    await readSSE(r, ev => {
+      if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') { text += ev.delta.text; if (onText) onText(text); }
+      else if (ev.type === 'message_start' && ev.message && ev.message.usage) { const u = ev.message.usage; inp = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0); out = u.output_tokens || 0; }
+      else if (ev.type === 'message_delta') { if (ev.delta && ev.delta.stop_reason) stop = ev.delta.stop_reason; if (ev.usage && ev.usage.output_tokens != null) out = ev.usage.output_tokens; }
+      else if (ev.type === 'error') throw new Error((ev.error && ev.error.message) || 'Akış hatası');
+    });
+  } finally { var usage = window.usageAdd ? usageAdd({ prov: 'claude', model, tag, inp, out, think: 0 }) : null; }
+  return { text, cut: stop === 'max_tokens', usage };
 }
-async function geminiStream(c, { system, messages, maxTokens, onText, signal }) {
+async function geminiStream(c, { system, messages, maxTokens, onText, signal, tag }) {
   const model = aiModel(c);
   const contents = messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: typeof m.content === 'string' ? [{ text: m.content }] : m.content.map(p => p.type === 'image' ? { inlineData: { mimeType: p.mime, data: p.data } } : { text: p.text }) }));
   const call = async think => {
@@ -78,16 +81,22 @@ async function geminiStream(c, { system, messages, maxTokens, onText, signal }) 
     const nice = /API key not valid|API_KEY_INVALID/i.test(msg) || r.status === 403 ? 'Gemini API anahtarı geçersiz. aistudio.google.com → Get API key bölümünden yeniden kopyalayın.' : r.status === 404 ? 'Gemini modeli bulunamadı: ' + model + '. Ayarlardan diğer modeli seçin ya da model adını yazın.' : r.status === 429 ? 'Gemini ücretsiz kullanım sınırına ulaşıldı. Biraz bekleyip tekrar deneyin.' : msg;
     throw Object.assign(new Error(nice), { status: r.status });
   }
-  let text = '', fin = '';
-  await readSSE(r, ev => {
-    if (ev.error) throw new Error(ev.error.message || 'Akış hatası');
-    const cand = ev.candidates && ev.candidates[0]; if (!cand) return;
-    const parts = (cand.content && cand.content.parts) || [];
-    for (const p of parts) if (p.text && !p.thought) { text += p.text; if (onText) onText(text); }
-    if (cand.finishReason) fin = cand.finishReason;
-  });
+  let text = '', fin = '', um = null;
+  try {
+    await readSSE(r, ev => {
+      if (ev.error) throw new Error(ev.error.message || 'Akış hatası');
+      if (ev.usageMetadata) um = ev.usageMetadata;
+      const cand = ev.candidates && ev.candidates[0]; if (!cand) return;
+      const parts = (cand.content && cand.content.parts) || [];
+      for (const p of parts) if (p.text && !p.thought) { text += p.text; if (onText) onText(text); }
+      if (cand.finishReason) fin = cand.finishReason;
+    });
+  } finally {
+    // yanıt (düşünme dahil) ücretlendirilir: candidates + thoughts
+    var usage = um && window.usageAdd ? usageAdd({ prov: 'gemini', model, tag, inp: um.promptTokenCount || 0, out: (um.candidatesTokenCount || 0) + (um.thoughtsTokenCount || 0), think: um.thoughtsTokenCount || 0 }) : null;
+  }
   if (!text && fin === 'SAFETY') throw new Error('Gemini bu isteği yanıtlamadı (güvenlik filtresi).');
-  return { text, cut: fin === 'MAX_TOKENS' };
+  return { text, cut: fin === 'MAX_TOKENS', usage };
 }
 
 const FOLLOW_RULE = '\nKullanıcı sonradan ek soru sorarsa yukarıdaki biçim sınırını uygulama; soruya uygun uzunlukta, açık ve Türkçe yanıt ver. Selamlama ya da kapanış cümlesi yazma.';
@@ -219,7 +228,7 @@ function openDict(word, context, place, mode = 'auto', image = null) {
     sendBtn.disabled = true;
     try {
       history.push({ role: 'user', content: userMsg });
-      const { text, cut } = await aiStream({ system, messages: history, maxTokens: maxTokens || 2500, signal: dictAbort.signal, onText: t => { ans.innerHTML = mdLite(t); if (body.scrollHeight - body.scrollTop - body.clientHeight < 120) body.scrollTop = body.scrollHeight; } });
+      const { text, cut } = await aiStream({ tag: 'dict', system, messages: history, maxTokens: maxTokens || 2500, signal: dictAbort.signal, onText: t => { ans.innerHTML = mdLite(t); if (body.scrollHeight - body.scrollTop - body.clientHeight < 120) body.scrollTop = body.scrollHeight; } });
       history.push({ role: 'assistant', content: text || '…' });
       ans.innerHTML = mdLite(text || 'Yanıt boş geldi.'); lastAnswer = text;
       if (cut) ans.append(h('div', { class: 'cutnote' }, 'Yanıt uzun olduğu için kesildi.'));
@@ -331,7 +340,7 @@ function handPad(onText) {
         let t = '';
         if (native) { try { const r = await handNative(raw, S.hand.lang, ''); t = (r.corrected || '').trim(); } catch (e) { if (!aiReady()) throw e; } }
         if (!t) {
-          const { text } = await aiStream({ system: HANDWRITING_SYSTEM, messages: [{ role: 'user', content: [{ type: 'image', mime: 'image/png', data }, { type: 'text', text: 'Bu el yazısını metne çevir.' }] }], maxTokens: 400 });
+          const { text } = await aiStream({ tag: 'hand', system: HANDWRITING_SYSTEM, messages: [{ role: 'user', content: [{ type: 'image', mime: 'image/png', data }, { type: 'text', text: 'Bu el yazısını metne çevir.' }] }], maxTokens: 400 });
           t = (text || '').replace(/^["“”']+|["“”']+$/g, '').trim();
         }
         if (t) onText(t);

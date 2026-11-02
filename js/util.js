@@ -72,6 +72,7 @@ const IC = {
   link: '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',
   moon: '<path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/>',
   spark: '<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+  chart: '<path d="M4 20h16"/><path d="M7 16v-4"/><path d="M12 16V7"/><path d="M17 16v-7"/>',
   split: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/>',
   upArrow: '<path d="M12 19V5M6 11l6-6 6 6"/>',
   downArrow: '<path d="M12 5v14M6 13l6 6 6-6"/>',
@@ -190,7 +191,8 @@ const DEF = {
   hand: { mode: 'off', lang: 'auto', font: 'hand', scale: 100, grammar: false, asked: false, style: null, ai: 'off', cont: true, where: 'both' },
   voice: { hold: true, rate: 0.95, name: '', lang: 'en-GB' }, favSeed: 0,
   pageFix: { first: 'gemini', fallback: true, gmodel: '', cmodel: '', when: 'manual', review: true, dest: 'replace', fixes: true,
-    boost: { ex: false, explain: false, sheet: false, ask: '', answers: true, mark: true } }
+    boost: { ex: false, explain: false, sheet: false, ask: '', answers: true, mark: true } },
+  usage: { gFree: false, range: '30d' }
 };
 /* Ders notu kalem stilleri: kalem rengi + düzeltilen yazının yazı tipi/boyutu.
    Sayfa birimi PDF noktasıdır (A4 = 595 × 842 pt), bu yüzden pt değerleri birebir kullanılır. */

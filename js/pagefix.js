@@ -39,22 +39,23 @@ function pfParse(text, check, salvage) {
   return null;
 }
 async function pfAsk(parts, onStep, o = {}) {
-  const notes = [];
+  const notes = [], spent = [];
   if (!navigator.onLine) throw Object.assign(new Error('İnternet bağlantısı yok. Sayfa bağlantı gelince düzeltilebilir.'), { code: 'offline' });
   for (const pr of pfProviders()) {
     if (!pr.ok) { notes.push(pr.name + ' anahtarı yok'); continue; }
     if (onStep) onStep(pr);
     try {
-      const { text } = await pr.run({ system: o.system, messages: [{ role: 'user', content: parts }], maxTokens: o.maxTokens || 6000 });
+      const { text, usage } = await pr.run({ system: o.system, messages: [{ role: 'user', content: parts }], maxTokens: o.maxTokens || 6000, tag: o.tag });
+      if (usage) spent.push(usage);
       const j = pfParse(text, o.check, o.salvage);
-      if (j) return { j, by: pr, notes };
+      if (j) return { j, by: pr, notes, usage: spent };
       notes.push(pr.name + ' yanıtı okunamadı');
     } catch (e) {
       notes.push(pr.name + ': ' + (e.status === 429 ? 'günlük/dakikalık sınır doldu' : e.status === 403 || e.status === 401 ? 'anahtar geçersiz' : (e.message || 'hata')));
     }
   }
   const nokey = !pfProviders().some(p => p.ok);
-  throw Object.assign(new Error(nokey ? 'Sayfayı düzeltmek için Gemini ya da Claude anahtarı girin.' : 'Sayfa okunamadı · ' + notes.join(' · ')), { code: nokey ? 'nokey' : 'fail' });
+  throw Object.assign(new Error(nokey ? 'Sayfayı düzeltmek için Gemini ya da Claude anahtarı girin.' : 'Sayfa okunamadı · ' + notes.join(' · ')), { code: nokey ? 'nokey' : 'fail', usage: spent });
 }
 
 /* ---------- sayfa seçici ---------- */
