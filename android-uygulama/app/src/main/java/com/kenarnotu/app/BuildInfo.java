@@ -1,6 +1,6 @@
 package com.kenarnotu.app;
 
 final class BuildInfo {
-    static final String VERSION = "2.5.7";
+    static final String VERSION = "2.5.8";
     private BuildInfo() { }
 }

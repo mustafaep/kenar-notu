@@ -74,6 +74,12 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
   sarı vurgulu bölüm başlığı · girintili örnek · ↳ çeviri · ★ ipucu). Eşleme: Ayarlar → Sayfayı düzelt.
 - Nereye: **Yazının yerine** (el yazısı kalkar, art arda seçilen sayfalar birlikte akar; PDF sayfalarında ardından
   yeni sayfaya yazılır) ya da **Yeni sayfalara** (seçilen sayfalar olduğu gibi kalır).
+- **Geliştir** (isteğe bağlı, seçicideki düğmeler): yapay zekâ yazdıklarıma **örnek cümle** ve çevirisini ekliyor,
+  **kelimeleri anlatıyor** (sözcük türü, okunuş, kullanım, eş/zıt anlam, sık yapılan hata) ya da **kendi isteğimi**
+  uyguluyor. Eklenen satırlar notta kenarda mor çizgiyle işaretleniyor; önizlemede tek tek ya da hepsi birden çıkarılabiliyor.
+- **Çalışma kağıdı**: okunan yazılardan alıştırmalar (boşluk doldurma, eşleştirme, çeviri, cümle kurma, çoktan seçmeli)
+  düzenlenen sayfalardan sonra yeni sayfalara yazılıyor; kalemle cevap yazacak yer kalıyor, cevap anahtarı ayrı sayfada.
+  "Yalnız çalışma kağıdı" seçilirse sayfalara dokunulmuyor.
 - Bulunan hatalar sonuna "Kırmızı kalem · düzeltmeler" olarak yazılıyor (✗ yazdığım · ✓ doğrusu · açıklama).
 - Yanda önizleme ve satır satır düzenleme (görevi değiştir, metni düzelt, satırı çıkar); okunamayan sayfa için
   "Yeniden dene"; sığmayan kısım sonraki sayfaya geçiyor.
@@ -138,8 +144,8 @@ js/                  Uygulama kodu
   pdfio.js           PDF okuma ve notlu PDF üretme (pdf-lib, qpdf)
   hand.js            El yazısını düzelt
   settings.js        Ayarlar ekranı
-  pagefix.js         Sayfayı düzelt: sayfa seçici, sağlayıcılar (Gemini → Claude)
-  pagelayout.js      Sayfaları okuma, görev → kalem stili, yerleşim, önizleme
+  pagefix.js         Sayfayı düzelt: sayfa seçici, Geliştir seçenekleri, sağlayıcılar (Gemini → Claude)
+  pagelayout.js      Sayfaları okuma, geliştirme, çalışma kağıdı, görev → kalem stili, yerleşim, önizleme
   flow.js            Boşlukları kapat, sayfaları birleştir
   speak.js           Sesli okuma
   ai.js              Sözlük, çeviri, sohbet (Gemini / Claude)

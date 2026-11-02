@@ -113,6 +113,27 @@ G) YENİ (2.2.0)
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
 
 
+U) YENİ (2.5.8) — Geliştir: örnek cümle, kelimeleri anlat, çalışma kağıdı
+--------------------------------------------------------------------------
+- Sayfayı düzelt → sayfa seçme ekranında yeni "Geliştir" düğmeleri (isteğe bağlı; açılan düğmeler hatırlanır):
+  · Örnek cümleler: yapay zekâ her terime 1-2 yeni örnek cümle ve Türkçe çevirisini ekler.
+  · Kelimeleri anlat: sözcük türü ve okunuş, kullanım, sık birlikte kullanılan kelimeler, eş/zıt anlam,
+    sık yapılan hata.
+  · Kendi isteğin: yapay zekâya kendi isteğini yaz (ör. "eş anlamlılarını da yaz", "B1 seviyesinde olsun").
+  · Çalışma kağıdı: okunan yazılardan alıştırmalar (boşluk doldurma, eşleştirme, çeviri, cümle kurma,
+    çoktan seçmeli…) hazırlanır; düzenlenen sayfalardan sonra yeni sayfalara yazılır, kalemle cevap yazacak yer
+    bırakılır. Cevap anahtarı ayrı sayfadan başlar.
+- Yapay zekânın eklediği satırlar notta kenarda mor çizgiyle işaretlenir (Ayarlar → Sayfayı düzelt → Geliştir'den
+  kapatılabilir). Önizlemede "Satırlar" sekmesinde "eklendi" etiketiyle görünür; "Yapay zekânın eklediklerini yaz"
+  anahtarıyla hepsi birden çıkarılabilir.
+- "Nereye" seçeneğine "Yalnız çalışma kağıdı" eklendi (Çalışma kağıdı açıkken): sayfalara dokunulmaz, yalnızca
+  çalışma kağıdı eklenir.
+- Önizlemede yeni "Çalışma kağıdı" sekmesi: soruları düzenle, satırı çıkar, yazma yerini ayarla, cevap anahtarını
+  aç/kapat, "Yeniden hazırla". Çalışma kağıdı hazırlanamazsa "Yeniden dene" çıkar.
+- Uygulayınca bildirimdeki "Çalışma kağıdına git" ile çalışma kağıdına geçilir. Geri al hepsini geri getirir.
+- Sayfadan çıkınca kendiliğinden düzeltmede geliştirme yapılmaz.
+
+
 T) YENİ (2.5.7) — sayfa seçerek düzeltme, Düzelt düğmesinde kapatma, düğmenin hangi belgede çalışacağı
 ---------------------------------------------------------------------------------------------------------
 - Sayfayı düzelt artık önce sayfa seçtirir: açık sayfa hazır seçili gelir; başka sayfalara dokunarak ekleyin

@@ -10,7 +10,11 @@
    - Yazının yerine: el yazısı ve metin kutuları kalkar, temiz yazı aynı sayfadan başlar. Art arda seçilen not
      sayfaları birlikte akar. PDF sayfalarına dokunulmaz; onların yazısı ardından gelen yeni sayfaya yazılır.
    - Yeni sayfalara: seçilen sayfalar olduğu gibi kalır; temiz yazı son seçilen sayfadan sonra yeni sayfalara.
+   - Yalnız çalışma kağıdı: sayfalara dokunulmaz; yalnızca çalışma kağıdı eklenir.
    Düzeltilen hatalar isteğe bağlı olarak sonda kırmızı kalemle listelenir.
+   Geliştir (isteğe bağlı): yapay zekâ yazdıklarına örnek cümle ve çeviri ekler, terimleri ayrıntılı anlatır ya da
+   kullanıcının kendi isteğini uygular; eklenen satırlar kenarda mor çizgiyle işaretlenir. Çalışma kağıdı: okunan
+   yazılardan alıştırmalar hazırlanır, son sayfadan sonra yeni sayfalara yazılır; cevap anahtarı ayrı sayfadadır.
    ========================================================= */
 const PL_SYSTEM = `Sen bir not alma uygulamasında el yazısıyla tutulmuş not sayfalarını temize çeken yardımcısın.
 Sana bir sayfanın görüntüsü verilecek. Görevin: sayfadaki yazıları okumak, düzeltmek ve okuma sırasıyla, yazı yazı geri vermek. Her yazının görevini de sen belirlersin; uygulama yazıları bu görevlere göre kullanıcının kalem stilleriyle nota sırayla yazar.
@@ -29,7 +33,8 @@ Kurallar:
 - Birbirine yakın yazılmış satırlar tek cümle DEĞİLDİR: her satırın görevine bak; terim, anlamı, örnek, çeviri, ipucu ayrı öğelerdir. Bir cümleyi yalnızca gerçekten alt satıra taşmışsa (aynı renk, cümle bitmemiş) birleştir.
 - Görevi belirlerken mürekkep rengine ve yazının büyüklüğüne de bak: kullanıcı her görevi genellikle kendi rengiyle yazar (renkleri aşağıda). Büyük yazı başlıktır; İngilizce tam cümle örnektir; altındaki Türkçe karşılığı çeviridir.
 - "terim : anlamı", "terim - anlamı", "terim = anlamı" biçimindeki satır tek öğedir: {"r":"terim","t":"terim","m":"anlamı"}. Birden çok terim aynı anlamı paylaşıyorsa ayrı öğeler yaz.
-- El yazısı okuma hatalarını, yazım hatalarını (İngilizce ve Türkçe) ve İngilizce cümlelerdeki dil bilgisi hatalarını düzelt. Anlamı değiştirme; kullanıcının yazmadığı içerik ekleme (çeviri, örnek, ipucu uydurma).
+- El yazısı okuma hatalarını, yazım hatalarını (İngilizce ve Türkçe) ve İngilizce cümlelerdeki dil bilgisi hatalarını düzelt. Anlamı değiştirme; geliştirme istenmedikçe kullanıcının yazmadığı içerik ekleme (çeviri, örnek, ipucu uydurma).
+- Geliştirme istenirse (isteğin ayrıntısı sayfa bilgisinde yazar) kendi eklediğin her öğeye "ek":1 yaz ve onu ait olduğu yazının hemen ardına koy. Kullanıcının yazdıkları "ek" almaz.
 - Düzelttiğin anlamlı hataları (dil bilgisi, yanlış kelime, yanlış anlam, yanlış çeviri) "fixes" listesine yaz: "wrong" kullanıcının yazdığı (yalnızca ilgili kısım), "right" doğrusu, "note" kısa Türkçe açıklama (kural, fark). El yazısı okuma kaynaklı küçük harf hatalarını yazma. Hata yoksa boş liste ver.
 - ↳ ★ ✗ ✓ • gibi satır başı işaretlerini yazma; uygulama görevine göre ekler. İpucu ve açıklamalarda önemli kısa kısmı **iki yıldız** arasına alabilirsin (az kullan).
 - Kırmızı çerçeveli ve "Ç" numaralı parçalar çizimdir (şekil, ok, tablo): metin yazma, ait olduğu yere {"draw": numara} koy.
@@ -72,6 +77,8 @@ function plStyleMap() {
   for (const r in fb) if (!M[r]) { const s = fb[r].map(x => M[x]).find(Boolean); if (s) M[r] = { ...s, prefix: '', borrowed: true }; }
   for (const [r, lab] of PL_ROLES) if (!M[r]) M[r] = { name: lab, color: '#1f2f5c', font: 'kalam', wt: 400, size: 12.5, prefix: '' };
   for (const [r] of PL_ROLES) M[r].role = r;
+  // çalışma kağıdı: sorular Metin, şıklar Anlamı, yönergeler Açıklama stiliyle
+  M.q = { ...M.plain, prefix: '', role: 'q' }; M.opt = { ...M.meaning, prefix: '', role: 'opt' }; M.ins = { ...M.note, prefix: '', role: 'ins' };
   return M;
 }
 /* yaklaşık renk adı (yapay zekâya renk alışkanlığını anlatmak için) */
@@ -129,13 +136,31 @@ function plPageText(job, pg) {
   L.push('Kullanıcının mürekkep renkleri ve hangi görevde kullandığı:\n' + plLegend(job.map));
   if (pg.draws.length) L.push('Çizimler: ' + pg.draws.map(d => 'Ç' + d.id).join(', ') + ' (kırmızı çerçeveli). Ait oldukları yere {"draw": numara} koy.');
   L.push(job.wantFixes ? 'Düzeltme listesi (fixes) isteniyor.' : 'Düzeltme listesi istenmiyor; fixes boş olsun.');
+  const b = job.enrich ? plBoostText(job.boost) : '';
+  L.push(b || 'Geliştirme istenmiyor: yalnızca sayfada yazanları ver.');
   return L.join('\n\n') + '\n\nJSON:';
+}
+/* geliştirme isteği (örnek cümle, kelimeleri anlat, kullanıcının kendi isteği) */
+function plBoostText(b) {
+  const L = [];
+  if (b.ex) L.push('- Örnek cümle: her terim (kelime, kalıp, kavram) için 1-2 yeni, doğal, günlük hayattan örnek cümle (ornek) ve her birinin hemen altına Türkçe çevirisi (ceviri). Kullanıcının zaten yazdığı örnekleri tekrarlama.');
+  if (b.explain) L.push('- Kelimeleri anlat: her terimi biraz daha ayrıntılı anlat; terim başına 1-3 kısa öğe (aciklama ya da ipucu): sözcük türü ve okunuşu (örn. "fiil · /ˈnəʊtɪs/"), başka anlamları ve kullanımı, sık birlikte kullanıldığı kelimeler, eş ve zıt anlamlıları, sık yapılan hata ya da karıştırılan kelime. Kısa ve öğretici yaz; yalnızca o terim için gerçekten yararlı olanları ekle.');
+  if (b.ask) L.push('- Kullanıcının isteği: "' + b.ask + '" (yalnızca sayfadaki yazılarla ilgili kısmını uygula; çalışma kağıdıyla ilgili bir istekse burada yok say).');
+  if (!L.length) return '';
+  return 'GELİŞTİRME İSTENİYOR. Kullanıcının yazdıklarını kurallara göre düzeltilmiş olarak ver; ayrıca şunları ekle ve eklediğin her öğeye "ek":1 yaz:\n' + L.join('\n') +
+    '\nEklenenler de yukarıdaki görevleri kullanır. Sayfada terim yoksa (düz konu notu) konuyu anlamaya yardım edecek kısa açıklama ve örnekler ekle. Sayfa başına en çok 60 eklenen öğe.';
 }
 
 /* ---------- okuma ---------- */
 const plClean = s => String(s == null ? '' : s).replace(/\r/g, '').replace(/^[\s↳★✗✓✔✘•·]+/, '').replace(/[ \t]+/g, ' ').trim();
-function plNewJob(pvs, dest) {
-  return { mode: 'pages', dest: dest === 'new' ? 'new' : 'replace', map: plStyleMap(), wantFixes: S.pageFix.fixes !== false, showFixes: S.pageFix.fixes !== false,
+/* boost: { ex, explain, sheet, ask, answers, mark } ya da null (yalnız düzelt) */
+function plNewJob(pvs, dest, boost) {
+  const b = boost || {}, ask = String(b.ask || '').trim().slice(0, 400);
+  const sheet = !!b.sheet, d = dest === 'new' ? 'new' : dest === 'none' && sheet ? 'none' : 'replace';
+  const fixes = S.pageFix.fixes !== false && d !== 'none';
+  return { mode: 'pages', dest: d, map: plStyleMap(), wantFixes: fixes, showFixes: fixes,
+    boost: { ex: !!b.ex, explain: !!b.explain, ask }, enrich: d !== 'none' && !!(b.ex || b.explain || ask), mark: b.mark !== false, showAdded: true,
+    sheet: sheet ? { items: null, answers: [], title: '', err: null, reading: false, tk: 0, answersOn: b.answers !== false, ask } : null,
     pages: pvs.map(pv => ({ pv, kind: pv.meta.k === 'pdf' ? 'pdf' : 'note', own: pfHasWriting(pv), items: null, fixes: [], err: null, draws: [], strokes: new Set(), texts: new Set(), tk: 0 })) };
 }
 async function plReadPage(job, pg, onStep) {
@@ -148,7 +173,7 @@ async function plReadPage(job, pg, onStep) {
     const img = await plImage(pv, draws);
     pg.draws = draws;
     const res = await pfAsk([{ type: 'image', mime: 'image/jpeg', data: img }, { type: 'text', text: plPageText(job, pg) }], onStep,
-      { system: PL_SYSTEM, check: j => Array.isArray(j.items) || Array.isArray(j.lines), maxTokens: 9000 });
+      { system: PL_SYSTEM, check: j => Array.isArray(j.items) || Array.isArray(j.lines), maxTokens: job.enrich ? 16000 : 9000, salvage: true });
     if (pg.tk !== tk) return false;
     const used = new Set();
     const items = (res.j.items || res.j.lines).map(x => {
@@ -159,7 +184,8 @@ async function plReadPage(job, pg, onStep) {
       if (!t && m) { t = m; m = ''; if (r === 'term') r = 'meaning'; }
       if (!m && r === 'term') { const k = t.search(/\s[:=–—-]\s/); if (k > 0) { m = plClean(t.slice(k + 2)); t = t.slice(0, k).trim(); } }
       if (m && r !== 'term') r = 'term';
-      return t ? { r, t, m, on: true, pg } : null;
+      const ek = !!x.ek && x.ek !== '0' && x.ek !== 'false';
+      return t ? { r, t, m, on: true, pg, ek } : null;
     }).filter(Boolean);
     if (!items.some(it => !it.draw)) throw Object.assign(new Error('Sayfada yazı bulunamadı'), { code: 'empty' });
     Object.assign(pg, { by: res.by, notes: res.notes, items, strokes, texts, ver,
@@ -188,16 +214,73 @@ async function plReadAll(job, pages, onProgress) {
 function plStop(job) {
   job.stop = true; job.stopped = true;
   for (const pg of job.pages) if (pg.reading) { pg.tk++; pg.reading = false; }
+  if (job.sheet && job.sheet.reading) { job.sheet.tk++; job.sheet.reading = false; }
   if (job.stopRes) job.stopRes();
 }
 
+/* ---------- çalışma kağıdı ---------- */
+const PL_SHEET_SYSTEM = `Sen bir öğretmensin. Kullanıcının çalışma notlarından, tablette kalemle çözeceği bir çalışma kağıdı hazırlarsın.
+Kurallar:
+- Notlardaki terimlerin ve konuların hepsini kullan. Sorular notların dilinde olsun (İngilizce kelimeler için İngilizce cümleler); bölüm başlıkları ve yönergeler Türkçe.
+- Notlara uygun 3-5 farklı alıştırma türü seç: boşluk doldurma (boşluk "______"), eşleştirme (terimler numaralı; anlamları harfli ve karışık sırada, ayrı satırlarda), çeviri (Türkçeden İngilizceye ve tersi), cümle kurma, doğru/yanlış, çoktan seçmeli (şıklar aynı satırda: "a) … b) … c) …").
+- Her alıştırma: bölüm başlığı ("A. Boşlukları doldurun"), gerekiyorsa tek satır yönerge, sonra numaralı sorular. Numaralar her bölümde 1'den başlar.
+- Cevabı kalemle uzun yazılacak sorulardan sonra (çeviri, cümle kurma) yazma yeri bırak: {"r":"bosluk","n":satır sayısı (1-3)}. Boşluk doldurma, eşleştirme ve çoktan seçmelide yazma yeri gerekmez.
+- Toplam 15-30 soru; zorluk notlardaki seviyeye uygun olsun. Sorular notları ezberletmek yerine kullanmayı öğretsin.
+- Cevap anahtarı istenirse "answers" içinde ver: her alıştırma için bölüm başlığı ve numaralı kısa cevaplar (aynı satırda birden çok cevap: "1. notice · 2. avoid").
+- Önemli kısa kısmı **iki yıldız** arasına alabilirsin (az kullan). Satır başına ★ • gibi işaret koyma.
+Görevler ("r"): baslik (kağıdın başlığı, en fazla bir tane), bolum (alıştırma başlığı), yonerge (kısa yönerge), soru (numaralı soru), secenek (soruya ait şıklar ya da eşleştirmenin harfli satırları), bosluk (yazma yeri), metin (diğer).
+Yalnızca şu biçimde geçerli JSON döndür, başka hiçbir şey yazma:
+{"title":"Çalışma kağıdı · Word formation","items":[{"r":"bolum","t":"A. Boşlukları doldurun"},{"r":"yonerge","t":"Kelimeler: notice, pronounce, avoid"},{"r":"soru","t":"1. Did you ______ the new sign on the door?"},{"r":"bolum","t":"B. Türkçeye çevirin"},{"r":"soru","t":"1. She noticed the mistake immediately."},{"r":"bosluk","n":1}],"answers":[{"r":"bolum","t":"A. Boşlukları doldurun"},{"r":"metin","t":"1. notice · 2. avoid · 3. pronounce"},{"r":"bolum","t":"B. Türkçeye çevirin"},{"r":"metin","t":"1. Hatayı hemen fark etti."}]}`;
+const PL_SHEET_ROLE = { baslik: 'title', title: 'title', bolum: 'section', section: 'section', alistirma: 'section', yonerge: 'ins', talimat: 'ins', instruction: 'ins', soru: 'q', question: 'q',
+  secenek: 'opt', sik: 'opt', siklar: 'opt', option: 'opt', options: 'opt', bosluk: 'gap', yazmayeri: 'gap', gap: 'gap', blank: 'gap', metin: 'plain', cevap: 'plain', answer: 'plain', text: 'plain' };
+const PL_SHEET_ROLES = [['title', 'Başlık'], ['section', 'Bölüm'], ['ins', 'Yönerge'], ['q', 'Soru'], ['opt', 'Şık'], ['gap', 'Yazma yeri'], ['plain', 'Metin']];
+function plSheetItem(x) {
+  if (typeof x === 'string') return x.trim() ? { r: 'plain', t: plClean(x), on: true } : null;
+  if (!x || typeof x !== 'object') return null;
+  const r = PL_SHEET_ROLE[plAscii(x.r || x.role || x.type)] || 'plain';
+  if (r === 'gap') return { r, n: Math.max(1, Math.min(4, Math.round(Number(x.n || x.lines || 1)) || 1)), t: '', on: true };
+  const t = plClean(x.t != null ? x.t : x.text);
+  return t ? { r, t, on: true } : null;
+}
+function plSheetText(job) {
+  const L = ['Kullanıcının notları (görev: yazı):'];
+  for (const pg of job.pages) if (pg.items) for (const it of pg.items) if (it.on && !it.draw && (it.t || it.m)) L.push(plRoleName(it.r) + ': ' + plPlain(it.t || '') + (it.m ? ' = ' + plPlain(it.m) : ''));
+  if (job.sheet.ask) L.push('', 'Kullanıcının isteği: "' + job.sheet.ask + '" (yalnızca çalışma kağıdıyla ilgili kısmını uygula).');
+  L.push('', job.sheet.answersOn ? 'Cevap anahtarı isteniyor.' : 'Cevap anahtarı istenmiyor; answers boş olsun.');
+  return L.join('\n') + '\n\nJSON:';
+}
+async function plSheetRead(job, onStep) {
+  const sh = job.sheet; if (!sh) return false;
+  const tk = ++sh.tk; sh.reading = true; sh.err = null;
+  try {
+    if (!job.pages.some(pg => pg.items && pg.items.some(it => it.on && !it.draw))) throw new Error('Çalışma kağıdı için okunan yazı yok');
+    const res = await pfAsk([{ type: 'text', text: plSheetText(job) }], onStep, { system: PL_SHEET_SYSTEM, check: j => Array.isArray(j.items), maxTokens: 12000, salvage: true });
+    if (sh.tk !== tk) return false;
+    const items = res.j.items.map(plSheetItem).filter(Boolean);
+    if (!items.some(it => it.r !== 'gap' && it.r !== 'title')) throw new Error('Çalışma kağıdı boş geldi');
+    const title = plClean(res.j.title) || (items.find(it => it.r === 'title') || {}).t || 'Çalışma kağıdı';
+    const body = items.filter(it => it.r !== 'title');
+    Object.assign(sh, { title, items: [{ r: 'title', t: title, on: true }, ...body], by: res.by, notes: res.notes,
+      answers: (Array.isArray(res.j.answers) ? res.j.answers : []).map(plSheetItem).filter(it => it && it.r !== 'gap' && it.r !== 'title') });
+    return true;
+  } catch (e) {
+    if (sh.tk !== tk) return false;
+    sh.err = e; sh.items = null; return false;
+  } finally { if (sh.tk === tk) sh.reading = false; }
+}
+
 /* ---------- yerleşim ---------- */
-const PL_INDENT = { title: 0, section: 0, term: 0, plain: 0, meaning: 1, example: 1, tip: 1, trans: 2, note: 2, wrong: 0, right: 0 };
+const PL_INDENT = { title: 0, section: 0, term: 0, plain: 0, meaning: 1, example: 1, tip: 1, trans: 2, note: 2, wrong: 0, right: 0, q: 0, opt: 1, ins: 0, gap: 0 };
 const PL_STEP = [0, 17, 31];
+const PL_LINE = 28, PL_MARK = '#8b5cf6';
 function plGap(prev, role) {
   if (!prev) return 0;
   if (role === 'title') return 18;
   if (role === 'section') return prev === 'title' ? 12 : 17;
+  if (role === 'gap') return 0;
+  if (role === 'q') return prev === 'section' ? 3 : prev === 'ins' ? 5 : 8;
+  if (role === 'opt') return prev === 'opt' ? -3 : -1.5;
+  if (role === 'ins') return prev === 'section' ? 0 : 3;
   if (prev === 'section') return 1;
   if (prev === 'title') return role === 'plain' ? -3 : 9;
   if (role === 'draw' || prev === 'draw') return 6;
@@ -252,15 +335,27 @@ function plRowText(st, text, x, R, extra) {
   }
   return { role, h: box.h, t, s };
 }
-function plLayout(meta, items, M, fixes) {
+/* düz çizgi darbesi (yazma yeri satırı, eklenenler için kenar işareti) */
+function plLineStroke(x0, y0, x1, y1, w, c, o) {
+  const n = Math.max(2, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 5)), p = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { const k = i / (n - 1); p[3 * i] = x0 + (x1 - x0) * k; p[3 * i + 1] = y0 + (y1 - y0) * k; p[3 * i + 2] = w; }
+  return { id: uid(), t: 'ballpoint', c, o, p };
+}
+const plSticky = (a, b) => !!(a && b && b.role !== a.role && (a.role === 'section' || a.role === 'title' || a.role === 'term' || a.role === 'ins' || (a.role === 'q' && (b.role === 'opt' || b.role === 'gap'))));
+/* o.mark: yapay zekânın eklediği satırlar kenarda mor çizgiyle işaretlenir */
+function plLayout(meta, items, M, fixes, o = {}) {
   const L = meta.bg === 'lined' ? 74 : 50, R = meta.w - 46, TOP = 46, BOT = meta.h - 44;
+  const ruled = meta.bg === 'lined' || meta.bg === 'grid';
   const rows = [];
   for (const it of items) {
     if (!it.on) continue;
     if (it.draw) { const b = it.draw.bb; rows.push({ role: 'draw', h: b.y1 - b.y0, draw: it.draw }); continue; }
+    if (it.r === 'gap') { const n = it.n || 1; rows.push({ role: 'gap', h: n * PL_LINE, n }); continue; }
     const r = M[it.r] ? it.r : 'plain', st = M[r], x = L + PL_STEP[PL_INDENT[r] || 0];
-    if (it.m && it.t) rows.push(plRowText(st, it.t, x, R, { role: r, m: it.m, mst: M.meaning || st }));
-    else if (it.t || it.m) rows.push(plRowText(st, it.t || it.m, x, R, { role: r }));
+    let row = null;
+    if (it.m && it.t) row = plRowText(st, it.t, x, R, { role: r, m: it.m, mst: M.meaning || st });
+    else if (it.t || it.m) row = plRowText(st, it.t || it.m, x, R, { role: r });
+    if (row) { row.ek = !!it.ek; rows.push(row); }
   }
   if (fixes && fixes.some(f => f.on)) {
     const wr = M.wrong, rt = M.right, nt = M.fixnote || M.note, sec = M.section;
@@ -278,13 +373,17 @@ function plLayout(meta, items, M, fixes) {
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i], nx = rows[i + 1];
     let ny = top ? TOP : y + plGap(prev, r.role);
-    const keep = (r.role === 'section' || r.role === 'title' || r.role === 'term') && nx && nx.role !== r.role ? nx.h + plGap(r.role, nx.role) : 0;
+    // başlık, terim, yönerge ve soru ardındakiyle aynı sayfada kalır (zincir: başlık → soru → yazma yeri)
+    let keep = 0;
+    for (let j = i, n = 0; n < 3 && plSticky(rows[j], rows[j + 1]); j++, n++) keep += rows[j + 1].h + plGap(rows[j].role, rows[j + 1].role);
     if (!top && ny + r.h + keep > BOT) { pages.push({ t: [], s: [] }); ny = TOP; }
     const pg = pages[pages.length - 1];
     if (r.draw) { const dy = ny - r.draw.bb.y0; for (const s of r.draw.strokes) pg.s.push(transformStroke(s, [1, 0, 0, 1, 0, dy])); }
+    else if (r.role === 'gap') { if (!ruled) for (let k = 1; k <= r.n; k++) { const ly = ny + k * PL_LINE - 6; pg.s.push(plLineStroke(L + PL_STEP[1], ly, R, ly, .7, '#c3cad6', 1)); } }
     else {
       for (const b of r.t) pg.t.push({ ...b, y: b.y + ny });
       for (const s of r.s) { const p = new Float32Array(s.p); for (let k = 1; k < p.length; k += 3) p[k] += ny; pg.s.push({ ...s, p }); }
+      if (r.ek && o.mark) pg.s.push(plLineStroke(L - 5, ny + 3, L - 5, ny + Math.max(6, r.h - 2), 2.2, PL_MARK, .7));
     }
     y = ny + r.h; prev = r.role; top = false;
   }
@@ -306,6 +405,7 @@ function plPlan(job) {
   const idx = pg => ed.pvs.indexOf(pg.pv);
   const act = plActive(job).sort((a, b) => idx(a) - idx(b));
   const selIds = new Set(act.map(pg => pg.pv.meta.id)), claimed = new Set(), groups = [];
+  if (job.dest === 'none') return [];
   if (job.dest === 'new') { if (act.length) groups.push({ kind: 'new', pages: act }); }
   else for (const pg of act) {
     const g = groups[groups.length - 1];
@@ -315,7 +415,7 @@ function plPlan(job) {
     const clear = g.kind === 'note', last = g.pages[g.pages.length - 1].pv;
     const base = clear ? g.pages[0].pv.meta : plRefMeta((g.pages.find(p => p.kind === 'note') || g.pages[0]).pv);
     const items = g.pages.flatMap(pg => pg.items), fixes = job.showFixes ? g.pages.flatMap(pg => pg.fixes) : [];
-    const lay = plLayout(base, items, job.map, fixes);
+    const lay = plLayout(base, items, job.map, fixes, { mark: job.mark });
     const cont = clear ? g.pages.map(pg => ({ meta: pg.pv.meta, src: pg })) : [];
     let prev = last.meta.id, i = ed.note.pages.findIndex(p => p.id === prev), fresh = false;
     while (cont.length < lay.pages.length) {
@@ -325,6 +425,19 @@ function plPlan(job) {
     }
     return { kind: g.kind, pages: g.pages, clear, last, slots: lay.pages.map((page, k) => ({ page, c: cont[k] })), left: cont.slice(lay.pages.length) };
   });
+}
+/* çalışma kağıdı ve cevap anahtarı: düzenlenen son sayfadan sonra yeni sayfalara (cevap anahtarı ayrı sayfadan başlar) */
+const plSheetReady = job => !!(job.sheet && job.sheet.items && job.sheet.items.some(it => it.on && it.r !== 'title' && it.r !== 'gap'));
+function plSheetPlan(job) {
+  if (!plSheetReady(job)) return null;
+  const sh = job.sheet; plFresh(job);
+  const sel = job.pages.filter(pg => ed.pvs.includes(pg.pv));
+  const ref = plRefMeta((sel.filter(p => p.kind === 'note').pop() || sel[sel.length - 1] || {}).pv);
+  const base = { k: 'blank', w: ref.w, h: ref.h, bg: ref.bg || 'plain' };
+  const pages = plLayout(base, sh.items, job.map, null).pages.map(page => ({ page, kind: 'sheet' }));
+  const ans = sh.answersOn ? sh.answers.filter(it => it.on) : [];
+  if (ans.length) for (const page of plLayout(base, [{ r: 'title', t: 'Cevap anahtarı', on: true }, ...ans], job.map, null).pages) pages.push({ page, kind: 'ans' });
+  return { base, pages };
 }
 /* sayfadan kalkacaklar: okunan el yazısı ve metin kutuları (taşınmayan çizimler kalır) ve üzerlerindeki fosforlu kalem */
 function plRemovals(pg) {
@@ -351,11 +464,11 @@ function trFrom(n) {
 /* ---------- uygula ---------- */
 function plApply(job) {
   if (PF.job === job) PF.job = null;
-  const runs = plPlan(job);
-  if (!runs.some(r => r.slots.length)) { toast('Uygulanacak satır yok', 1500); return; }
+  const runs = plPlan(job), sp = plSheetPlan(job);
+  if (!runs.some(r => r.slots.length) && !sp) { toast('Uygulanacak satır yok', 1500); return; }
   const srcNos = runs.flatMap(r => r.pages.map(pg => ed.pvs.indexOf(pg.pv) + 1));
   const pagesB = ed.note.pages.slice(), before = new Map(), touch = pid => { if (!before.has(pid)) before.set(pid, snap(pid)); };
-  let added = 0, firstPid = null, flowPid = null;
+  let added = 0, firstPid = null, flowPid = null, sheetPid = null;
   for (const run of runs) {
     if (run.clear) for (const pg of run.pages) {
       const pid = pg.pv.meta.id, A = ann(pid); touch(pid);
@@ -369,6 +482,19 @@ function plApply(job) {
       if (!firstPid) firstPid = m.id; if (run.clear) flowPid = m.id;
     }
   }
+  // çalışma kağıdı: seçilen ve düzenlenen sayfaların en sonuncusundan sonra
+  let sheetN = 0;
+  if (sp) {
+    const ids = new Set([...job.pages.map(pg => pg.pv.meta.id), ...runs.flatMap(r => r.slots.map(sl => sl.c.meta.id))]);
+    let at = -1; ed.note.pages.forEach((p, i) => { if (ids.has(p.id)) at = i; });
+    if (at < 0) at = ed.note.pages.length - 1;
+    for (const sl of sp.pages) {
+      const m = { id: uid(), k: 'blank', w: sp.base.w, h: sp.base.h, bg: sp.base.bg };
+      ed.note.pages.splice(++at, 0, m); added++; sheetN++;
+      touch(m.id); const A = ann(m.id); A.s = [...A.s, ...sl.page.s]; A.t = [...A.t, ...sl.page.t];
+      if (!sheetPid) sheetPid = m.id;
+    }
+  }
   const ops = [...before.entries()].map(([pid, b]) => ({ k: 'page', pid, b, a: snap(pid) }));
   if (added) { ops.unshift({ k: 'pages', b: pagesB, a: ed.note.pages.slice() }); rebuildAfterPages(); }
   pushOp(ops.length === 1 ? ops[0] : { k: 'multi', ops });
@@ -376,11 +502,21 @@ function plApply(job) {
   requestFrame(true); if (typeof refreshPanel === 'function') refreshPanel();
   for (const run of runs) for (const pg of run.pages) PF.fixedVer.set(pg.pv.meta.id, ed.pageVer.get(pg.pv.meta.id) || 0);
   const failed = job.pages.filter(pg => !pg.items).length;
-  toast((srcNos.length === 1 ? 'Sayfa ' + srcNos[0] : srcNos.length + ' sayfa') + ' düzenlendi' + (added ? ' · ' + added + ' yeni sayfa' : '') + (failed ? ' · ' + failed + ' sayfa okunamadı' : '') + ' · geri almak için ↶', 3200);
+  const si = sheetPid ? ed.pvs.findIndex(p => p.meta.id === sheetPid) : -1;
+  const msg = [];
+  if (srcNos.length) msg.push((srcNos.length === 1 ? 'Sayfa ' + srcNos[0] : srcNos.length + ' sayfa') + ' düzenlendi');
+  if (added - sheetN) msg.push((added - sheetN) + ' yeni sayfa');
+  if (si >= 0) msg.push((msg.length ? 'çalışma kağıdı' : 'Çalışma kağıdı eklendi:') + ' Sayfa ' + (si + 1) + (sheetN > 1 ? '–' + (si + sheetN) : ''));
+  if (job.sheet && !sp) msg.push('çalışma kağıdı hazırlanamadı');
+  if (failed) msg.push(failed + ' sayfa okunamadı');
+  msg.push('geri almak için ↶');
   const fi = ed.pvs.findIndex(p => p.meta.id === firstPid);
+  if (!runs.some(r => r.slots.length) && si >= 0) { toast(msg.join(' · '), 3600); goToPage(si); return; }
+  if (si >= 0) toastAction(msg.join(' · '), 'Çalışma kağıdına git', () => { const k = ed.pvs.findIndex(p => p.meta.id === sheetPid); if (k >= 0) goToPage(k); });
+  else toast(msg.join(' · '), 3200);
   if (fi >= 0 && ed.curPage !== fi + 1 && (job.dest === 'new' || runs.length > 1 || !runs[0].clear)) goToPage(fi);
-  // yazının yerine yazıldıysa ve sayfada yer açıldıysa: sonraki sayfa buradan devam etsin mi?
-  const lp = flowPid && ed.pvs.find(p => p.meta.id === flowPid);
+  // yazının yerine yazıldıysa ve sayfada yer açıldıysa: sonraki sayfa buradan devam etsin mi? (ardından çalışma kağıdı geldiyse sorulmaz)
+  const lp = !sp && flowPid && ed.pvs.find(p => p.meta.id === flowPid);
   if (lp && window.flowSuggest) flowSuggest(lp);
 }
 
@@ -388,6 +524,8 @@ function plApply(job) {
 async function plPreview(job, box) {
   const runs = plPlan(job), W = Math.round((box.clientWidth || 360) * Math.min(2, devicePixelRatio || 1));
   const no = id => ed.pvs.findIndex(p => p.meta.id === id) + 1, out = [];
+  const selNos = job.pages.filter(pg => ed.pvs.includes(pg.pv)).map(pg => no(pg.pv.meta.id));
+  if (job.dest === 'none') out.push({ head: selNos.length === 1 ? 'Sayfa ' + selNos[0] + ' olduğu gibi kalır' : selNos.join(', ') + '. sayfalar olduğu gibi kalır' });
   for (const run of runs) {
     const rem = new Map(); if (run.clear) for (const pg of run.pages) rem.set(pg.pv.meta.id, plRemovals(pg));
     const rest = id => { const A = ann(id), r = rem.get(id); return { s: r ? A.s.filter(s => !r.rs.has(s)) : A.s.slice(), t: r ? A.t.filter(t => !r.rt.has(t)) : A.t.slice(), i: A.i || [], n: A.n || [] }; };
@@ -402,11 +540,25 @@ async function plPreview(job, box) {
       out.push({ cv: has ? await renderThumb(c.meta, b, null, W) : null, label: 'Sayfa ' + no(c.meta.id) + ' · yazısı öncekine taşındı' + (has ? '' : ', boş kalır') });
     }
   }
+  if (job.sheet) {
+    const sp = plSheetPlan(job);
+    if (job.sheet.reading) out.push({ wait: 'Çalışma kağıdı hazırlanıyor…' });
+    else if (sp) {
+      const where = job.dest === 'none' ? 'Sayfa ' + trFrom(Math.max(...selNos, 0) || ed.pvs.length) + ' sonra eklenir' : 'düzenlenen sayfalardan sonra eklenir';
+      let k = 0, ka = 0;
+      for (const sl of sp.pages) {
+        const cv = await renderThumb(sp.base, { s: sl.page.s, t: sl.page.t, i: [], n: [] }, null, W);
+        const ans = sl.kind === 'ans', first = ans ? !ka++ : !k++;
+        out.push({ cv, label: (ans ? 'Cevap anahtarı' : 'Çalışma kağıdı') + ' · yeni sayfa' + (first && !ans ? ' · ' + where : '') });
+      }
+    }
+  }
   if (job.previewTok !== box._tok) return;
   box.innerHTML = '';
-  if (!out.length) { box.append(h('p', { class: 'notice' }, 'Sayfaya yazılacak satır yok.')); return; }
+  if (!out.some(o => !o.head)) { box.append(...out.map(o => h('div', { class: 'plsep head' }, o.head)), h('p', { class: 'notice' }, job.sheet ? 'Eklenecek çalışma kağıdı yok.' : 'Sayfaya yazılacak satır yok.')); return; }
   for (const o of out) {
     if (o.head) { box.append(h('div', { class: 'plsep head' }, o.head)); continue; }
+    if (o.wait) { box.append(h('div', { class: 'plsep plwait' }, h('i', { class: 'spin' }), o.wait)); continue; }
     box.append(h('div', { class: 'plsep' }, o.label)); if (o.cv) { o.cv.className = 'plpage'; box.append(o.cv); }
   }
 }
@@ -417,29 +569,34 @@ function plOpen(job) {
   let tab = 'preview', tok = 0;
   const no = pg => ed.pvs.indexOf(pg.pv) + 1;
   const applyBtn = h('button', { class: 'btn small primary', type: 'button', onclick: () => { pfClose(); plApply(job); } }, 'Uygula');
-  const segBtns = {}, title = h('b'), sub = h('small');
+  const segBtns = {}, title = h('b'), sub = h('small'), sh = job.sheet;
   const show = t => {
     tab = t; Object.entries(segBtns).forEach(([k, b]) => { b.classList.toggle('on', k === t); b.setAttribute('aria-checked', k === t ? 'true' : 'false'); });
     body.innerHTML = ''; body.scrollTop = 0;
     if (t === 'preview') { const pbox = h('div', { class: 'plprev' }, h('i', { class: 'spin' })); body.append(pbox); pbox._tok = job.previewTok = ++tok; requestAnimationFrame(() => plPreview(job, pbox)); }
-    else if (t === 'lines') body.append(plLinesList(job, M, retry));
+    else if (t === 'lines') body.append(plLinesList(job, M, retry, () => show('lines')));
+    else if (t === 'sheet') body.append(plSheetList(job, M, sheetRetry));
     else body.append(plFixesList(job));
-    applyBtn.disabled = !plActive(job).length;
+    applyBtn.disabled = !!(sh && sh.reading) || !((job.dest !== 'none' && plActive(job).length) || plSheetReady(job));
   };
   const head = () => {
     plFresh(job);
     const ok = job.pages.filter(pg => pg.items);
-    title.textContent = job.pages.length === 1 ? 'Sayfa ' + no(job.pages[0]) + ' · düzenlendi' : ok.length === job.pages.length ? ok.length + ' sayfa düzenlendi' : ok.length + ' / ' + job.pages.length + ' sayfa düzenlendi';
-    const by = [...new Map(ok.filter(pg => pg.by).map(pg => [pg.by.id, pg.by.name + ' · ' + pfModelName(pg.by.id, pg.by.model)])).values()];
-    sub.textContent = by.join(' + ');
+    title.textContent = job.dest === 'none' ? (sh.reading ? 'Çalışma kağıdı hazırlanıyor…' : sh.items ? 'Çalışma kağıdı hazır' : 'Çalışma kağıdı hazırlanamadı')
+      : job.pages.length === 1 ? 'Sayfa ' + no(job.pages[0]) + ' · düzenlendi' : ok.length === job.pages.length ? ok.length + ' sayfa düzenlendi' : ok.length + ' / ' + job.pages.length + ' sayfa düzenlendi';
+    const bys = ok.filter(pg => pg.by).map(pg => pg.by); if (sh && sh.by) bys.push(sh.by);
+    sub.textContent = [...new Map(bys.map(b => [b.id, b.name + ' · ' + pfModelName(b.id, b.model)])).values()].join(' + ');
     const n = ok.reduce((a, pg) => a + pg.items.filter(x => !x.draw).length, 0), nf = ok.reduce((a, pg) => a + pg.fixes.length, 0);
     if (segBtns.lines) segBtns.lines.textContent = 'Satırlar (' + n + ')';
-    if (segBtns.fixes) { segBtns.fixes.textContent = 'Düzeltmeler (' + nf + ')'; segBtns.fixes.hidden = !nf; }
+    if (segBtns.fixes) { segBtns.fixes.textContent = 'Düzeltmeler (' + nf + ')'; segBtns.fixes.hidden = !nf || job.dest === 'none'; }
+    if (segBtns.sheet) { const q = sh.items ? sh.items.filter(it => it.r === 'q').length : 0; segBtns.sheet.textContent = 'Çalışma kağıdı' + (q ? ' (' + q + ')' : ''); }
     notes.innerHTML = '';
-    const pn = [...new Set(ok.flatMap(pg => pg.notes && pg.notes.length ? [pg.notes.join(' · ') + ' → ' + pg.by.name + ' kullanıldı'] : []))];
+    const pn = [...new Set([...ok, ...(sh && sh.items ? [sh] : [])].flatMap(pg => pg.notes && pg.notes.length ? [pg.notes.join(' · ') + ' → ' + pg.by.name + ' kullanıldı'] : []))];
     for (const t of pn) notes.append(h('p', { class: 'notice pfnote' }, t));
     for (const pg of job.pages) if (!pg.items) notes.append(h('p', { class: 'notice pfnote plfail' }, h('span', null, 'Sayfa ' + no(pg) + (pg.err ? ' okunamadı' + (pg.err.code === 'empty' ? ': yazı bulunamadı' : ' · ' + pg.err.message.replace(/^Sayfa okunamadı · /, '')) : ' okunmadı (durduruldu)')),
       h('button', { class: 'btn small', type: 'button', onclick: e => retry(pg, e.currentTarget) }, icon(IC.sync), 'Yeniden dene')));
+    if (sh && !sh.items && !sh.reading) notes.append(h('p', { class: 'notice pfnote plfail' }, h('span', null, 'Çalışma kağıdı ' + (sh.err ? 'hazırlanamadı · ' + sh.err.message.replace(/^Sayfa okunamadı · /, '') : 'hazırlanmadı (durduruldu)')),
+      h('button', { class: 'btn small', type: 'button', onclick: e => sheetRetry(e.currentTarget) }, icon(IC.sync), 'Yeniden dene')));
   };
   async function retry(pg, btn) {
     if (pg.reading) return;
@@ -448,17 +605,27 @@ function plOpen(job) {
     if (PF.job !== job || !PF.panel) return;
     head(); show(tab);
   }
+  async function sheetRetry(btn) {
+    if (!sh || sh.reading) return;
+    if (btn) btn.disabled = true;
+    const p = plSheetRead(job);
+    head(); show(tab);
+    await p;
+    if (PF.job !== job || !PF.panel) return;
+    head(); show(tab);
+  }
   const seg = h('div', { class: 'seg plseg', role: 'radiogroup', 'aria-label': 'Görünüm' });
   const addSeg = (k, label) => { const b = h('button', { type: 'button', role: 'radio', onclick: () => show(k) }, label); segBtns[k] = b; seg.append(b); };
-  addSeg('preview', 'Önizleme'); addSeg('lines', 'Satırlar'); addSeg('fixes', 'Düzeltmeler');
-  const dest = segRow([['replace', 'Yazının yerine'], ['new', 'Yeni sayfalara']], job.dest, v => { job.dest = v; S.pageFix.dest = v; saveSettings(); show(tab); }, 'Düzenlenen yazı nereye');
+  addSeg('preview', 'Önizleme'); addSeg('lines', 'Satırlar'); if (sh) addSeg('sheet', 'Çalışma kağıdı'); addSeg('fixes', 'Düzeltmeler');
+  const dest = segRow([['replace', 'Yazının yerine'], ['new', 'Yeni sayfalara'], ...(sh ? [['none', 'Yalnız çalışma kağıdı']] : [])], job.dest,
+    v => { job.dest = v; S.pageFix.dest = v; saveSettings(); head(); show(tab === 'fixes' && v === 'none' ? 'preview' : tab); }, 'Düzenlenen yazı nereye');
   PF.panel = h('section', { class: 'uiwin pfwin plwin', role: 'dialog', 'aria-label': 'Sayfayı düzelt' },
     h('div', { class: 'pfhead' }, h('span', { class: 'ico' }, icon(IC.fixText)), h('div', { class: 'tt' }, title, sub),
       h('button', { class: 'ibtn', type: 'button', 'aria-label': 'Kapat', onclick: () => pfClose() }, icon(IC.close))),
     notes,
     h('div', { class: 'plsegw' }, seg),
     body,
-    h('div', { class: 'pldest' }, h('span', null, 'Nereye'), dest),
+    h('div', { class: 'pldest' + (sh ? ' three' : '') }, h('span', null, 'Nereye'), dest),
     h('div', { class: 'pffoot' }, h('button', { class: 'btn small', type: 'button', onclick: () => pfClose() }, 'Vazgeç'), applyBtn));
   PF.panel.addEventListener('pointerdown', e => e.stopPropagation());
   $('#ui').append(PF.panel);
@@ -478,8 +645,12 @@ function plTa(value, st, onInput, ph) {
   ta.addEventListener('input', () => { onInput(ta.value); grow(); }); style(st); requestAnimationFrame(grow);
   ta._style = style; return ta;
 }
-function plLinesList(job, M, retry) {
+function plLinesList(job, M, retry, rerender) {
   const list = h('div', { class: 'pflist pllist' }), many = job.pages.length > 1;
+  const added = job.pages.flatMap(pg => pg.items ? pg.items.filter(it => it.ek && !it.draw) : []);
+  if (job.sheet) list.append(h('p', { class: 'notice pfnote' }, job.dest === 'none' ? 'Sayfalar değişmez. Çalışma kağıdı bu satırlardan hazırlandı; satırları değiştirirsen Çalışma kağıdı sekmesinden yeniden hazırlayabilirsin.' : 'Çalışma kağıdı bu satırlardan hazırlandı; satırları değiştirirsen Çalışma kağıdı sekmesinden yeniden hazırlayabilirsin.'));
+  if (added.length && job.dest !== 'none') list.append(toggleRow('plShowAdded', 'Yapay zekânın eklediklerini yaz (' + added.length + ' satır)', added.some(it => it.on), v => { added.forEach(it => { it.on = v; }); if (rerender) rerender(); },
+    job.mark ? 'Notta kenarda mor çizgiyle işaretlenir' : 'Ayarlar → Sayfayı düzelt’ten kenar işareti açılabilir'));
   for (const pg of job.pages) {
     const no = ed.pvs.indexOf(pg.pv) + 1;
     if (many || !pg.items) list.append(h('div', { class: 'plpg' }, h('b', null, 'Sayfa ' + no), h('small', null, pg.kind === 'pdf' ? 'PDF' : ''),
@@ -493,9 +664,10 @@ function plLinesList(job, M, retry) {
       }
       const ta = plTa(it.t, M[it.r], v => { it.t = v; it.on = !!(v.trim() || (it.m || '').trim()); cb.checked = it.on; row.classList.toggle('same', !it.on); });
       const mta = it.m ? plTa(it.m, M.meaning, v => { it.m = v; }, 'Anlamı') : null;
-      const sel = plRoleSelect(M, it.r, r => { it.r = r; ta._style(M[r]); row.className = 'pfrow plrow ind' + (PL_INDENT[r] || 0) + (it.on ? '' : ' same'); });
+      const sel = plRoleSelect(M, it.r, r => { it.r = r; ta._style(M[r]); row.className = 'pfrow plrow ind' + (PL_INDENT[r] || 0) + (it.on ? '' : ' same') + (it.ek ? ' ek' : ''); });
       const cb = h('input', { type: 'checkbox', class: 'switch sm', 'aria-label': 'Satır nota yazılsın' }); cb.checked = it.on; cb.addEventListener('change', () => { it.on = cb.checked; row.classList.toggle('same', !it.on); });
-      const row = h('div', { class: 'pfrow plrow ind' + (PL_INDENT[it.r] || 0) + (it.on ? '' : ' same') }, h('div', { class: 'pft' }, sel, ta, mta), cb);
+      const tag = it.ek ? h('i', { class: 'pltag' }, icon(IC.spark), 'eklendi') : null;
+      const row = h('div', { class: 'pfrow plrow ind' + (PL_INDENT[it.r] || 0) + (it.on ? '' : ' same') + (it.ek ? ' ek' : '') }, h('div', { class: 'pft' }, tag ? h('div', { class: 'plrh' }, sel, tag) : sel, ta, mta), cb);
       list.append(row);
     }
   }
@@ -516,5 +688,36 @@ function plFixesList(job) {
       list.append(row);
     }
   }
+  return list;
+}
+function plSheetList(job, M, retry) {
+  const sh = job.sheet, list = h('div', { class: 'pflist pllist' });
+  const rb = h('button', { class: 'btn small', type: 'button', disabled: sh.reading ? '' : null, onclick: e => retry(e.currentTarget) }, sh.reading ? h('i', { class: 'spin' }) : icon(IC.sync), sh.reading ? 'Hazırlanıyor…' : sh.items ? 'Yeniden hazırla' : 'Hazırla');
+  const nq = sh.items ? sh.items.filter(it => it.r === 'q').length : 0;
+  list.append(h('div', { class: 'plpg plsh' }, h('b', null, sh.items ? sh.title : 'Çalışma kağıdı'), h('small', null, nq ? nq + ' soru' : ''), rb));
+  if (sh.reading) { list.append(h('p', { class: 'notice' }, 'Yapay zekâ okunan yazılardan alıştırmalar hazırlıyor…')); return list; }
+  if (!sh.items) { list.append(h('p', { class: 'notice' }, sh.err ? 'Hazırlanamadı · ' + sh.err.message.replace(/^Sayfa okunamadı · /, '') : 'Henüz hazırlanmadı.')); return list; }
+  list.append(toggleRow('plAns', 'Cevap anahtarını ayrı sayfaya yaz', sh.answersOn, v => { sh.answersOn = v; }, sh.answers.length ? 'Çalışma kağıdından sonraki sayfada başlar' : 'Cevap anahtarı gelmedi; açıp yeniden hazırlayabilirsin'));
+  const styleOf = r => M[r] || M.plain;
+  const row = it => {
+    const cb = h('input', { type: 'checkbox', class: 'switch sm', 'aria-label': 'Satır yazılsın' }); cb.checked = it.on;
+    let el;
+    cb.addEventListener('change', () => { it.on = cb.checked; el.classList.toggle('same', !it.on); });
+    if (it.r === 'gap') {
+      const n = h('select', { class: 'plsel', 'aria-label': 'Yazma yeri satır sayısı' }, ...[1, 2, 3, 4].map(k => h('option', { value: String(k) }, k + ' satır')));
+      n.value = String(it.n || 1); n.addEventListener('change', () => { it.n = Number(n.value); });
+      el = h('div', { class: 'pfrow plrow plgap' + (it.on ? '' : ' same') }, h('div', { class: 'pft' }, h('div', { class: 'plrh' }, h('b', null, 'Yazma yeri'), n)), cb);
+      return el;
+    }
+    const ta = plTa(it.t, styleOf(it.r), v => { it.t = v; it.on = !!v.trim(); cb.checked = it.on; el.classList.toggle('same', !it.on); });
+    const sel = h('select', { class: 'plsel', 'aria-label': 'Görevi' }, ...PL_SHEET_ROLES.filter(x => x[0] !== 'gap').map(([r, lab]) => h('option', { value: r }, lab)));
+    sel.value = it.r;
+    const paint = () => { const s = styleOf(sel.value); sel.style.color = s.color; sel.style.borderColor = s.color + '66'; };
+    sel.addEventListener('change', () => { it.r = sel.value; ta._style(styleOf(it.r)); el.className = 'pfrow plrow ind' + (PL_INDENT[it.r] || 0) + (it.on ? '' : ' same'); paint(); }); paint();
+    el = h('div', { class: 'pfrow plrow ind' + (PL_INDENT[it.r] || 0) + (it.on ? '' : ' same') }, h('div', { class: 'pft' }, sel, ta), cb);
+    return el;
+  };
+  for (const it of sh.items) list.append(row(it));
+  if (sh.answers.length) { list.append(h('div', { class: 'plpg' }, h('b', null, 'Cevap anahtarı'), h('small', null, sh.answersOn ? 'ayrı sayfada' : 'yazılmayacak'))); for (const it of sh.answers) list.append(row(it)); }
   return list;
 }
