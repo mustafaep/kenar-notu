@@ -56,6 +56,8 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
 - Android'de tamamen cihazda çalışır (Google ML Kit el yazısı tanıma + Samsung Klavye'nin yazım denetleyicisi).
   Web'de bağlı yapay zekâ ile çalışır.
 - Kapalı / Düğmeyle / Otomatik modları; TR/EN düğmesiyle diğer dilde yeniden okuma; A− / A+; Geri al.
+  Düzelt düğmesinin köşesindeki ✕ düğmeyi kapatır; düğmenin ana belgede mi, yan belgede mi, ikisinde mi
+  çalışacağı kalem panelinden seçilir.
 - Alt satıra geçen yazı aynı paragrafta kalır; düzeltilmiş bir metnin yanına ya da altına yazılan devam, o metnin
   hemen arkasına eklenir ve hizalı kalır (Ayarlar → El yazısı → "Metnin devamına ekle" ile kapatılabilir).
 - Daha önce yazılanlar için: kement ile seç → "Yazıya dök". Ayrı düşmüş parçalar için: kement ile seç →
@@ -64,12 +66,17 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
   yapay zekâ el yazısının görüntüsüne ve önceki metne bakıp düzeltir.
 
 **Sayfayı düzelt (yapay zekâ)**
-- Not sayfasındaki bütün yazı (her satır ayrı, mürekkep renkleriyle) ve kalem stillerim yapay zekâya gidiyor; sayfa
-  kelime defteri düzeninde baştan diziliyor: bölüm başlığı (sarı vurgulu) · **terim** : anlamı · girintili örnek cümle ·
-  ↳ Türkçe çeviri · ★ ipucu. Yakın yazılmış satırlar tek cümle sayılmıyor; stil önce yazdığım renge göre seçiliyor.
-- Bulunan hatalar sayfanın sonuna "Kırmızı kalem · düzeltmeler" olarak yazılıyor (✗ yazdığım · ✓ doğrusu · açıklama).
-- Yanda önizleme ve satır satır düzenleme (stil değiştir, metni düzelt, satırı çıkar); sığmayan kısım sonraki sayfaya geçiyor.
-- PDF sayfalarında yazılar yerinde düzeltiliyor; numaralı etiketlerle her bloğun önerisi gösteriliyor.
+- Önce düzeltilecek sayfaları seçiyorum (açık sayfa hazır seçili; "Yazılı sayfalar" hepsini seçer, en çok 20 sayfa).
+- Her sayfanın görüntüsü yapay zekâya gidiyor. Yazılar okunup düzeltiliyor ve sırayla, yazı yazı geri geliyor; her
+  yazının görevi de geliyor: sayfa başlığı · bölüm başlığı · **terim** : anlamı · örnek cümle · çeviri · ipucu ·
+  açıklama · metin. Yakın yazılmış satırlar tek cümle sayılmıyor; görev belirlenirken mürekkep rengine de bakılıyor.
+- Uygulama her görevi kalem stillerimden birine eşleyip yazıları nota sırayla diziyor (kelime defteri düzeni:
+  sarı vurgulu bölüm başlığı · girintili örnek · ↳ çeviri · ★ ipucu). Eşleme: Ayarlar → Sayfayı düzelt.
+- Nereye: **Yazının yerine** (el yazısı kalkar, art arda seçilen sayfalar birlikte akar; PDF sayfalarında ardından
+  yeni sayfaya yazılır) ya da **Yeni sayfalara** (seçilen sayfalar olduğu gibi kalır).
+- Bulunan hatalar sonuna "Kırmızı kalem · düzeltmeler" olarak yazılıyor (✗ yazdığım · ✓ doğrusu · açıklama).
+- Yanda önizleme ve satır satır düzenleme (görevi değiştir, metni düzelt, satırı çıkar); okunamayan sayfa için
+  "Yeniden dene"; sığmayan kısım sonraki sayfaya geçiyor.
 - Önce **Gemini**; anahtar yoksa, günlük sınır dolduysa ya da hata verirse **Claude Sonnet**. Sıra, modeller ve
   "sayfadan çıkınca kendiliğinden hazırla" seçeneği Ayarlar'dan değiştirilir.
 
@@ -131,8 +138,8 @@ js/                  Uygulama kodu
   pdfio.js           PDF okuma ve notlu PDF üretme (pdf-lib, qpdf)
   hand.js            El yazısını düzelt
   settings.js        Ayarlar ekranı
-  pagefix.js         Sayfayı düzelt (Gemini → Claude)
-  pagelayout.js      Sayfayı kalem stilleriyle düzenleme (yerleşim, önizleme)
+  pagefix.js         Sayfayı düzelt: sayfa seçici, sağlayıcılar (Gemini → Claude)
+  pagelayout.js      Sayfaları okuma, görev → kalem stili, yerleşim, önizleme
   flow.js            Boşlukları kapat, sayfaları birleştir
   speak.js           Sesli okuma
   ai.js              Sözlük, çeviri, sohbet (Gemini / Claude)

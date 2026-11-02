@@ -169,7 +169,7 @@ if (EMBED) {
   fwd('__penButton'); fwd('kenarFlush');
   const baseBack = window.kenarBack;
   if (baseBack) window.kenarBack = () => {
-    const busy = document.querySelector('.modal-back, .od-back') || (pop && !pop.hidden) || ed.capture || ed.editing || ed.sel || TS.sel || dictEl;
+    const busy = document.querySelector('.modal-back, .od-back, .pfpick, .pfwin') || (pop && !pop.hidden) || ed.capture || ed.editing || ed.sel || TS.sel || dictEl;
     if (!busy && splitOpen()) { const w = sideWin(); let r = false; try { r = w && w.kenarBack && w.kenarBack(); } catch (e) { } if (!r) closeSplit(); return true; }
     if (dictEl) { closeDict(); return true; }
     if (TS.sel) { textSelClear(); return true; }

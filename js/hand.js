@@ -6,7 +6,8 @@
      (HandwritingCorrector.java); modeller bir kez indirildikten sonra internetsiz çalışır.
    - Web / yedek: bağlı yapay zekâ (Gemini ya da Claude) görüntüden okur ve düzeltir.
    - İsteğe bağlı: cihazdaki sonuç hemen yazılır, ardından yapay zekâ görüntüye ve bağlama bakıp son düzeltmeyi yapar.
-   Mod: Kapalı · Düğmeyle (yazınca “Düzelt” düğmesi çıkar) · Otomatik (durunca kendisi düzeltir)
+   Mod: Kapalı · Düğmeyle (yazınca “Düzelt” düğmesi çıkar; köşesindeki çarpı düğmeyi kapatır) · Otomatik (durunca kendisi düzeltir)
+   Hangi belgede: ana belge, yan yana açılan yan belge ya da ikisi (kalem panelinden ve Ayarlar'dan).
    Alt satıra geçen yazı aynı paragrafta kalır; bir metnin yanına/altına yazılan devam, o metne eklenir.
    ========================================================= */
 const HW = { group: null, pend: [], timer: 0, chip: null, bar: null, last: null, reqs: new Map(), status: null, seq: 0, times: new WeakMap(), busy: 0 };
@@ -146,9 +147,16 @@ function splitLines(strokes) {
 }
 function medianLineH(lines) { const a = lines.map(l => l.bb.y1 - l.bb.y0).sort((x, y) => x - y); return Math.max(10, a[a.length >> 1] || 14); }
 
+/* Hangi belgede çalışır: ana belge, yan yana açılan yan belge ya da ikisi */
+const handHere = () => { const w = S.hand.where || 'both'; return w === 'both' || (w === 'side' ? EMBED : !EMBED); };
+/* iki belgedeki bekleyen düğmeleri ve çubukları birlikte temizle */
+function handResetAll() {
+  handReset();
+  try { if (EMBED) { if (parent.handReset) parent.handReset(); } else { const w = typeof sideWin === 'function' && sideWin(); if (w && w.handReset) w.handReset(); } } catch (e) { }
+}
 window.handPenDown = () => { clearTimeout(HW.timer); };
 window.handAfterStroke = (pv, s, t0p, t1p) => {
-  if (S.hand.mode === 'off' || S.prefs.readOnly || s.t === 'hl') return;
+  if (S.hand.mode === 'off' || !handHere() || S.prefs.readOnly || s.t === 'hl') return;
   const t1 = Date.now(); HW.times.set(s, { t0: t1 - Math.max(1, t1p - t0p), t1 });
   const bb = strokeBB(s); const hgt = bb.y1 - bb.y0;
   let g = HW.group;
@@ -179,12 +187,16 @@ function pendingGroups() {
 function showHandChip() {
   const gs = pendingGroups(); if (!gs.length) { hideHandChip(); return; }
   hideHandChip();
-  HW.chip = h('button', { class: 'floaty handchip', type: 'button', title: 'El yazısını metne çevir ve düzelt' }, icon(IC.fixText), gs.length > 1 ? 'Düzelt (' + gs.length + ')' : 'Düzelt');
-  HW.chip.addEventListener('pointerdown', e => e.stopPropagation());
-  HW.chip.addEventListener('click', async () => {
+  const go = async () => {
     const all = pendingGroups(); HW.pend = []; HW.group = null; hideHandChip();
     for (const g of all) await runGroup(g, false);
-  });
+  };
+  // çarpı: düğmeyi kapatır, yazı el yazısı olarak kalır (sonraki yazıda düğme yeniden çıkar)
+  const dismiss = () => { clearTimeout(HW.timer); HW.pend = []; HW.group = null; hideHandChip(); };
+  HW.chip = h('div', { class: 'floaty handchip' },
+    h('button', { class: 'hgo', type: 'button', title: 'El yazısını metne çevir ve düzelt', onclick: go }, icon(IC.fixText), gs.length > 1 ? 'Düzelt (' + gs.length + ')' : 'Düzelt'),
+    h('button', { class: 'hx', type: 'button', 'aria-label': 'Düzelt düğmesini kapat', title: 'Kapat (yazı el yazısı olarak kalır)', onclick: dismiss }, icon(IC.close)));
+  HW.chip.addEventListener('pointerdown', e => e.stopPropagation());
   $('#ui').append(HW.chip); placeHandUi();
 }
 function hideHandChip() { if (HW.chip) { HW.chip.remove(); HW.chip = null; } }
@@ -469,6 +481,9 @@ function scaleSelBy(k) {
 }
 
 /* ---------- kalem panelindeki ayarlar ---------- */
+function handWhereSeg() {
+  return segRow([['main', 'Ana belge'], ['side', 'Yan belge'], ['both', 'İkisinde de']], S.hand.where || 'both', v => { S.hand.where = v; saveSettings(); handResetAll(); }, 'El yazısını düzelt hangi belgede çalışsın');
+}
 function handStatusNote() {
   const st = h('p', { class: 'notice handst' });
   const showSt = () => {
@@ -499,7 +514,9 @@ function handSettingsRows() {
   const st = handStatusNote(), showSt = st._show, aiNote = handAiNote(), showAi = aiNote._show;
   const rows = h('div', { class: 'col handset' },
     h('hr', { class: 'sep' }), h('div', { class: 'lbl' }, 'El yazısını düzelt'),
-    segRow([['off', 'Kapalı'], ['button', 'Düğmeyle'], ['auto', 'Otomatik']], S.hand.mode, v => { S.hand.mode = v; saveSettings(); handReset(); if (v !== 'off' && HW_NATIVE()) { const s = HW.status || {}; if (s.tr !== 'ready' || s.en !== 'ready') try { KenarNative.inkPrepare(); } catch (e) { } } showSt(); }),
+    segRow([['off', 'Kapalı'], ['button', 'Düğmeyle'], ['auto', 'Otomatik']], S.hand.mode, v => { S.hand.mode = v; saveSettings(); handResetAll(); if (v !== 'off' && HW_NATIVE()) { const s = HW.status || {}; if (s.tr !== 'ready' || s.en !== 'ready') try { KenarNative.inkPrepare(); } catch (e) { } } showSt(); }),
+    h('small', { class: 'segcap' }, 'Hangi belgede çalışsın'),
+    handWhereSeg(),
     h('small', { class: 'segcap' }, 'Dil'),
     segRow([['auto', 'Otomatik'], ['tr', 'Türkçe'], ['en', 'İngilizce']], S.hand.lang, v => { S.hand.lang = v; saveSettings(); }),
     h('small', { class: 'segcap' }, 'Düzeltilen metnin yazı tipi'),
@@ -519,7 +536,8 @@ function handSettingsGroups() {
   st.className = 'sfoot handst'; aiNote.className = 'sfoot';
   return [
     sGroup('Mod', [
-      sRow('El yazısını düzelt', 'Kalemle yazdığın satırlar metne çevrilir, yazım hataları düzeltilir', segRow([['off', 'Kapalı'], ['button', 'Düğmeyle'], ['auto', 'Otomatik']], S.hand.mode, v => { S.hand.mode = v; saveSettings(); handReset(); if (v !== 'off' && HW_NATIVE()) { const s = HW.status || {}; if (s.tr !== 'ready' || s.en !== 'ready') try { KenarNative.inkPrepare(); } catch (e) { } } showSt(); }), true),
+      sRow('El yazısını düzelt', 'Kalemle yazdığın satırlar metne çevrilir, yazım hataları düzeltilir', segRow([['off', 'Kapalı'], ['button', 'Düğmeyle'], ['auto', 'Otomatik']], S.hand.mode, v => { S.hand.mode = v; saveSettings(); handResetAll(); if (v !== 'off' && HW_NATIVE()) { const s = HW.status || {}; if (s.tr !== 'ready' || s.en !== 'ready') try { KenarNative.inkPrepare(); } catch (e) { } } showSt(); }), true),
+      sRow('Hangi belgede çalışsın', 'Ana belge: soldaki (ya da tek açık) belge · Yan belge: “Yan yana belge” ile açılan ikinci belge', handWhereSeg(), true),
       sRow('Dil', null, segRow([['auto', 'Otomatik'], ['tr', 'Türkçe'], ['en', 'İngilizce']], S.hand.lang, v => { S.hand.lang = v; saveSettings(); }), true)
     ], st),
     sGroup('Düzeltilen metin', [

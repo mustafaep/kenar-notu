@@ -88,6 +88,7 @@ if (Native) {
     const od = document.querySelector('.od-back'); if (od) { od.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); if (od.isConnected) od.remove(); return true; }
     const m = [...document.querySelectorAll('.modal-back')].pop(); if (m) { m.remove(); return true; }
     if (pop && !pop.hidden) { closePop(); return true; }
+    if (window.pfBack && pfBack()) return true;
     if (ed.editing) { finishText(); return true; }
     if (ed.sel) { clearSel(); return true; }
     if (typeof pgridEl !== 'undefined' && pgridEl) { closePgrid(); return true; }

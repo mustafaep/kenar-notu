@@ -113,6 +113,27 @@ G) YENİ (2.2.0)
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
 
 
+T) YENİ (2.5.7) — sayfa seçerek düzeltme, Düzelt düğmesinde kapatma, düğmenin hangi belgede çalışacağı
+---------------------------------------------------------------------------------------------------------
+- Sayfayı düzelt artık önce sayfa seçtirir: açık sayfa hazır seçili gelir; başka sayfalara dokunarak ekleyin
+  ("Yazılı sayfalar" hepsini seçer; bir seferde en çok 20 sayfa). "Gönder" deyince her sayfanın görüntüsü
+  yapay zekâya gönderilir (önce Gemini, olmazsa Claude; iki sayfa aynı anda).
+- Yapay zekâ sayfadaki yazıları okuyup düzeltir ve sırayla, yazı yazı geri verir; her yazının görevini de söyler:
+  sayfa başlığı, bölüm başlığı, terim : anlamı, anlamı, örnek cümle, çeviri, ipucu, açıklama, metin.
+  Uygulama her görevi kalem stillerinden birine eşleyip yazıları nota sırayla yazar. Hangi görevin hangi stille
+  yazılacağı: Ayarlar → Sayfayı düzelt → "Görevler ve kalem stilleri".
+- Nereye: "Yazının yerine" (el yazısı silinir, temiz yazı aynı sayfadan başlar; art arda seçilen sayfalar
+  birlikte akar; PDF sayfalarında ardından gelen yeni sayfaya yazılır) ya da "Yeni sayfalara" (seçilen sayfalar
+  olduğu gibi kalır). Seçici ekranında ve önizleme panelinde değiştirilebilir.
+- Önizleme panelinde "Satırlar" sekmesinde her satırın görevi listeden değiştirilebilir. Okunamayan sayfa için
+  "Yeniden dene" düğmesi çıkar. Okuma sürerken alttaki çipte ✕ ile durdurabilirsiniz; okunan sayfalar gösterilir.
+- El yazısını düzelt "Düğmeyle" modunda: "Düzelt" düğmesinin sağ üst köşesindeki ✕ düğmeyi kapatır
+  (yazı el yazısı olarak kalır; sonraki yazıda düğme yeniden çıkar).
+- Düzelt düğmesinin hangi belgede çalışacağı seçilebilir: kalem paneli → El yazısını düzelt → "Hangi belgede
+  çalışsın": Ana belge / Yan belge / İkisinde de (ayrıca Ayarlar → El yazısı).
+- Bildirimlerdeki düğmelerin (ör. "Bağla", "Sonraki sayfa buradan devam etsin") yazısı artık görünüyor.
+
+
 S) YENİ (2.5.6) — yeni Ayarlar ekranı, sağ belgede sayfa düzenleme, dik konumda alt alta belge
 ------------------------------------------------------------------------------------------------
 - Ayarlar yeniden düzenlendi: solda bölümler (Görünüm · S Pen ve dokunma · El yazısı · Sayfayı düzelt ·
