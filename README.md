@@ -64,9 +64,12 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
   hemen arkasına eklenir ve hizalı kalır (Ayarlar → El yazısı → "Metnin devamına ekle" ile kapatılabilir).
 - Daha önce yazılanlar için: kement ile seç → "Yazıya dök". Ayrı düşmüş parçalar için: kement ile seç →
   **Hizala ve düzelt** (parçalar okuma sırasıyla tek, sola hizalı metinde birleşir ve yeniden düzeltilir).
-- **Gelişmiş okuma** (Yalnız cihaz / Uzun yazılarda / Her zaman; varsayılan Her zaman): cihazdaki sonuç hemen yazılır,
-  aynı anda gelişmiş model (Gemini 3.8 Flash ya da daha hızlı Flash-Lite; Claude'da Sonnet / Haiku) el yazısının
-  görüntüsünü baştan okur ve 1–3 saniyede o parçayı günceller. Uzun cümlelerde cihazdaki modelden çok daha doğru.
+- Uzun satırlar kelime boşluklarından 3–4 kelimelik parçalara bölünüp sırayla okunur (ML Kit kısa yazıda daha iyi).
+- **Gelişmiş okuma, tablette** (Yalnız cihaz / Uzun yazılarda / Her zaman): cihazdaki sonuç hemen yazılır, aynı anda
+  **Gemma 4 E2B** (Google, Apache 2.0) el yazısının görüntüsünü baştan okur ve o parçayı günceller. Model bir kez
+  Hugging Face'ten indirilir (≈2,6 GB), sonra internetsiz çalışır; yazı tabletten çıkmaz (LiteRT-LM ile cihazda).
+  İstenirse bulut (Gemini / Claude) da seçilebilir; kendiliğinden kullanılmaz.
+- **Karşılaştır:** bir cümle yazıp cihazdaki tanıma (tüm satır / parçalı) ile Gemma'nın sonucunu ve süresini yan yana görürüm.
 
 **Sayfayı düzelt (yapay zekâ)**
 - Önce düzeltilecek sayfaları seçiyorum (açık sayfa hazır seçili; "Yazılı sayfalar" hepsini seçer, en çok 20 sayfa).
@@ -169,6 +172,7 @@ android-uygulama/    Android kabuğu (WebView)
   app/src/main/java/com/kenarnotu/app/
     MainActivity.java          WebView, KenarNative köprüsü, OneDrive'a yazma
     HandwritingCorrector.java  ML Kit el yazısı tanıma + yazım düzeltme
+    LocalReader.java           Tabletteki gelişmiş okuma: Gemma 4 E2B (LiteRT-LM), model indirme
     Speaker.java               Metin okuma (en-GB kadın sesi)
   APK-OLUSTUR.bat              Windows'ta tek tıkla APK
   KURULUM.txt                  Kurulum ve sürüm notları
@@ -208,19 +212,21 @@ cihazda saklanır, depoya girmez.
 
 Notlar tabletin kendi deposunda tutulur. Dosyalar yalnızca seçtiğiniz OneDrive dosyasına yazılır. Yapay zekâ
 özellikleri yalnızca siz kullandığınızda seçilen metni ya da alanı seçtiğiniz sağlayıcıya gönderir. El yazısı tanıma
-ve sesli okuma Android'de cihazda çalışır; "Gelişmiş okuma" açıkken düzeltilen el yazısının görüntüsü seçtiğiniz
-yapay zekâ sağlayıcısına da gönderilir (Ayarlar → El yazısı → "Yalnız cihaz" ile kapatılır).
+(ML Kit ve tabletteki Gemma 4) ve sesli okuma Android'de cihazda çalışır; el yazısı yalnızca Ayarlar → El yazısı →
+Okuyan model'de açıkça "Bulut" seçilirse yapay zekâ sağlayıcısına gönderilir.
 
 ## Bilinen sınırlar
 
 - S Pen'in Air Actions hareketleri desteklenmez.
 - Parola ile açılan (açılış şifreli) PDF'ler açılmaz.
 - Kurşun kalemin doku görünümü dışa aktarılan PDF'te düz gri çıkar.
+- Tabletteki Gemma modelinin Türkçe el yazısındaki başarısı ve hızı cihaza göre değişir; Ayarlar → El yazısı → Karşılaştır ile denenebilir.
 
 ## Lisanslar (üçüncü taraf)
 
 - PDF.js — Apache 2.0 (Mozilla) · pdf-lib — MIT · MSAL.js — MIT (Microsoft) · qpdf — Apache 2.0
 - Google ML Kit Digital Ink Recognition — Google API Hizmet Şartları
+- LiteRT-LM (Google) — Apache 2.0 · Gemma 4 E2B modeli (Google, Hugging Face litert-community) — Apache 2.0; uygulamayla dağıtılmaz, ilk kullanımda indirilir
 - Onest, Literata, Caveat, Kalam yazı tipleri — SIL Open Font License 1.1
 
 ---

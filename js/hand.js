@@ -3,21 +3,24 @@
    El yazısını düzelt
    Kalemle yazılan satırları metne çevirir ve yazım hatalarını düzeltir.
    - Android: cihazda ML Kit el yazısı tanıma (Türkçe + İngilizce, aynı anda) ve sistemin yazım denetleyicisi
-     (HandwritingCorrector.java); modeller bir kez indirildikten sonra internetsiz çalışır.
-   - Web / yedek: bağlı yapay zekâ (Gemini ya da Claude) görüntüden okur ve düzeltir.
-   - Gelişmiş okuma (varsayılan, internet gerekir): cihazdaki sonuç hemen yazılır; aynı anda gelişmiş model (Gemini 3.8 Flash
-     ya da hızlısı Flash-Lite; Claude'da Sonnet / Haiku) el yazısının görüntüsünü baştan okur ve 1–3 sn içinde o parçayı günceller.
-     Cihazdaki ML Kit modeli kısa yazıda iyi, uzun cümlede zayıf; Gemini Nano Galaxy Tab S11'de yok, bu yüzden gelişmiş okuma buluttadır.
+     (HandwritingCorrector.java); modeller bir kez indirildikten sonra internetsiz çalışır. Uzun satırlar kelime
+     boşluklarından birkaç kelimelik parçalara bölünüp sırayla okunur (ML Kit kısa yazıda daha iyi).
+   - Gelişmiş okuma (isteğe bağlı): cihazdaki sonuç hemen yazılır; aynı anda gelişmiş model el yazısının görüntüsünü
+     baştan okur ve o parçayı günceller. Varsayılan model TABLETTE çalışır: Gemma 4 E2B (LiteRT-LM, LocalReader.java;
+     ≈2,6 GB, bir kez indirilir, sonra internetsiz). İstenirse bulut (Gemini / Claude) seçilebilir; kendiliğinden kullanılmaz.
+   - Web (tarayıcı): cihazda tanıma olmadığı için bağlı yapay zekâ okur.
    Mod: Kapalı · Düğmeyle (yazınca “Düzelt” düğmesi çıkar; köşesindeki çarpı düğmeyi kapatır) · Otomatik (durunca kendisi düzeltir)
    Hangi belgede: ana belge, yan yana açılan yan belge ya da ikisi (kalem panelinden ve Ayarlar'dan).
    Alt satıra geçen yazı aynı paragrafta kalır; bir metnin yanına/altına yazılan devam, o metne eklenir.
    ========================================================= */
-const HW = { group: null, pend: [], timer: 0, chip: null, bar: null, last: null, reqs: new Map(), status: null, seq: 0, times: new WeakMap(), busy: 0 };
+const HW = { group: null, pend: [], timer: 0, chip: null, bar: null, last: null, reqs: new Map(), status: null, local: null, seq: 0, times: new WeakMap(), busy: 0,
+  tag: (EMBED ? 's' : 'm') + Math.random().toString(36).slice(2, 6) }; // istek kimlikleri iki bölmede çakışmasın
 const HW_NATIVE = () => !!(window.KenarNative && window.KenarNative.inkRecognize);
+const HW_LOCAL = () => !!(window.KenarNative && window.KenarNative.localRead);
 const HW_TR = /[çğıöşüÇĞİÖŞÜ]/;
 if (S.hand.grammar && S.hand.ai === 'off') { S.hand.ai = 'always'; S.hand.grammar = false; saveSettings(); }
-// 2.6.0: gelişmiş okuma varsayılan olarak açılır (bir kez; sonra kullanıcının seçimi korunur)
-if (!S.hand.mig) { S.hand.mig = 1; if (S.hand.ai === 'off') S.hand.ai = 'always'; saveSettings(); }
+// 2.6.1: el yazısı buluta gönderilmez; gelişmiş okuma tabletteki modelle yapılır (model inince açılır)
+if ((S.hand.mig || 0) < 2) { S.hand.mig = 2; S.hand.ai = 'off'; S.hand.engine = 'local'; saveSettings(); }
 const HAND_MODELS = {
   gemini: { best: { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', short: 'Flash', think: 'low' }, fast: { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite', short: 'Flash-Lite', think: 'minimal' } },
   claude: { best: { id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5', short: 'Sonnet' }, fast: { id: 'claude-haiku-5-5', name: 'Claude Haiku 5.5', short: 'Haiku' } }
@@ -37,10 +40,37 @@ const HAND_READ_SYSTEM = `Sen el yazısını metne çeviren uzman bir okuyucusun
 
 window.__inkStatus = j => { try { HW.status = JSON.parse(j); } catch (e) { } if (HW.onStatus) HW.onStatus(); };
 window.__inkResult = j => { let r; try { r = JSON.parse(j); } catch (e) { return; } const f = HW.reqs.get(r.id); if (f) { HW.reqs.delete(r.id); f(r); } };
+/* tabletteki model (Gemma) durumu: missing · downloading · waiting · ready · loading · loaded · error */
+window.__localStatus = j => {
+  let st; try { st = JSON.parse(j); } catch (e) { return; }
+  const was = HW.local && HW.local.state; HW.local = st;
+  // indirme bitti: gelişmiş okumayı bir kez kendiliğinden aç (indirmek istendiği için)
+  if (!EMBED && (was === 'downloading' || was === 'waiting') && st.state === 'ready' && S.hand.engine !== 'cloud') {
+    if ((S.hand.ai || 'off') === 'off') { S.hand.ai = 'always'; saveSettings(); }
+    toast('Tabletteki el yazısı modeli hazır; gelişmiş okuma açık.', 3200);
+  }
+  if (HW.onLocal) HW.onLocal(); if (HW.onStatus) HW.onStatus();
+  if (HW.bar && HW.last && HW.last.ai === 'busy') showHandBar();
+};
+window.__localResult = j => { let r; try { r = JSON.parse(j); } catch (e) { return; } const f = HW.reqs.get(r.id); if (f) { HW.reqs.delete(r.id); f(r); } };
+function handLocalStatus() {
+  if (!HW_LOCAL()) return null;
+  try { HW.local = JSON.parse(KenarNative.localStatus()); } catch (e) { }
+  return HW.local;
+}
+const handLocalReady = () => { const s = HW.local || handLocalStatus(); return !!(s && /^(ready|loading|loaded)$/.test(s.state)); };
+function handLocalPrepare() { if (HW_LOCAL() && handLocalReady()) try { KenarNative.localPrepare(); } catch (e) { } }
+
+/* Gelişmiş okuyucu: tablet (Gemma) ya da — yalnızca açıkça seçildiyse — bulut */
+function handAdv() {
+  if (S.hand.engine === 'cloud') { const m = handModelInfo(); return { kind: 'cloud', name: m.name, short: m.short, ready: aiReady() && navigator.onLine }; }
+  return { kind: 'local', name: 'Gemma 4 (tablette)', short: 'Gemma', ready: HW_LOCAL() && handLocalReady() };
+}
+function handAdvRead(strokes, opts) { return handAdv().kind === 'cloud' ? handAiRead(strokes, opts) : handLocalRead(strokes, opts); }
 
 function handModelsReady() { const s = HW.status; return !!(s && (s.tr === 'ready' || s.en === 'ready')); }
 function handCheckModels() { if (HW_NATIVE()) try { KenarNative.inkCheck(); } catch (e) { } }
-const cleanAi = t => (t || '').replace(/^\s*(düzeltilmiş metin\s*:)?\s*/i, '').replace(/^["“”'«»]+|["“”'«»]+$/g, '').trim();
+const cleanAi = t => (t || '').replace(/^\s*```[a-z]*\s*|\s*```\s*$/gi, '').replace(/^\s*(düzeltilmiş metin|metin|el yazısının metni)\s*:\s*/i, '').replace(/^["“”'«»]+|["“”'«»]+$/g, '').trim();
 const wordCount = t => (t || '').trim().split(/\s+/).filter(Boolean).length;
 
 /* ---------- tanıma ---------- */
@@ -54,12 +84,36 @@ function handNative(strokes, mode, pre, area) {
     // Yazı alanı: dar çerçeve değil, satır yüksekliği ve sayfa genişliği (küçük/büyük harf ve noktalama için önemli)
     const lineH = area && area.lineH ? area.lineH : (y1 - y0), pageW = area && area.pageW ? area.pageW : (x1 - x0);
     const W = Math.max(x1 - x0, pageW * .85) * k + 20, H = Math.max(y1 - y0, lineH * 1.4) * k + 20;
-    const id = 'ink' + (++HW.seq);
+    const id = 'ink' + HW.tag + (++HW.seq);
     const to = setTimeout(() => { HW.reqs.delete(id); rej(Object.assign(new Error('Tanıma zaman aşımına uğradı'), { code: 'timeout' })); }, 15000);
     HW.reqs.set(id, r => { clearTimeout(to); if (r.ok) res({ ...r, via: 'device' }); else rej(Object.assign(new Error(r.error === 'nomodel' ? 'El yazısı modelleri henüz indirilmedi' : r.error || 'Tanınamadı'), { code: r.error })); });
     try { KenarNative.inkRecognize(JSON.stringify({ id, strokes: payload, mode, pre: (pre || '').slice(-60), w: W, h: H })); }
     catch (e) { clearTimeout(to); HW.reqs.delete(id); rej(e); }
   });
+}
+const ptsBB = s => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of s) { if (p[0] < x0) x0 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[0] > x1) x1 = p[0]; if (p[1] > y1) y1 = p[1]; } return { x0, y0, x1, y1 }; };
+/* Uzun bir satırı (çizgi noktaları) yalnızca belirgin kelime boşluklarından, her parça en az `per` kelime olacak şekilde böler.
+   Kelime: yatayda üst üste binen ya da çok yakın çizgiler (i noktası, ç/ş çengeli, ğ şapkası kelimesinde kalır). */
+function handChunks(ls, lh, per = 3) {
+  const items = ls.map(s => ({ s, bb: ptsBB(s) })).sort((a, b) => a.bb.x0 - b.bb.x0);
+  const words = [];
+  for (const it of items) {
+    const w = words[words.length - 1];
+    if (w && it.bb.x0 <= w.x1 + lh * .5) { w.items.push(it); w.x1 = Math.max(w.x1, it.bb.x1); }
+    else words.push({ items: [it], x0: it.bb.x0, x1: it.bb.x1 });
+  }
+  if (words.length <= per + 1) return [ls];
+  const chunks = []; let cur = [], n = 0;
+  words.forEach((w, i) => {
+    const next = words[i + 1], gap = next ? next.x0 - w.x1 : 0;
+    cur.push(...w.items); n++;
+    // en az `per` kelime biriktiyse ve boşluk belirginse (yaklaşık bir harf genişliğinden büyük) burada kes
+    if (next && n >= per && gap >= lh * .7 && words.length - i - 1 >= 2) { chunks.push(cur); cur = []; n = 0; }
+  });
+  if (cur.length) chunks.push(cur);
+  // parçalar özgün yazılış sırasını korusun
+  const order = new Map(ls.map((s, i) => [s, i]));
+  return chunks.map(c => c.map(it => it.s).sort((a, b) => order.get(a) - order.get(b)));
 }
 function handImage(strokes) {
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
@@ -71,54 +125,110 @@ function handImage(strokes) {
   for (const s of strokes) { g.beginPath(); s.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); if (s.length === 1) g.lineTo(s[0][0] + .5, s[0][1]); g.stroke(); }
   return c.toDataURL('image/png').split(',')[1];
 }
-/* Gelişmiş okuma: model görüntüyü baştan okur (cihazın okuması verilmez; uzun cümlede çoğu zaman yanlış olduğu için yanıltır).
+/* Tabletteki model için: satırlar (uzunsa parçaları) alt alta, sola hizalı dizilir. Çok uzun ince bir görüntü yerine
+   daha kare bir görüntü olur; modelin sabit görsel token bütçesinde harfler daha büyük kalır. rows: [[çizgi noktaları]…] */
+function handImageRows(rows) {
+  const bbs = rows.map(r => r.reduce((b, s) => bbUnion(b, ptsBB(s)), null));
+  const hs = bbs.map(b => b.y1 - b.y0), lh = Math.max(8, hs.slice().sort((a, b) => a - b)[hs.length >> 1]);
+  const gapY = lh * .45, pad = lh * .4;
+  const W = Math.max(...bbs.map(b => b.x1 - b.x0)) + pad * 2, H = hs.reduce((a, x) => a + x, 0) + gapY * (rows.length - 1) + pad * 2;
+  const k = Math.min(5, 1600 / Math.max(1, W), 1600 / Math.max(1, H), 64 / lh);
+  const c = document.createElement('canvas'); c.width = Math.max(8, Math.round(W * k)); c.height = Math.max(8, Math.round(H * k));
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.strokeStyle = '#111'; g.lineCap = g.lineJoin = 'round';
+  let y = pad;
+  rows.forEach((r, i) => {
+    const b = bbs[i]; g.setTransform(k, 0, 0, k, (pad - b.x0) * k, (y - b.y0) * k); g.lineWidth = Math.max(1.4, 4.4 / k);
+    for (const s of r) { g.beginPath(); s.forEach((p, j) => j ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); if (s.length === 1) g.lineTo(s[0][0] + .5, s[0][1]); g.stroke(); }
+    y += hs[i] + gapY;
+  });
+  return c.toDataURL('image/png').split(',')[1];
+}
+const handAsk = (before, lines, extra) => {
+  const ask = [];
+  if (before && before.trim()) ask.push('Önceki metin (yalnızca bağlam; bunu tekrar yazma): «' + before.trim().slice(-240) + '»');
+  if (extra) ask.push(extra);
+  else if (lines > 1) ask.push('Yazı ' + lines + ' satır; hepsini sırayla oku.');
+  ask.push('El yazısının metni:');
+  return ask.join('\n');
+};
+/* Bulutta gelişmiş okuma (yalnızca Ayarlar'da “Bulut” seçildiyse): model görüntüyü baştan okur.
    before: önceki metin (devam yazısı için bağlam) · maxLen: el yazısının genişliğine göre en uzun makul metin */
 async function handAiRead(strokes, { mode = S.hand.lang, before = '', lines = 1, maxLen = 0 } = {}) {
   const hint = mode === 'tr' ? '\n- Metin Türkçe.' : mode === 'en' ? '\n- Metin İngilizce.' : '';
-  const ask = [];
-  if (before && before.trim()) ask.push('Önceki metin (yalnızca bağlam; bunu tekrar yazma): «' + before.trim().slice(-240) + '»');
-  if (lines > 1) ask.push('Yazı ' + lines + ' satır; hepsini sırayla oku.');
-  ask.push('El yazısının metni:');
-  const { text } = await aiStream({ tag: 'hand', ...handAiOpts(), system: HAND_READ_SYSTEM + hint, messages: [{ role: 'user', content: [{ type: 'image', mime: 'image/png', data: handImage(strokes) }, { type: 'text', text: ask.join('\n') }] }], maxTokens: 2048 });
+  const { text } = await aiStream({ tag: 'hand', ...handAiOpts(), system: HAND_READ_SYSTEM + hint, messages: [{ role: 'user', content: [{ type: 'image', mime: 'image/png', data: handImage(strokes) }, { type: 'text', text: handAsk(before, lines) }] }], maxTokens: 2048 });
   const t = cleanAi(text).replace(/\s*\n+\s*/g, ' ');
   if (!t) throw new Error('Yazı okunamadı');
   if (maxLen && t.length > maxLen) throw new Error('sonuç yazının uzunluğuyla uyuşmadı');
   return t;
+}
+/* Tabletteki model (Gemma 4 E2B): internetsiz. rowsPts verilirse satırlar/parçalar alt alta dizilmiş görüntü gider.
+   İlk okumada model belleğe yüklenir (birkaç saniye). Sonuç metni döner; opts.info'ya süreler yazılır. */
+function handLocalRead(strokes, { mode = S.hand.lang, before = '', lines = 1, maxLen = 0, rows = null, info = null } = {}) {
+  return new Promise((res, rej) => {
+    if (!HW_LOCAL()) { rej(new Error('Tabletteki model yalnızca Android uygulamasında çalışır')); return; }
+    if (!handLocalReady()) { rej(Object.assign(new Error('Tabletteki model indirilmedi (Ayarlar → El yazısı)'), { code: 'nolocal' })); return; }
+    const hint = mode === 'tr' ? '\n- Metin Türkçe.' : mode === 'en' ? '\n- Metin İngilizce.' : '';
+    const rr = rows && rows.length ? rows : null;
+    const extra = rr && rr.length > 1 ? 'Görüntüdeki satırları yukarıdan aşağı sırayla oku; hepsi tek bir metnin devamıdır.' : '';
+    const id = 'loc' + HW.tag + (++HW.seq);
+    const to = setTimeout(() => { HW.reqs.delete(id); rej(new Error('Tabletteki model yanıt vermedi')); }, 120000);
+    HW.reqs.set(id, r => {
+      clearTimeout(to);
+      if (info) Object.assign(info, { ms: r.ms || 0, loadMs: r.loadMs || 0, backend: r.backend || '' });
+      if (!r.ok) { rej(Object.assign(new Error(r.error === 'nomodel' ? 'Tabletteki model indirilmedi' : r.error || 'Okunamadı'), { code: r.error })); return; }
+      const t = cleanAi(r.text).replace(/\s*\n+\s*/g, ' ');
+      if (!t) { rej(new Error('Yazı okunamadı')); return; }
+      if (r.cut || (maxLen && t.length > maxLen)) { rej(new Error('sonuç yazının uzunluğuyla uyuşmadı')); return; }
+      res(t);
+    });
+    try {
+      const png = rr ? handImageRows(rr) : handImage(strokes);
+      KenarNative.localRead(JSON.stringify({ id, png, system: HAND_READ_SYSTEM + hint, prompt: handAsk(before, lines, extra), budget: (rr ? rr.length : lines) > 1 ? 1120 : 560, maxChars: maxLen ? Math.round(maxLen * 1.3) : 1500 }));
+    } catch (e) { clearTimeout(to); HW.reqs.delete(id); rej(e); }
+  });
 }
 /* el yazısının kapladığı genişliğe göre: uzun mu, en fazla kaç harf olabilir */
 function handInkSize(lines, lh) {
   const w = lines.reduce((a, l) => a + (l.bb.x1 - l.bb.x0), 0), k = w / Math.max(8, lh);
   return { long: lines.length > 1 || k >= 14, maxLen: Math.round(k * 3.5 + 40) };
 }
+/* tabletteki model için satırları (uzunsa parçalarına bölerek) alt alta diz */
+function handRows(linePts, lh) { return linePts.flatMap(ls => { const b = ls.reduce((a, s) => bbUnion(a, ptsBB(s)), null); return b.x1 - b.x0 > lh * 16 ? handChunks(ls, lh, 4) : [ls]; }); }
 async function handAi(strokes, mode, pre = '', lines = 1) {
   if (!aiReady()) throw Object.assign(new Error('Bu cihazda el yazısı tanıma yok; yapay zekâyı bağlayın'), { code: 'nokey' });
   const t = await handAiRead(strokes, { mode, before: pre, lines });
   return { ok: true, lang: mode === 'tr' || mode === 'en' ? mode : HW_TR.test(t) ? 'tr' : 'en', text: t, corrected: t, kept: [], via: 'ai' };
 }
-/* Yalnızca metin (birleştirilmiş parçalar, el yazısı yok): bölünmüş kelimeleri birleştir, en az değişiklikle düzelt */
+/* Yalnızca metin (birleştirilmiş parçalar, el yazısı yok): bölünmüş kelimeleri birleştir, en az değişiklikle düzelt (yalnızca bulutta) */
 async function handAiText(r) {
   const { text } = await aiStream({ tag: 'hand', ...handAiOpts(), system: MERGE_FIX_SYSTEM, messages: [{ role: 'user', content: (r.text || r.corrected) + (r.corrected && r.corrected !== r.text ? '\n\n(Yazım denetleyicisinin önerisi: ' + r.corrected + ')' : '') }], maxTokens: 2048 });
   const t = cleanAi(text); return t && t.length < (r.corrected || '').length * 1.8 + 40 ? t : null;
 }
-/* Satırlar sırayla tanınır; her satıra öncesindeki metin bağlam olarak verilir. Olmazsa yapay zekâ. */
-async function handRecognizeLines(lineStrokes, mode = S.hand.lang, pre = '', area = null, aiP = null) {
+/* Satırlar sırayla tanınır; her satıra (ve uzun satırın her parçasına) öncesindeki metin bağlam olarak verilir.
+   Cihazda tanıma olmazsa: gelişmiş okuma yoldaysa (aiP) onun sonucu; web'de bulut. Tablette, açıkça seçilmedikçe buluta gidilmez.
+   o.split: uzun satırları böl (varsayılan ayardan) · o.deviceOnly: yalnızca cihaz (karşılaştırma için) */
+async function handRecognizeLines(lineStrokes, mode = S.hand.lang, pre = '', area = null, aiP = null, o = {}) {
   const all = lineStrokes.flat();
   const viaAi = async () => { const t = await aiP; return { ok: true, lang: mode === 'tr' || mode === 'en' ? mode : HW_TR.test(t) ? 'tr' : 'en', text: t, corrected: t, kept: [], via: 'ai' }; };
   if (HW_NATIVE()) {
     try {
-      const outs = []; let ctx = pre || '';
-      for (const ls of lineStrokes) { const r = await handNative(ls, mode, ctx, area); outs.push(r); ctx = (ctx ? ctx + ' ' : '') + r.corrected; }
+      const split = o.split != null ? o.split : S.hand.split !== false, lh = area && area.lineH ? area.lineH : 20;
+      const outs = []; let ctx = pre || '', parts = 0;
+      for (const ls of lineStrokes) for (const ch of split ? handChunks(ls, lh) : [ls]) { const r = await handNative(ch, mode, ctx, area); outs.push(r); parts++; ctx = (ctx ? ctx + ' ' : '') + r.corrected; }
       const langs = outs.map(o => o.lang);
-      return { ok: true, via: 'device', lang: langs.filter(l => l === 'tr').length > langs.length / 2 ? 'tr' : langs[0],
+      return { ok: true, via: 'device', parts, lang: langs.filter(l => l === 'tr').length > langs.length / 2 ? 'tr' : langs[0],
         text: outs.map(o => o.text).join(' '), corrected: outs.map(o => o.corrected).join(' '),
         kept: outs.flatMap(o => o.kept || []), alts: outs.length === 1 ? outs[0].alts || [] : [] };
     } catch (e) {
-      if (e.code === 'nomodel') { handCheckModels(); if (!aiReady()) throw Object.assign(new Error('El yazısı modelleri indiriliyor (yaklaşık 40 MB). Birkaç dakika sonra tekrar deneyin.'), { code: 'nomodel' }); }
-      else if (!aiReady()) throw e;
+      if (o.deviceOnly) throw e;
       if (aiP) return viaAi(); // gelişmiş okuma zaten yolda
-      return handAi(all, mode, pre, lineStrokes.length);
+      if (e.code === 'nomodel') { handCheckModels(); throw Object.assign(new Error('El yazısı modelleri indiriliyor (yaklaşık 40 MB). Birkaç dakika sonra tekrar deneyin.'), { code: 'nomodel' }); }
+      if (S.hand.engine === 'cloud' && aiReady()) return handAi(all, mode, pre, lineStrokes.length);
+      throw e;
     }
   }
+  if (o.deviceOnly) throw new Error('Cihazda tanıma yalnızca Android uygulamasında var');
   if (aiP) return viaAi();
   return handAi(all, mode, pre, lineStrokes.length);
 }
@@ -127,7 +237,7 @@ async function handRecognize(strokes, mode = S.hand.lang, pre = '', area = null)
 function handNativeText(text, mode) {
   return new Promise((res, rej) => {
     if (!(window.KenarNative && KenarNative.inkCorrectText)) { rej(new Error('yok')); return; }
-    const id = 'txt' + (++HW.seq);
+    const id = 'txt' + HW.tag + (++HW.seq);
     const to = setTimeout(() => { HW.reqs.delete(id); rej(new Error('Zaman aşımı')); }, 10000);
     HW.reqs.set(id, r => { clearTimeout(to); r.ok ? res({ ...r, via: 'device' }) : rej(new Error(r.error || 'Düzeltilemedi')); });
     try { KenarNative.inkCorrectText(JSON.stringify({ id, text, mode })); } catch (e) { clearTimeout(to); HW.reqs.delete(id); rej(e); }
@@ -179,7 +289,11 @@ function handResetAll() {
   handReset();
   try { if (EMBED) { if (parent.handReset) parent.handReset(); } else { const w = typeof sideWin === 'function' && sideWin(); if (w && w.handReset) w.handReset(); } } catch (e) { }
 }
-window.handPenDown = () => { clearTimeout(HW.timer); };
+window.handPenDown = () => {
+  clearTimeout(HW.timer);
+  // tabletteki model: yazmaya başlayınca arka planda belleğe yüklensin (ilk Düzelt beklemesin)
+  if (!HW.prepped && S.hand.mode !== 'off' && (S.hand.ai || 'off') !== 'off' && S.hand.engine !== 'cloud') { HW.prepped = true; handLocalPrepare(); }
+};
 window.handAfterStroke = (pv, s, t0p, t1p) => {
   if (S.hand.mode === 'off' || !handHere() || S.prefs.readOnly || s.t === 'hl') return;
   const t1 = Date.now(); HW.times.set(s, { t0: t1 - Math.max(1, t1p - t0p), t1 });
@@ -258,12 +372,12 @@ async function runGroup(g, auto) {
   try {
     const pts = lines.map(l => l.strokes.map(strokePts)), ink = handInkSize(lines, lh), before = cont ? cont.text : '';
     // gelişmiş okuma cihazdakiyle AYNI ANDA başlar: cihaz sonucu hemen yazılır, model gelince o parça güncellenir
-    const mode = S.hand.ai || 'off', useAi = HW_NATIVE() && aiReady() && navigator.onLine && (mode === 'always' || (mode === 'long' && ink.long));
-    const aiAt = Date.now(), aiP = useAi ? handAiRead(pts.flat(), { before, lines: lines.length, maxLen: ink.maxLen }) : null;
+    const mode = S.hand.ai || 'off', adv = handAdv(), useAi = HW_NATIVE() && adv.ready && (mode === 'always' || (mode === 'long' && ink.long));
+    const aiAt = Date.now(), aiInfo = {}, aiP = useAi ? handAdvRead(pts.flat(), { before, lines: lines.length, maxLen: ink.maxLen, rows: handRows(pts, lh), info: aiInfo }) : null;
     if (aiP) aiP.catch(() => { });
     const r = await handRecognizeLines(pts, S.hand.lang, before, { lineH: lh, pageW: g.pv.meta.w }, aiP);
     if (auto && r.corrected.replace(/\s/g, '').length < 2) return;
-    applyHandResult(g.pv, live, r, { cont, lines, lh, aiP: r.via === 'ai' ? null : aiP, aiAt, maxLen: ink.maxLen, long: ink.long });
+    applyHandResult(g.pv, live, r, { cont, lines, lh, aiP: r.via === 'ai' ? null : aiP, aiAt, aiInfo, maxLen: ink.maxLen, long: ink.long });
   } catch (e) {
     if (e.code === 'nokey') toastAction(e.message, 'Bağla', () => aiSettingsModal());
     else toast(e.message || 'El yazısı tanınamadı', 3200);
@@ -319,7 +433,7 @@ function applyHandResult(pv, strokes, r, info = {}) {
   HW.last = { pv, t: nt, strokes: live, lines: lines.map(l => l.strokes), lh: lineH, r, op, prefix, mark, prevInk, at: Date.now(),
     seg: r.corrected, idx: cont ? prefix.length : mark ? mark.length + 1 : 0, mode: S.hand.lang, maxLen: info.maxLen || 0, long: !!info.long };
   showHandBar();
-  maybeAiImprove(HW.last, info.aiP, info.aiAt);
+  maybeAiImprove(HW.last, info.aiP, info.aiAt, info.aiInfo);
 }
 /* L'nin eklediği parça metnin neresinde? (kullanıcı o parçayı değiştirdiyse -1) */
 function segAt(L, text) {
@@ -337,24 +451,29 @@ function segReplace(L, seg) {
 }
 /* Gelişmiş okuma: cihazdaki sonuç beklemeden yazılmıştır; model gelince yalnızca bu işlemin parçası güncellenir.
    Sonuç, kullanıcı bu arada başka satırlar düzeltse de kendi kutusuna uygulanır (parça değiştirilmediyse). */
-async function maybeAiImprove(L, aiP, at) {
+async function maybeAiImprove(L, aiP, at, info) {
   if (!L) return;
-  const mode = S.hand.ai || 'off';
+  const mode = S.hand.ai || 'off', adv = handAdv();
   if (!aiP) {
-    if (mode === 'off' || (L.r.via !== 'device' && L.r.via !== 'merge') || !aiReady() || !navigator.onLine) return;
+    if (mode === 'off' || (L.r.via !== 'device' && L.r.via !== 'merge') || !adv.ready) return;
+    info = {};
     if (L.lines && L.lines.length) {
       if (mode === 'long' && !L.long && wordCount(L.seg) < 6) return;
-      aiP = handAiRead(L.lines.flat().map(strokePts), { mode: L.mode, before: L.prefix, lines: L.lines.length, maxLen: Math.max(L.maxLen, L.seg.length * 1.8 + 30) });
+      const pts = L.lines.map(l => l.map(strokePts));
+      aiP = handAdvRead(pts.flat(), { mode: L.mode, before: L.prefix, lines: L.lines.length, maxLen: Math.max(L.maxLen, L.seg.length * 1.8 + 30), rows: handRows(pts, L.lh || 20), info });
     } else {
+      if (adv.kind !== 'cloud') return; // birleştirilmiş metnin düzeltmesi yalnızca bulutta (tabletteki model görüntüden okur)
       if (mode === 'long' && wordCount(L.r.corrected) < 6) return;
       aiP = handAiText(L.r);
     }
     at = Date.now();
   }
-  L.ai = 'busy'; L.aiModel = handModelInfo().short; if (HW.last === L && HW.bar) showHandBar();
+  L.ai = 'busy'; L.aiModel = adv.short; L.aiKind = adv.kind; L.aiInfo = info || null; if (HW.last === L && HW.bar) showHandBar();
   let imp = null;
   try { imp = await aiP; } catch (e) { L.ai = 'fail'; L.aiErr = e && e.message; }
-  L.aiMs = Date.now() - (at || Date.now());
+  // tabletteki modelde süre: okuma süresi (ilk okumada model yükleme ayrıca)
+  L.aiMs = info && info.ms ? info.ms : Date.now() - (at || Date.now());
+  L.aiLoad = info && info.loadMs ? info.loadMs : 0;
   if (L.ai === 'fail') { }
   else if (imp && imp !== L.seg) {
     const before = L.seg;
@@ -414,11 +533,12 @@ function showHandBar() {
   hideHandBar(); const L = HW.last; if (!L) return;
   const r = L.r;
   const langBtn = h('button', { class: 'langb', type: 'button', title: (r.lang === 'tr' ? 'İngilizce' : 'Türkçe') + ' olarak yeniden oku', onclick: handSwitchLang }, (r.lang || '?').toUpperCase());
-  const sec = L.aiMs ? ' · ' + (L.aiMs / 1000).toFixed(1).replace('.', ',') + ' sn' : '';
-  const info = L.ai === 'busy' ? (L.aiModel || 'Gelişmiş model') + ' okuyor…' : L.ai === 'done' ? (L.aiModel || 'Gelişmiş model') + ' düzeltti' + sec + (L.prefix ? ' · metnin devamına eklendi' : '')
+  const sec = L.aiMs ? ' · ' + (L.aiMs / 1000).toFixed(1).replace('.', ',') + ' sn' + (L.aiLoad ? ' (+' + (L.aiLoad / 1000).toFixed(0) + ' sn yükleme)' : '') : '';
+  const loadingLocal = L.aiKind === 'local' && HW.local && HW.local.state === 'loading';
+  const info = L.ai === 'busy' ? (loadingLocal ? 'Gemma belleğe yükleniyor (ilk okuma)…' : (L.aiModel || 'Gelişmiş model') + ' okuyor…') : L.ai === 'done' ? (L.aiModel || 'Gelişmiş model') + ' düzeltti' + sec + (L.prefix ? ' · metnin devamına eklendi' : '')
     : L.ai === 'same' ? (L.aiModel || 'Gelişmiş model') + ' de aynı okudu' + sec : L.ai === 'fail' ? 'Gelişmiş okuma olmadı' + (L.aiErr ? ': ' + L.aiErr : '') + '; cihazdaki sonuç kaldı' : L.ai === 'edited' ? 'Metni değiştirdiğin için gelişmiş okuma uygulanmadı'
     : r.kept && r.kept.length ? 'Korundu: ' + r.kept.join(', ') : r.text && r.text !== r.corrected ? 'Düzeltildi: ' + r.text
-    : L.prefix ? 'Metnin devamına eklendi' : r.via === 'merge' ? 'Parçalar birleştirildi ve hizalandı' : r.via === 'ai' ? handModelInfo().short + ' ile okundu' : 'Yazım hatası yok';
+    : L.prefix ? 'Metnin devamına eklendi' : r.via === 'merge' ? 'Parçalar birleştirildi ve hizalandı' : r.via === 'ai' ? (L.aiModel || (HW_NATIVE() ? handAdv().short : handModelInfo().short)) + ' ile okundu' : 'Yazım hatası yok';
   const shown = L.t.text.length > 60 ? '…' + L.t.text.slice(-58) : L.t.text;
   HW.bar = h('div', { class: 'floaty handbar' + (L.ai === 'busy' ? ' aibusy' : ''), role: 'toolbar', 'aria-label': 'El yazısı sonucu' },
     langBtn,
@@ -576,22 +696,83 @@ function handCost() {
   const inp = prov === 'gemini' ? 1500 : 900, out = prov === 'gemini' && m.think === 'low' ? 300 : 70;
   try { const pr = uzPrice(prov, m.id, uzDay(), inp); return { usd: (inp * pr.i + out * pr.o) / 1e6, real: false }; } catch (e) { return null; }
 }
+/* ---------- tabletteki model kutusu (indir / durdur / sil / durum) ---------- */
+const gb = b => (b / 1e9).toFixed(1).replace('.', ',') + ' GB';
+HW.localSubs = new Set();
+{ const base = window.__localStatus; window.__localStatus = j => { base(j); for (const f of [...HW.localSubs]) f(); }; }
+function handLocalBox() {
+  const box = h('div', { class: 'lmbox' });
+  let armDel = false, armT = 0;
+  const btn = (label, ic, fn, cls) => h('button', { class: 'btn small' + (cls ? ' ' + cls : ''), type: 'button', onclick: fn }, ic ? icon(ic) : null, label);
+  const call = f => { try { KenarNative[f](); } catch (e) { toast('Yapılamadı: ' + e.message, 2400); } };
+  const render = () => {
+    if (!box.isConnected && box._mounted) { HW.localSubs.delete(render); return; }
+    box.innerHTML = '';
+    if (!HW_LOCAL()) { box.append(h('p', { class: 'notice' }, 'Tabletteki model yalnızca Android uygulamasında çalışır.')); return; }
+    const st = HW.local || handLocalStatus() || { state: 'missing' }, total = st.total || 2.58e9;
+    const line = (txt, sub) => box.append(h('div', { class: 'lmline' }, h('b', null, txt), sub ? h('small', null, sub) : null));
+    const bar = frac => box.append(h('div', { class: 'lmbar', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(frac * 100) }, h('i', { style: { width: Math.max(2, Math.round(frac * 100)) + '%' } })));
+    const acts = (...b) => box.append(h('div', { class: 'sbtns' }, ...b));
+    const st0 = st.state;
+    if (st0 === 'missing' || (st0 === 'error' && !(st.done > 0))) {
+      if (st.error) box.append(h('p', { class: 'lmerr' }, st.error));
+      line('Gemma 4 E2B · yaklaşık 2,6 GB', 'Bir kez indirilir, sonra internetsiz çalışır; yazın tabletten çıkmaz. Yalnızca Wi-Fi’da iner; indirme bildirimlerde görünür, uygulamayı kapatsan da sürer.' + (st.free ? ' Boş yer: ' + gb(st.free) + '.' : ''));
+      acts(btn(st0 === 'error' ? 'Yeniden dene' : 'İndir (2,6 GB)', IC.dl, () => { if (st.free && st.free < 3e9) { toast('Tablette yeterli boş yer yok (en az 3 GB gerekir).', 3200); return; } call('localDownload'); }, 'primary'));
+    } else if (st0 === 'downloading' || st0 === 'waiting') {
+      const done = st.done || 0, frac = Math.min(1, done / total);
+      line(st0 === 'waiting' ? (st.reason || 'Bekliyor') : 'İndiriliyor · %' + Math.floor(frac * 100), gb(done) + ' / ' + gb(total));
+      bar(frac);
+      acts(btn('İndirmeyi durdur', IC.close, () => call('localCancel')));
+    } else if (st0 === 'loading') {
+      line('Belleğe yükleniyor…', 'İlk yüklemede 5–10 saniye sürebilir');
+      bar(.5); box.lastChild.classList.add('busy');
+    } else if (st0 === 'ready' || st0 === 'loaded') {
+      line(st0 === 'loaded' ? 'Hazır · ' + (st.backend === 'CPU' ? 'işlemcide' : st.backend ? 'grafik işlemcisinde' : '') + (st.loadMs ? ' · yükleme ' + (st.loadMs / 1000).toFixed(1).replace('.', ',') + ' sn' : '') : 'İndirildi · ilk okumada belleğe yüklenir',
+        'Gemma 4 E2B · 2,6 GB · internetsiz' + (st.backend === 'CPU' ? ' · grafik işlemcisi kullanılamadı, işlemcide daha yavaş çalışır' : ''));
+      acts(st0 === 'ready' ? btn('Şimdi yükle', IC.spark, () => call('localPrepare')) : null,
+        btn(armDel ? 'Emin misin? Sil' : 'Modeli sil', IC.trash, () => {
+          if (!armDel) { armDel = true; render(); clearTimeout(armT); armT = setTimeout(() => { armDel = false; render(); }, 4000); return; }
+          armDel = false; call('localDelete');
+        }, armDel ? 'danger' : ''));
+    } else {
+      if (st.error) box.append(h('p', { class: 'lmerr' }, st.error));
+      acts(btn('Yeniden dene', IC.dl, () => call('localDownload'), 'primary'));
+    }
+  };
+  HW.localSubs.add(render);
+  render(); box._mounted = true;
+  return box;
+}
 function handAiNote() {
   const aiNote = h('p', { class: 'notice' });
   const showAi = () => {
     const mode = S.hand.ai || 'off';
+    if (!HW_NATIVE()) { aiNote.textContent = 'Bu tarayıcıda cihazda tanıma yok; el yazısını ' + handModelName() + ' okur (internet gerekir).' + (aiReady() ? '' : ' Önce yapay zekâyı bağlayın (Ayarlar → Yapay zekâ).'); return; }
     if (mode === 'off') { aiNote.textContent = 'Yalnızca cihazdaki tanıma ve yazım denetimi kullanılır (internetsiz, anında). Kısa yazılarda iyidir; uzun cümlelerde hata yapabilir.'; return; }
+    const when = mode === 'long' ? ' (birden çok satır ya da yaklaşık 6 kelimeden uzun yazılarda)' : '';
+    if (S.hand.engine !== 'cloud') {
+      aiNote.textContent = 'Önce cihazdaki sonuç anında yazılır; aynı anda tabletteki Gemma 4 el yazısının görüntüsünü baştan okur ve metni günceller' + when + '. İnternet gerekmez, yazın tabletten çıkmaz.' + (handLocalReady() ? '' : ' Önce aşağıdan modeli indir.');
+      return;
+    }
     const k = handCost(), cost = k && window.uzUsd ? ' Düzeltme başına ' + (k.real ? 'ortalama ' : '≈ ') + uzUsd(k.usd) + ' (100 düzeltme ≈ ' + uzUsd(k.usd * 100) + ')' + (S.usage && S.usage.gFree && aiCfg().provider === 'gemini' ? '; ücretsiz katmanda ödenmez' : '') + '.' : '';
-    const head = HW_NATIVE() ? 'Önce cihazdaki sonuç anında yazılır; aynı anda ' + handModelName() + ' el yazısının görüntüsünü baştan okur ve genellikle 1–3 saniyede metni günceller' + (mode === 'long' ? ' (birden çok satır ya da yaklaşık 6 kelimeden uzun yazılarda)' : '') + '. İnternet gerekir; bağlantı yoksa cihazdaki sonuç kalır.'
-      : 'Bu tarayıcıda cihazda tanıma yok; el yazısını ' + handModelName() + ' okur (internet gerekir).';
-    aiNote.textContent = head + cost + (aiReady() ? '' : ' Önce yapay zekâyı bağlayın (Ayarlar → Yapay zekâ).');
+    aiNote.textContent = 'Önce cihazdaki sonuç anında yazılır; aynı anda ' + handModelName() + ' el yazısının görüntüsünü baştan okur ve genellikle 1–3 saniyede metni günceller' + when + '. El yazısının görüntüsü buluta gider; internet gerekir.' + cost + (aiReady() ? '' : ' Önce yapay zekâyı bağlayın (Ayarlar → Yapay zekâ).');
   };
   showAi(); aiNote._show = showAi;
   return aiNote;
 }
 const handModelSub = () => { const c = aiCfg(), M = HAND_MODELS[c.provider === 'gemini' ? 'gemini' : 'claude']; return 'En doğru: ' + M.best.name + ' · En hızlı: ' + M.fast.name; };
+const HAND_WHEN = [['off', 'Yalnız cihaz'], ['long', 'Uzun yazılarda'], ['always', 'Her zaman']];
 function handSettingsRows() {
   const st = handStatusNote(), showSt = st._show, aiNote = handAiNote(), showAi = aiNote._show;
+  const loc = HW_NATIVE() && S.hand.engine !== 'cloud' ? h('p', { class: 'notice' }) : null;
+  const showLoc = () => {
+    if (!loc) return; if (!loc.isConnected && loc._m) { HW.localSubs.delete(showLoc); return; }
+    const s0 = (HW.local || handLocalStatus() || {}).state;
+    loc.innerHTML = '';
+    loc.append(s0 === 'loaded' || s0 === 'ready' || s0 === 'loading' ? 'Tabletteki model hazır. ' : s0 === 'downloading' || s0 === 'waiting' ? 'Tabletteki model indiriliyor. ' : 'Tabletteki model indirilmedi. ',
+      h('button', { class: 'btn small', type: 'button', onclick: () => { closePop(); openSettings('hand'); } }, 'Ayarlar → El yazısı'));
+  };
+  if (loc) { HW.localSubs.add(showLoc); showLoc(); loc._m = true; }
   const rows = h('div', { class: 'col handset' },
     h('hr', { class: 'sep' }), h('div', { class: 'lbl' }, 'El yazısını düzelt'),
     segRow([['off', 'Kapalı'], ['button', 'Düğmeyle'], ['auto', 'Otomatik']], S.hand.mode, v => { S.hand.mode = v; saveSettings(); handResetAll(); if (v !== 'off' && HW_NATIVE()) { const s = HW.status || {}; if (s.tr !== 'ready' || s.en !== 'ready') try { KenarNative.inkPrepare(); } catch (e) { } } showSt(); }),
@@ -604,11 +785,9 @@ function handSettingsRows() {
     rangeRow('hScale', 'Metin boyutu', 50, 200, 5, S.hand.scale, v => '%' + Math.round(v), v => { S.hand.scale = v; saveSettings(); }),
     toggleRow('hCont', 'Metnin devamına ekle', S.hand.cont !== false, v => { S.hand.cont = v; saveSettings(); showSt(); }, 'Düzeltilmiş bir metnin yanına ya da altına yazdığın devam o metne eklenir'),
     S.hand.style ? h('p', { class: 'notice' }, 'Seçili kalem stili: ' + S.hand.style.name + ' (' + (FONT_LABEL[S.hand.style.font] || '') + ' ' + String(S.hand.style.size).replace('.', ',') + ' pt). Yazı tipi ve boyut bu stilden gelir; araç çubuğundaki stil düğmesinden değiştirin.') : null,
-    h('small', { class: 'segcap' }, 'Gelişmiş okuma (yapay zekâ)'),
-    segRow([['off', 'Yalnız cihaz'], ['long', 'Uzun yazılarda'], ['always', 'Her zaman']], S.hand.ai || 'off', v => { S.hand.ai = v; saveSettings(); showAi(); }),
-    h('small', { class: 'segcap' }, 'Gelişmiş model'),
-    segRow([['best', 'En doğru'], ['fast', 'En hızlı']], S.hand.model === 'fast' ? 'fast' : 'best', v => { S.hand.model = v; saveSettings(); showAi(); }),
-    aiNote,
+    h('small', { class: 'segcap' }, S.hand.engine === 'cloud' ? 'Gelişmiş okuma (bulut)' : 'Gelişmiş okuma (tablette, Gemma 4)'),
+    segRow(HAND_WHEN, S.hand.ai || 'off', v => { S.hand.ai = v; saveSettings(); showAi(); if (v !== 'off') { HW.prepped = false; } }),
+    aiNote, loc,
     st);
   return rows;
 }
@@ -616,11 +795,24 @@ function handSettingsRows() {
 function handSettingsGroups() {
   const st = handStatusNote(), showSt = st._show, aiNote = handAiNote(), showAi = aiNote._show;
   st.className = 'sfoot handst'; aiNote.className = 'sfoot';
+  const localRow = sRow('Tabletteki model', null, handLocalBox(), true);
+  const cloudRow = sRow('Bulut modeli', handModelSub(), segRow([['best', 'En doğru'], ['fast', 'En hızlı']], S.hand.model === 'fast' ? 'fast' : 'best', v => { S.hand.model = v; saveSettings(); showAi(); }), true);
+  const showEng = () => { localRow.hidden = S.hand.engine === 'cloud' || !HW_NATIVE(); cloudRow.hidden = S.hand.engine !== 'cloud' && HW_NATIVE(); };
+  showEng();
+  const whenSeg = segRow(HAND_WHEN, S.hand.ai || 'off', v => { S.hand.ai = v; saveSettings(); showAi(); HW.prepped = false; });
+  // model inince gelişmiş okuma kendiliğinden açılır: seçim ve açıklama güncel kalsın
+  const syncWhen = () => {
+    if (!whenSeg.isConnected && whenSeg._m) { HW.localSubs.delete(syncWhen); return; }
+    [...whenSeg.children].forEach((b, i) => { const on = HAND_WHEN[i][0] === (S.hand.ai || 'off'); b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
+    showAi();
+  };
+  HW.localSubs.add(syncWhen); setTimeout(() => { whenSeg._m = true; }, 0);
   return [
     sGroup('Mod', [
       sRow('El yazısını düzelt', 'Kalemle yazdığın satırlar metne çevrilir, yazım hataları düzeltilir', segRow([['off', 'Kapalı'], ['button', 'Düğmeyle'], ['auto', 'Otomatik']], S.hand.mode, v => { S.hand.mode = v; saveSettings(); handResetAll(); if (v !== 'off' && HW_NATIVE()) { const s = HW.status || {}; if (s.tr !== 'ready' || s.en !== 'ready') try { KenarNative.inkPrepare(); } catch (e) { } } showSt(); }), true),
       sRow('Hangi belgede çalışsın', 'Ana belge: soldaki (ya da tek açık) belge · Yan belge: “Yan yana belge” ile açılan ikinci belge', handWhereSeg(), true),
-      sRow('Dil', null, segRow([['auto', 'Otomatik'], ['tr', 'Türkçe'], ['en', 'İngilizce']], S.hand.lang, v => { S.hand.lang = v; saveSettings(); }), true)
+      sRow('Dil', null, segRow([['auto', 'Otomatik'], ['tr', 'Türkçe'], ['en', 'İngilizce']], S.hand.lang, v => { S.hand.lang = v; saveSettings(); }), true),
+      HW_NATIVE() ? toggleRow('sHSplit', 'Uzun satırları parça parça oku', S.hand.split !== false, v => { S.hand.split = v; saveSettings(); }, 'Cihazdaki tanıma uzun bir satırı kelime boşluklarından 3–4 kelimelik parçalara bölüp sırayla okur (bu model kısa yazıda daha iyi)') : null
     ], st),
     sGroup('Düzeltilen metin', [
       sRow('Yazı tipi', S.hand.style ? 'Seçili kalem stili kullanılıyor: ' + S.hand.style.name : null, segRow([['hand', 'El yazısı'], ['kalam', 'Kalam'], ['sans', 'Yalın'], ['serif', 'Tırnaklı']], S.hand.font, v => { S.hand.font = v; saveSettings(); }), true),
@@ -629,11 +821,89 @@ function handSettingsGroups() {
       toggleRow('sScratch', 'Karalayarak sil', S.feel.scratch !== false, v => { S.feel.scratch = v; saveSettings(); }, 'Yazının üzerini zikzakla karalayınca silinir')
     ]),
     sGroup('Gelişmiş okuma', [
-      sRow('Ne zaman', 'Cihazdaki model kısa yazılarda iyi, uzun cümlelerde zayıf. Gelişmiş model el yazısının görüntüsünü baştan okur.', segRow([['off', 'Yalnız cihaz'], ['long', 'Uzun yazılarda'], ['always', 'Her zaman']], S.hand.ai || 'off', v => { S.hand.ai = v; saveSettings(); showAi(); }), true),
-      sRow('Model', handModelSub(), segRow([['best', 'En doğru'], ['fast', 'En hızlı']], S.hand.model === 'fast' ? 'fast' : 'best', v => { S.hand.model = v; saveSettings(); showAi(); }), true)
+      sRow('Ne zaman', 'Cihazdaki model kısa yazılarda iyi, uzun cümlelerde zayıf. Gelişmiş model el yazısının görüntüsünü baştan okur.', whenSeg, true),
+      HW_NATIVE() ? sRow('Okuyan model', 'Tablette: internetsiz, yazın tabletten çıkmaz · Bulut: görüntü Gemini’ye ya da Claude’a gider, internet ve ücret gerekir', segRow([['local', 'Tablette · Gemma 4'], ['cloud', 'Bulut']], S.hand.engine === 'cloud' ? 'cloud' : 'local', v => { S.hand.engine = v; saveSettings(); showEng(); showAi(); }), true) : null,
+      localRow, cloudRow,
+      HW_NATIVE() ? h('div', { class: 'srow' }, h('div', { class: 'stext' }, h('b', null, 'Karşılaştır'), h('small', null, 'Bir cümle yaz: cihazdaki tanıma (tüm satır ve parçalı) ile tabletteki Gemma aynı yazıyı okusun, sonuçlar süreleriyle yan yana görünsün')),
+        h('button', { class: 'btn small', type: 'button', onclick: () => handCompare() }, icon(IC.pen), 'Dene')) : null
     ], aiNote)
   ];
 }
+
+/* ---------- karşılaştırma: aynı yazıyı farklı okuyucular okusun ---------- */
+function handCompare() {
+  const cv = h('canvas', { class: 'hcpad', 'aria-label': 'Yazma alanı' });
+  const list = h('div', { class: 'hclist' });
+  const strokes = []; let cur = null, W = 0, H = 0, busy = false;
+  const g = cv.getContext('2d');
+  const paint = () => {
+    const d = DPR(); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(120,135,170,.35)'; g.lineWidth = 1;
+    for (let y = 56; y < H; y += 56) { g.beginPath(); g.moveTo(12, y + .5); g.lineTo(W - 12, y + .5); g.stroke(); }
+    g.strokeStyle = '#1f2f5c'; g.lineCap = g.lineJoin = 'round'; g.lineWidth = 2.2;
+    for (const s of [...strokes, cur].filter(Boolean)) { const p = s.p; g.beginPath(); for (let i = 0; i < p.length; i += 3) i ? g.lineTo(p[i], p[i + 1]) : g.moveTo(p[i], p[i + 1]); if (p.length === 3) g.lineTo(p[0] + .5, p[1]); g.stroke(); }
+  };
+  const size = () => { const r = cv.getBoundingClientRect(); W = r.width; H = r.height; cv.width = Math.round(W * DPR()); cv.height = Math.round(H * DPR()); paint(); };
+  const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  let pts = [], t0 = 0;
+  cv.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'touch' && S.prefs.penSeen) return; // kalem varken parmak/avuç yazmasın
+    e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (er) { }
+    const [x, y] = pos(e); pts = [x, y, 2.2]; t0 = Date.now(); cur = { id: uid(), t: 'ballpoint', c: '#1f2f5c', o: 1, p: new Float32Array(pts) }; paint();
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!cur) return; e.preventDefault();
+    let evs = []; try { evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; } catch (er) { }
+    for (const ev of evs.length ? evs : [e]) { const [x, y] = pos(ev); pts.push(x, y, 2.2); }
+    cur.p = new Float32Array(pts); paint();
+  });
+  const up = () => { if (!cur) return; const s = cur; cur = null; s.p = new Float32Array(pts); HW.times.set(s, { t0, t1: Date.now() }); strokes.push(s); paint(); };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  const row = (name, note) => { const t = h('div', { class: 'hctext' }, '…'), m = h('small', null, note || ''); const el = h('div', { class: 'hcrow' }, h('div', { class: 'hchead' }, h('b', null, name), m), t); list.append(el); return { t, m, el }; };
+  const fmt = ms => (ms / 1000).toFixed(1).replace('.', ',') + ' sn';
+  const run = async () => {
+    if (busy) return; if (!strokes.length) { toast('Önce kalemle bir cümle yaz.', 1800); return; }
+    busy = true; readBtn.disabled = true; list.innerHTML = '';
+    const lines = splitLines(strokes.slice()), lh = medianLineH(lines), P = lines.map(l => l.strokes.map(strokePts)), area = { lineH: lh, pageW: W };
+    const ink = handInkSize(lines, lh);
+    const jobs = [
+      ['Cihaz · tüm satır', 'ML Kit, satır bir kerede', () => handRecognizeLines(P, S.hand.lang, '', area, null, { split: false, deviceOnly: true }).then(r => r.corrected)],
+      ['Cihaz · parçalı', 'ML Kit, uzun satır 3–4 kelimelik parçalarla', () => handRecognizeLines(P, S.hand.lang, '', area, null, { split: true, deviceOnly: true }).then(r => { jobs.parts = r.parts; return r.corrected; })],
+      ['Gemma 4 · tablette', 'internetsiz', null]
+    ];
+    if (S.hand.engine === 'cloud' && aiReady()) jobs.push([handModelName() + ' · bulut', 'internet', () => handAiRead(P.flat(), { lines: lines.length, maxLen: ink.maxLen })]);
+    const rs = jobs.map(j => row(j[0], j[1]));
+    for (let i = 0; i < jobs.length; i++) {
+      const R = rs[i], t1 = performance.now();
+      R.t.textContent = 'okuyor…'; R.el.classList.add('busy');
+      try {
+        let text;
+        if (i === 2) {
+          if (!handLocalReady()) throw new Error('Model indirilmedi (yukarıdaki Ayarlar’dan indir)');
+          const info = {};
+          if (HW.local && HW.local.state !== 'loaded') R.t.textContent = 'model belleğe yükleniyor…';
+          text = await handLocalRead(P.flat(), { lines: lines.length, maxLen: ink.maxLen, rows: handRows(P, lh), info });
+          R.m.textContent = fmt(info.ms || performance.now() - t1) + (info.loadMs ? ' · ilk okuma, model yüklemesi ' + fmt(info.loadMs) : '') + (info.backend ? ' · ' + (info.backend === 'CPU' ? 'işlemci' : 'grafik işlemcisi') : '');
+        } else {
+          text = await jobs[i][2]();
+          R.m.textContent = fmt(performance.now() - t1) + (i === 1 && jobs.parts ? ' · ' + jobs.parts + ' parça' : '');
+        }
+        R.t.textContent = text || '(boş)';
+      } catch (e) { R.t.textContent = e.message || 'Okunamadı'; R.el.classList.add('fail'); R.m.textContent = ''; }
+      R.el.classList.remove('busy');
+    }
+    busy = false; readBtn.disabled = false;
+  };
+  const readBtn = h('button', { class: 'btn primary', type: 'button', onclick: run }, icon(IC.fixText), 'Oku ve karşılaştır');
+  const body = h('div', { class: 'col hcwrap' },
+    cv,
+    h('div', { class: 'sbtns' }, h('button', { class: 'btn', type: 'button', onclick: () => { strokes.length = 0; list.innerHTML = ''; paint(); } }, icon(IC.trash), 'Temizle'), readBtn),
+    list,
+    h('p', { class: 'notice' }, 'Yazılan hiçbir şey kaydedilmez. Sıra: önce cihazdaki tanıma (tüm satır, sonra parçalı), sonra Gemma. İlk Gemma okuması modelin belleğe yüklenmesini de içerir.'));
+  modal({ title: 'El yazısı okumayı karşılaştır', body, wide: true, actions: [{ label: 'Kapat' }] });
+  requestAnimationFrame(size);
+}
+window.handCompare = handCompare;
 
 /* seçim çubuğu düğmeleri */
 (() => {

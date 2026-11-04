@@ -77,6 +77,7 @@ public class MainActivity extends Activity {
     boolean barsLight = true, immersive = false, penButton = false;
     HandwritingCorrector corrector;   // el yazısı tanıma + yazım düzeltme (ML Kit, cihazda)
     volatile Speaker speaker;         // sesli okuma (en-GB kadın sesi)
+    volatile LocalReader local;       // tabletteki gelişmiş el yazısı okuma (Gemma 4 E2B, LiteRT-LM)
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -150,6 +151,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         if (corrector != null) corrector.close();
+        if (local != null) local.shutdown();
         if (speaker != null) speaker.shutdown();
         if (web != null) {
             web.destroy();
@@ -360,6 +362,13 @@ public class MainActivity extends Activity {
     }
 
     /* ---------------- sayfa ↔ uygulama köprüsü ---------------- */
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        // bellek daralınca modelin belleğini bırak (dosya kalır; sonraki okumada yeniden yüklenir)
+        if (local != null && (level == TRIM_MEMORY_RUNNING_CRITICAL || level >= TRIM_MEMORY_BACKGROUND)) local.release();
+    }
+
     class Bridge {
         @JavascriptInterface
         public String version() { return BuildInfo.VERSION; }
@@ -541,6 +550,25 @@ public class MainActivity extends Activity {
                 ensureCorrector().correctText(req, r -> js("__inkResult", r.toString()));
             });
         }
+
+        /* ---- tabletteki gelişmiş okuma (Gemma 4 E2B) ---- */
+        @JavascriptInterface
+        public String localStatus() { return ensureLocal().status(); }
+
+        @JavascriptInterface
+        public void localDownload() { ensureLocal().download(); }
+
+        @JavascriptInterface
+        public void localCancel() { ensureLocal().cancel(); }
+
+        @JavascriptInterface
+        public void localDelete() { ensureLocal().delete(); }
+
+        @JavascriptInterface
+        public void localPrepare() { ensureLocal().prepare(); }
+
+        @JavascriptInterface
+        public void localRead(final String json) { ensureLocal().read(json); }
 
         /* ---- sesli okuma ---- */
         @JavascriptInterface
@@ -896,6 +924,23 @@ public class MainActivity extends Activity {
     HandwritingCorrector ensureCorrector() {
         if (corrector == null) corrector = new HandwritingCorrector(this);
         return corrector;
+    }
+
+    LocalReader ensureLocal() {
+        LocalReader l = local;
+        if (l == null) {
+            synchronized (this) {
+                if (local == null) {
+                    local = new LocalReader(this, new LocalReader.Sink() {
+                        @Override public void status(String json) { js("__localStatus", json); }
+                        @Override public void result(String json) { js("__localResult", json); }
+                    });
+                    local.resume();
+                }
+                l = local;
+            }
+        }
+        return l;
     }
 
     Speaker ensureSpeaker() {

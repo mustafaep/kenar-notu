@@ -113,6 +113,32 @@ G) YENİ (2.2.0)
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
 
 
+X) YENİ (2.6.1) — el yazısı tablette okunur (Gemma 4), buluta gitmez
+---------------------------------------------------------------------
+- El yazısı artık Gemini'ye ya da Claude'a gönderilmez. 2.6.0'daki bulut okuması kapatıldı.
+- Yeni "tabletteki model": Gemma 4 E2B (Google, Apache 2.0 lisanslı, Hugging Face'ten). Bir kez indirilir
+  (yaklaşık 2,6 GB, yalnızca Wi-Fi'da), sonra internetsiz çalışır; yazın tabletten çıkmaz.
+  · İndirmek için: Ayarlar → El yazısı → Gelişmiş okuma → "Tabletteki model" → İndir (2,6 GB).
+    İndirme Android'in indirme yöneticisiyle yapılır: bildirimlerde görünür, uygulamayı kapatsan da sürer;
+    "İndirmeyi durdur" ile iptal edilir. Model, uygulamanın kendi klasöründe durur
+    (Android/data/com.kenarnotu.app/files/models); uygulama kaldırılınca silinir, güncellemede kalır.
+  · Model inince "Gelişmiş okuma" kendiliğinden "Her zaman" olur. Düzelt'e basınca cihazdaki sonuç anında
+    yazılır, Gemma aynı anda el yazısının görüntüsünü baştan okur ve o parçayı günceller.
+  · İlk okumada model belleğe yüklenir (5–10 sn; sonuç çubuğunda "Gemma belleğe yükleniyor" yazar). Yazmaya
+    başlayınca yükleme arka planda başlar. Önce grafik işlemcisi denenir, olmazsa işlemcide (daha yavaş) çalışır.
+  · Bellek azalınca model bellekten bırakılır; dosya silinmez, sonraki okumada yeniden yüklenir.
+  · Modeli silmek: aynı yerde "Modeli sil" (iki kez dokun).
+- "Karşılaştır → Dene": bir cümle yaz; cihazdaki tanıma (tüm satır bir kerede ve parça parça) ile Gemma aynı yazıyı
+  okur, sonuçlar süreleriyle alt alta görünür. Hangisinin senin yazında daha iyi olduğunu buradan görebilirsin.
+- Cihazdaki tanıma (ML Kit) uzun satırları artık kelime boşluklarından 3–4 kelimelik parçalara bölüp sırayla okur;
+  her parçaya önceki metin bağlam olarak verilir. Ayarlar → El yazısı → "Uzun satırları parça parça oku" ile kapatılabilir.
+- Bulut yalnızca açıkça seçilirse kullanılır: Ayarlar → El yazısı → Okuyan model → "Bulut".
+- Düzeltme: yan yana açılan ikinci belgede cihazdaki el yazısı tanımanın sonucu yan belgeye ulaşmıyordu
+  (15 sn bekleyip yapay zekâya düşüyordu). Artık doğrudan yan belgede çalışır.
+- Sınırlar: Gemma'nın Türkçe el yazısındaki başarısı ve Galaxy Tab S11'deki hızı ölçülmedi; "Karşılaştır" ile dene.
+  APK biraz büyür (cihazda model çalıştıran kütüphane); APK yalnızca 64 bit ARM tabletler içindir.
+
+
 W) YENİ (2.6.0) — kaydırma düğmeleri, el yazısında gelişmiş okuma
 ------------------------------------------------------------------
 - Üst çubukta, Geri al'ın solunda iki yeni düğme: → (sağa kaydır) ve ↓ (aşağı kaydır). Yazarken diğer elinle

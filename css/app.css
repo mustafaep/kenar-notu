@@ -812,3 +812,26 @@ html:not(.embed) .sidechip{display:none}
 .uzlab.end{left:auto;right:0;transform:none}
 .uzlab.start{left:0;transform:none}
 @media (max-width:640px){.uzchart{padding-left:40px}}
+
+/* tabletteki el yazısı modeli (Ayarlar → El yazısı) */
+.lmbox{display:flex;flex-direction:column;gap:8px;width:100%}
+.lmline{display:flex;flex-direction:column;gap:2px}
+.lmline b{font-weight:600}
+.lmline small{color:var(--muted);line-height:1.35}
+.lmbar{height:8px;border-radius:4px;background:var(--chrome-2);overflow:hidden}
+.lmbar i{display:block;height:100%;border-radius:4px;background:var(--accent);transition:width .4s}
+.lmbar.busy i{width:35% !important;animation:lmBusy 1.2s ease-in-out infinite alternate}
+@keyframes lmBusy{from{transform:translateX(-10%)}to{transform:translateX(200%)}}
+.lmerr{margin:0;color:var(--danger,#c92a2a);font-size:13px}
+.lmbox .sbtns{margin:0}
+/* karşılaştırma ekranı */
+.hcwrap{gap:12px}
+.hcpad{width:100%;height:232px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);touch-action:none;cursor:crosshair}
+.hclist{display:flex;flex-direction:column;gap:8px}
+.hcrow{border-radius:12px;background:var(--chrome-2);padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.hcrow.busy{opacity:.7}
+.hcrow.fail .hctext{color:var(--muted);font-size:14px}
+.hchead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.hchead small{color:var(--muted)}
+.hctext{font-size:17px;line-height:1.4;color:var(--ink);word-break:break-word}
+@media (prefers-reduced-motion:reduce){.lmbar.busy i{animation:none}}

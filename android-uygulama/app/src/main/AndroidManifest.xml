@@ -55,6 +55,10 @@
             android:exported="false"
             android:grantUriPermissions="true" />
 
+        <!-- Tabletteki el yazısı modeli (LiteRT-LM) grafik işlemcisinde çalışabilsin -->
+        <uses-native-library android:name="libvndksupport.so" android:required="false" />
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+
         <!-- Samsung DeX ve çoklu pencere -->
         <meta-data android:name="com.samsung.android.keepalive.density" android:value="true" />
     </application>

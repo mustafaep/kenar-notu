@@ -14,8 +14,10 @@ android {
         applicationId 'com.kenarnotu.app'
         minSdk 26
         targetSdk 34
-        versionCode 20
-        versionName '2.6.0'
+        versionCode 21
+        versionName '2.6.1'
+        // Galaxy Tab S11 64 bit ARM: yalnızca bu mimarinin yerel kütüphaneleri (APK küçük kalsın)
+        ndk { abiFilters 'arm64-v8a' }
     }
 
     signingConfigs {
@@ -61,4 +63,6 @@ android {
 dependencies {
     // El yazısı tanıma (cihazda; Türkçe ve İngilizce modeller ilk kullanımda bir kez indirilir)
     implementation 'com.google.mlkit:digital-ink-recognition:19.0.0'
+    // Tabletteki gelişmiş okuma: Gemma 4 E2B modelini cihazda çalıştıran LiteRT-LM (model ayrıca indirilir, ≈2,6 GB)
+    implementation 'com.google.ai.edge.litertlm:litertlm-android:[0.18.0,0.20.0)'
 }
