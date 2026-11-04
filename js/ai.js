@@ -16,11 +16,12 @@ const aiCache = new Map();
 const gNoThink = new Set();
 
 /* İç ileti biçimi: { role: 'user'|'assistant', content: string | [{type:'text',text} | {type:'image',mime,data}] } */
-async function aiStream({ system, messages, maxTokens = 1200, onText, signal, tag }) {
+/* model: bu istek için ayardaki model yerine (ör. el yazısı); think: Gemini düşünme düzeyi (varsayılan 'minimal') */
+async function aiStream({ system, messages, maxTokens = 1200, onText, signal, tag, model, think }) {
   const c = aiCfg();
   if (!aiReady(c)) throw Object.assign(new Error(aiName(c) + ' API anahtarı girilmedi.'), { code: 'nokey' });
   if (!navigator.onLine) throw Object.assign(new Error('İnternet bağlantısı yok.'), { code: 'offline' });
-  return c.provider === 'gemini' ? geminiStream(c, { system, messages, maxTokens, onText, signal, tag }) : claudeStream(c, { system, messages, maxTokens, onText, signal, tag });
+  return c.provider === 'gemini' ? geminiStream(c, { system, messages, maxTokens, onText, signal, tag, model, think }) : claudeStream(c, { system, messages, maxTokens, onText, signal, tag, model });
 }
 async function readSSE(r, onEvent) {
   const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = '';
@@ -36,9 +37,9 @@ async function readSSE(r, onEvent) {
     }
   }
 }
-async function claudeStream(c, { system, messages, maxTokens, onText, signal, tag }) {
+async function claudeStream(c, { system, messages, maxTokens, onText, signal, tag, model: mOver }) {
   const msgs = messages.map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : m.content.map(p => p.type === 'image' ? { type: 'image', source: { type: 'base64', media_type: p.mime, data: p.data } } : { type: 'text', text: p.text }) }));
-  const model = aiModel(c);
+  const model = mOver || aiModel(c);
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', signal,
     headers: { 'content-type': 'application/json', 'x-api-key': c.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
@@ -60,21 +61,22 @@ async function claudeStream(c, { system, messages, maxTokens, onText, signal, ta
   } finally { var usage = window.usageAdd ? usageAdd({ prov: 'claude', model, tag, inp, out, think: 0 }) : null; }
   return { text, cut: stop === 'max_tokens', usage };
 }
-async function geminiStream(c, { system, messages, maxTokens, onText, signal, tag }) {
-  const model = aiModel(c);
+async function geminiStream(c, { system, messages, maxTokens, onText, signal, tag, model: mOver, think: level }) {
+  const model = mOver || aiModel(c), lvl = level || 'minimal', nk = model + '|' + lvl;
   const contents = messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: typeof m.content === 'string' ? [{ text: m.content }] : m.content.map(p => p.type === 'image' ? { inlineData: { mimeType: p.mime, data: p.data } } : { text: p.text }) }));
   const call = async think => {
     const gen = { maxOutputTokens: maxTokens, temperature: .4 };
-    if (think) gen.thinkingConfig = { thinkingLevel: 'minimal' };
+    if (think) gen.thinkingConfig = { thinkingLevel: lvl };
     return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`, {
       method: 'POST', signal, headers: { 'content-type': 'application/json', 'x-goog-api-key': c.gkey },
       body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents, generationConfig: gen })
     });
   };
-  let r = await call(!gNoThink.has(model));
-  if (r.status === 400 && !gNoThink.has(model)) {
+  // model bu düzeyi kabul etmezse (ör. 3.8 Flash 'minimal'i reddeder) düzey belirtmeden tekrar denenir ve hatırlanır
+  let r = await call(!gNoThink.has(nk));
+  if (r.status === 400 && !gNoThink.has(nk)) {
     let j = null; try { j = await r.clone().json(); } catch (e) { }
-    if (j && j.error && /think/i.test(j.error.message || '')) { gNoThink.add(model); r = await call(false); }
+    if (j && j.error && /think/i.test(j.error.message || '')) { gNoThink.add(nk); r = await call(false); }
   }
   if (!r.ok) {
     let msg = 'HTTP ' + r.status; try { const j = await r.json(); if (j && j.error && j.error.message) msg = j.error.message; } catch (e) { }

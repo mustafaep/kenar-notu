@@ -124,6 +124,7 @@ if (EMBED) {
       $('#titleIn').value = ed.note.name; window.__mainRenderStatus(...lastMainStatus);
       $('#pagesBtn').classList.toggle('on', !$('#ppanel').hidden);
     }
+    if (window.panSync) panSync();
   }
   window.__sideStatus = () => { if (activeSide()) syncHeader(); };
   window.__syncHeader = syncHeader;

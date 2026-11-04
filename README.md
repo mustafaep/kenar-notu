@@ -50,6 +50,8 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
 - Bekletince şekle dönüştürme (çizgi, daire, üçgen, dörtgen).
 - **Karalayarak sil:** yazının üzerini zikzakla karalayınca altındaki yazı silinir.
 - Kement ile seç, taşı, büyüt/küçült, döndür, rengini değiştir. Metne ya da görsele basılı tutunca da seçilir.
+- **Kaydırma düğmeleri** (üst çubukta → ve ↓; istenirse dört yön): yazarken diğer elle dokununca sayfa kayar,
+  basılı tutunca kaymaya devam eder. Kalemle yazarken parmakla sürüklemek avuç içi sayıldığı için düğmeler daha rahat.
 
 **El yazısını düzelt**
 - Yazdığın satır metne çevrilir ve yazım hataları düzeltilir. Türkçe ve İngilizce karışık yazılabilir.
@@ -62,8 +64,9 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
   hemen arkasına eklenir ve hizalı kalır (Ayarlar → El yazısı → "Metnin devamına ekle" ile kapatılabilir).
 - Daha önce yazılanlar için: kement ile seç → "Yazıya dök". Ayrı düşmüş parçalar için: kement ile seç →
   **Hizala ve düzelt** (parçalar okuma sırasıyla tek, sola hizalı metinde birleşir ve yeniden düzeltilir).
-- İsteğe bağlı **yapay zekâ ile son düzeltme** (Kapalı / Uzun cümlelerde / Her zaman): cihazdaki sonuç hemen yazılır,
-  yapay zekâ el yazısının görüntüsüne ve önceki metne bakıp düzeltir.
+- **Gelişmiş okuma** (Yalnız cihaz / Uzun yazılarda / Her zaman; varsayılan Her zaman): cihazdaki sonuç hemen yazılır,
+  aynı anda gelişmiş model (Gemini 3.8 Flash ya da daha hızlı Flash-Lite; Claude'da Sonnet / Haiku) el yazısının
+  görüntüsünü baştan okur ve 1–3 saniyede o parçayı günceller. Uzun cümlelerde cihazdaki modelden çok daha doğru.
 
 **Sayfayı düzelt (yapay zekâ)**
 - Önce düzeltilecek sayfaları seçiyorum (açık sayfa hazır seçili; "Yazılı sayfalar" hepsini seçer, en çok 20 sayfa).
@@ -205,7 +208,8 @@ cihazda saklanır, depoya girmez.
 
 Notlar tabletin kendi deposunda tutulur. Dosyalar yalnızca seçtiğiniz OneDrive dosyasına yazılır. Yapay zekâ
 özellikleri yalnızca siz kullandığınızda seçilen metni ya da alanı seçtiğiniz sağlayıcıya gönderir. El yazısı tanıma
-ve sesli okuma Android'de cihazda çalışır.
+ve sesli okuma Android'de cihazda çalışır; "Gelişmiş okuma" açıkken düzeltilen el yazısının görüntüsü seçtiğiniz
+yapay zekâ sağlayıcısına da gönderilir (Ayarlar → El yazısı → "Yalnız cihaz" ile kapatılır).
 
 ## Bilinen sınırlar
 

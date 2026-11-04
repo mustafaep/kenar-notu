@@ -59,7 +59,7 @@ function frame() {
   ed.frameReq = 0; if (!ed.note) return;
   updateVisible(false);
   if (ed.inkDirty) { ed.inkDirty = false; redrawInk(); }
-  updatePager(); placeSelbar(); placeGrip(); placeAddEnd(); placeAiBar(); if (window.placeHandUi) placeHandUi(); if (window.placePageFixUi) placePageFixUi();
+  updatePager(); placeSelbar(); placeGrip(); placeAddEnd(); placeAiBar(); if (window.placeHandUi) placeHandUi(); if (window.placePageFixUi) placePageFixUi(); panSync();
   if (TS.sel) textSelDraw();
 }
 function settle() { if (ed.note) { updateVisible(true); savePos(); } }
@@ -93,7 +93,15 @@ function onResize() {
   if (oldW) { const z = v.z * ed.fitZ / oldFit; setView(z, ed.W / 2, ed.H / 2 - cy * z); } else applyView();
   requestFrame(true);
   if (ed.capture) captureResize();
+  fitEbar();
 }
+/* Üst çubuk sığmazsa önce Kaydet yazısı gizlenir ve başlık daralır; yine sığmazsa araçlar alt satıra iner */
+function fitEbar() {
+  const bar = $('#edView .ebar'), t = $('#tools'); if (!bar || !t || !bar.offsetWidth) return;
+  bar.classList.remove('tight', 'tight2');
+  if (t.scrollWidth > t.clientWidth + 1) { bar.classList.add('tight'); if (t.scrollWidth > t.clientWidth + 1) bar.classList.replace('tight', 'tight2'); }
+}
+window.fitEbar = fitEbar;
 new ResizeObserver(onResize).observe(stage);
 
 /* ---------- sayfa raster katmanı (PDF/arka plan) ---------- */
@@ -403,6 +411,8 @@ function toolbarEditor() {
         h('button', { class: 'ibtn', type: 'button', 'aria-label': it.name + ' aşağı', disabled: i === cfg.order.length - 1 ? true : null, onclick: () => mv(1) }, icon(IC.downArrow)), sw));
     });
     wrap.append(list,
+      EMBED ? null : h('small', { class: 'segcap' }, 'Kaydırma düğmeleri (sağ üstte)'),
+      EMBED ? null : segRow([['off', 'Kapalı'], ['rd', 'Sağa ve aşağı'], ['all', 'Dört yön']], S.prefs.pan || 'rd', v => { S.prefs.pan = v; saveSettings(); buildPanBtns(); }, 'Kaydırma düğmeleri'),
       toggleRow('tbColors', 'Son kullanılan renkler', cfg.colors, v => { const c = tbCfg(); c.colors = v; S.toolbar = c; saveSettings(); buildTools(); }),
       toggleRow('tbFavs', 'Favori kalemler', cfg.favs, v => { const c = tbCfg(); c.favs = v; S.toolbar = c; saveSettings(); buildTools(); }));
     wrap.append(h('div', { class: 'lbl' }, 'Favori kalemler'));
@@ -455,6 +465,7 @@ function refreshToolbar() {
       requestAnimationFrame(() => miniStroke(cv, fv.type, { size: Math.min(fv.size, fv.type === 'hl' ? 8 : 4), color: fv.color, o: fv.o }));
     });
   }
+  fitEbar();
 }
 function stylePicker() {
   const wrap = h('div', { class: 'col stylepick' }, h('h3', null, 'Kalem stilleri'),
@@ -886,7 +897,7 @@ function startInertia(vx, vy) {
   };
   ed.inertia = requestAnimationFrame(step);
 }
-function stopInertia() { if (ed.inertia) { cancelAnimationFrame(ed.inertia); ed.inertia = 0; } }
+function stopInertia() { if (ed.inertia) { cancelAnimationFrame(ed.inertia); ed.inertia = 0; } panFinish(); }
 stage.addEventListener('wheel', e => {
   if (!ed.note || ed.capture) return; e.preventDefault(); stopInertia(); ed.rect = stage.getBoundingClientRect();
   const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? ed.H : 1;
@@ -1337,6 +1348,7 @@ addEventListener('keydown', e => {
   if (!mod && k === 's') { captureStart(); return; }
   if (e.key === 'PageDown' || e.key === 'ArrowDown') setView(ed.view.z, ed.view.tx, ed.view.ty - (e.key === 'PageDown' ? ed.H * .85 : 60));
   if (e.key === 'PageUp' || e.key === 'ArrowUp') setView(ed.view.z, ed.view.tx, ed.view.ty + (e.key === 'PageUp' ? ed.H * .85 : 60));
+  if (!mod && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) setView(ed.view.z, ed.view.tx + (e.key === 'ArrowRight' ? -60 : 60), ed.view.ty);
   if (mod && (e.key === '+' || e.key === '=')) { e.preventDefault(); zoomAt(ed.view.z * 1.25, ed.W / 2, ed.H / 2); }
   if (mod && e.key === '-') { e.preventDefault(); zoomAt(ed.view.z / 1.25, ed.W / 2, ed.H / 2); }
 });
@@ -1345,6 +1357,104 @@ $('#redoBtn').addEventListener('click', redo);
 $('#zIn').addEventListener('click', () => zoomAt(ed.view.z * 1.25, ed.W / 2, ed.H / 2));
 $('#zOut').addEventListener('click', () => zoomAt(ed.view.z / 1.25, ed.W / 2, ed.H / 2));
 $('#zLbl').addEventListener('click', fitWidth);
+
+/* ---------- kaydırma düğmeleri (üst çubukta) ----------
+   Yazarken diğer elle dokunulur: sayfa ekranın bir kısmı kadar yumuşakça sağa / aşağı kayar (Ayarlar → Görünüm).
+   Basılı tutunca kaymaya devam eder. Kalemin hemen ardından gelen parmak dokunuşları sayfada avuç sayıldığı için
+   (isPalm) parmakla sürüklemek yazarken çoğu zaman çalışmaz; düğmeler sayfanın dışında olduğundan bundan etkilenmez.
+   Yan yana belgede, en son dokunulan bölmeyi kaydırır. */
+const PAN_DIRS = { l: [-1, 0, 'Sola kaydır', 'leftArrow'], r: [1, 0, 'Sağa kaydır', 'rightArrow'], u: [0, -1, 'Yukarı kaydır', 'upArrow'], d: [0, 1, 'Aşağı kaydır', 'downArrow'] };
+function panClamp(tx, ty) { const v = ed.view, ox = v.tx, oy = v.ty; v.tx = tx; v.ty = ty; clampView(); const r = [v.tx, v.ty]; v.tx = ox; v.ty = oy; return r; }
+function panCan(dir) {
+  if (!ed.note || !ed.W) return false;
+  const [dx, dy] = PAN_DIRS[dir], A = ed.panAnim, v = ed.view, bx = A ? A.x1 : v.tx, by = A ? A.y1 : v.ty;
+  const [tx, ty] = panClamp(bx - dx * 4, by - dy * 4); return Math.abs(tx - bx) > .5 || Math.abs(ty - by) > .5;
+}
+function panStep(dir) {
+  if (!ed.note) return false;
+  const [dx, dy] = PAN_DIRS[dir], f = clamp((S.prefs.panStep || 50) / 100, .15, .9), v = ed.view, A0 = ed.panAnim;
+  const bx = A0 ? A0.x1 : v.tx, by = A0 ? A0.y1 : v.ty;
+  const [tx, ty] = panClamp(bx - dx * ed.W * f, by - dy * ed.H * f);
+  if (Math.abs(tx - bx) < .5 && Math.abs(ty - by) < .5) return false;
+  if (ed.inertia) { cancelAnimationFrame(ed.inertia); ed.inertia = 0; }
+  if (A0) cancelAnimationFrame(A0.raf);
+  const x0 = v.tx, y0 = v.ty, z = v.z, t0 = performance.now(), ms = 200, A = ed.panAnim = { x1: tx, y1: ty, raf: 0 };
+  const tick = t => {
+    if (ed.panAnim !== A) return;
+    if (v.z !== z) { ed.panAnim = null; return; } // arada yakınlaştırıldı
+    const k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    setView(z, x0 + (tx - x0) * e, y0 + (ty - y0) * e);
+    if (k < 1) A.raf = requestAnimationFrame(tick); else ed.panAnim = null;
+  };
+  A.raf = requestAnimationFrame(tick);
+  return true;
+}
+/* kalem sayfaya değince (ya da başka bir kaydırma başlayınca) yarım kalan kayma hemen tamamlanır */
+function panFinish() { const A = ed.panAnim; if (!A) return; ed.panAnim = null; cancelAnimationFrame(A.raf); setView(ed.view.z, A.x1, A.y1); }
+/* basılı tutma: sabit hızla kaymaya devam */
+function panHold(dir, on) {
+  cancelAnimationFrame(ed.panHoldRaf); ed.panHoldRaf = 0;
+  if (!on || !ed.note) return;
+  panFinish();
+  const [dx, dy] = PAN_DIRS[dir], spd = (dx ? ed.W : ed.H) * .9 * clamp((S.prefs.panStep || 50) / 50, .6, 1.5) / 1000; // px / ms
+  let last = performance.now();
+  const tick = t => {
+    const dt = Math.min(48, t - last); last = t;
+    const v = ed.view, bx = v.tx, by = v.ty;
+    setView(v.z, bx - dx * spd * dt, by - dy * spd * dt);
+    if (Math.abs(v.tx - bx) < .01 && Math.abs(v.ty - by) < .01) { ed.panHoldRaf = 0; return; }
+    ed.panHoldRaf = requestAnimationFrame(tick);
+  };
+  ed.panHoldRaf = requestAnimationFrame(tick);
+}
+const panFitsW = () => !!ed.note && ed.maxW * ed.view.z + 2 * MARGIN <= ed.W + .5;
+window.panStep = panStep; window.panCan = panCan; window.panHold = panHold; window.panFitsW = panFitsW;
+const panPane = () => (typeof activeSide === 'function' && activeSide()) || window;
+function buildPanBtns() {
+  if (EMBED) return;
+  let box = $('#panBtns');
+  if (!box) { box = h('div', { class: 'panpill', id: 'panBtns', role: 'group', 'aria-label': 'Sayfayı kaydır' }); $('#undoBtn').before(box); }
+  box.innerHTML = '';
+  const mode = S.prefs.pan || 'rd';
+  box.hidden = mode === 'off';
+  if (box.hidden) { fitEbar(); return; }
+  for (const dir of mode === 'all' ? ['l', 'r', 'u', 'd'] : ['r', 'd']) {
+    const [dx, dy, name, ic] = PAN_DIRS[dir];
+    const b = h('button', { class: 'ibtn', type: 'button', 'aria-label': name, title: name + ' (basılı tut: kaymaya devam eder)', 'data-dir': dir, style: '--ex:' + dx * 3 + 'px;--ey:' + dy * 3 + 'px' }, icon(IC[ic]));
+    let holdT = 0, held = false, pt = 0;
+    const fire = () => {
+      const w = panPane();
+      if (w.panStep(dir)) return true;
+      b.classList.remove('edge'); void b.offsetWidth; b.classList.add('edge');
+      if (dx && w.panFitsW && w.panFitsW() && !panHintShown) { panHintShown = true; toast('Sayfa genişliği ekrana sığıyor; sağa-sola kaydırmak için önce yakınlaştırın.', 2800); }
+      return false;
+    };
+    const stop = () => { clearTimeout(holdT); if (held) { held = false; try { panPane().panHold(dir, false); } catch (e) { } } b.classList.remove('hold'); };
+    b.addEventListener('pointerdown', e => {
+      if (e.button > 0) return;
+      e.preventDefault(); pt = Date.now();
+      try { b.setPointerCapture(e.pointerId); } catch (er) { }
+      if (!fire()) return;
+      clearTimeout(holdT);
+      holdT = setTimeout(() => { held = true; b.classList.add('hold'); panPane().panHold(dir, true); }, 380);
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => b.addEventListener(t, stop));
+    b.addEventListener('click', () => { if (Date.now() - pt < 1500) return; fire(); }); // klavye
+    b.addEventListener('contextmenu', e => e.preventDefault());
+    box.append(b);
+  }
+  panSync(); fitEbar();
+}
+let panHintShown = false;
+/* düğmeler o yönde gidilecek yer yoksa sönük görünür (etkin bölmeye göre) */
+function panSync() {
+  if (EMBED) { try { if (parent.panSync) parent.panSync(); } catch (e) { } return; }
+  const box = $('#panBtns'); if (!box || box.hidden) return;
+  const w = panPane();
+  for (const b of box.children) { let can = true; try { can = w.panCan(b.dataset.dir); } catch (e) { } b.classList.toggle('dis', !can); b.setAttribute('aria-disabled', can ? 'false' : 'true'); }
+}
+window.panSync = panSync; window.buildPanBtns = buildPanBtns;
+buildPanBtns();
 
 /* ---------- S Pen yan tuşu (Android'den bildirilir) ---------- */
 let penBtnNative = false;

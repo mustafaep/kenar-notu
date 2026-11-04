@@ -5,7 +5,9 @@
    - Android: cihazda ML Kit el yazısı tanıma (Türkçe + İngilizce, aynı anda) ve sistemin yazım denetleyicisi
      (HandwritingCorrector.java); modeller bir kez indirildikten sonra internetsiz çalışır.
    - Web / yedek: bağlı yapay zekâ (Gemini ya da Claude) görüntüden okur ve düzeltir.
-   - İsteğe bağlı: cihazdaki sonuç hemen yazılır, ardından yapay zekâ görüntüye ve bağlama bakıp son düzeltmeyi yapar.
+   - Gelişmiş okuma (varsayılan, internet gerekir): cihazdaki sonuç hemen yazılır; aynı anda gelişmiş model (Gemini 3.8 Flash
+     ya da hızlısı Flash-Lite; Claude'da Sonnet / Haiku) el yazısının görüntüsünü baştan okur ve 1–3 sn içinde o parçayı günceller.
+     Cihazdaki ML Kit modeli kısa yazıda iyi, uzun cümlede zayıf; Gemini Nano Galaxy Tab S11'de yok, bu yüzden gelişmiş okuma buluttadır.
    Mod: Kapalı · Düğmeyle (yazınca “Düzelt” düğmesi çıkar; köşesindeki çarpı düğmeyi kapatır) · Otomatik (durunca kendisi düzeltir)
    Hangi belgede: ana belge, yan yana açılan yan belge ya da ikisi (kalem panelinden ve Ayarlar'dan).
    Alt satıra geçen yazı aynı paragrafta kalır; bir metnin yanına/altına yazılan devam, o metne eklenir.
@@ -13,9 +15,25 @@
 const HW = { group: null, pend: [], timer: 0, chip: null, bar: null, last: null, reqs: new Map(), status: null, seq: 0, times: new WeakMap(), busy: 0 };
 const HW_NATIVE = () => !!(window.KenarNative && window.KenarNative.inkRecognize);
 const HW_TR = /[çğıöşüÇĞİÖŞÜ]/;
-const HAND_FIX_SYSTEM = 'Görüntüde bir kişinin kalemle yazdığı el yazısı var. Yazıyı düz metne çevir ve yalnızca yazım hatalarını düzelt. Metin Türkçe, İngilizce ya da ikisi karışık olabilir: her kelimeyi kendi dilinde düzelt, başka dile çevirme, kelime ekleme ya da çıkarma, anlamı değiştirme. Türkçe karakterleri (ç ğ ı İ ö ş ü) doğru kullan. Birden çok satır varsa tek paragraf olarak yaz. Yalnızca düzeltilmiş metni yaz; açıklama, tırnak ya da yorum ekleme. Görüntüde yazı yoksa hiçbir şey yazma.';
-const AI_FIX_SYSTEM = 'Sana bir kişinin kalemle yazdığı satırların görüntüsü ve cihazdaki el yazısı tanıma motorunun bu görüntüden okuduğu metin verilecek. Görüntüye bakarak tanıma hatalarını, yazım hatalarını ve bariz dil bilgisi hatalarını en az değişiklikle düzelt. Metin Türkçe, İngilizce ya da karışık olabilir: her kelimeyi kendi dilinde bırak; çevirme, yeniden yazma, anlamı değiştirme, cümle ekleme ya da çıkarma. Büyük/küçük harf ve noktalamayı görüntüye uygun yap. Yalnızca düzeltilmiş metni yaz; açıklama, tırnak ya da yorum ekleme.';
 if (S.hand.grammar && S.hand.ai === 'off') { S.hand.ai = 'always'; S.hand.grammar = false; saveSettings(); }
+// 2.6.0: gelişmiş okuma varsayılan olarak açılır (bir kez; sonra kullanıcının seçimi korunur)
+if (!S.hand.mig) { S.hand.mig = 1; if (S.hand.ai === 'off') S.hand.ai = 'always'; saveSettings(); }
+const HAND_MODELS = {
+  gemini: { best: { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', short: 'Flash', think: 'low' }, fast: { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite', short: 'Flash-Lite', think: 'minimal' } },
+  claude: { best: { id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5', short: 'Sonnet' }, fast: { id: 'claude-haiku-5-5', name: 'Claude Haiku 5.5', short: 'Haiku' } }
+};
+function handModelInfo(c = aiCfg()) { return HAND_MODELS[c.provider === 'gemini' ? 'gemini' : 'claude'][S.hand.model === 'fast' ? 'fast' : 'best']; }
+function handAiOpts() { const m = handModelInfo(); return { model: m.id, think: m.think }; }
+const handModelName = () => handModelInfo().name;
+const HAND_READ_SYSTEM = `Sen el yazısını metne çeviren uzman bir okuyucusun. Görüntüde bir kişinin tablete kalemle yazdığı bir ya da birkaç satır var.
+- Yazıyı baştan sona, eksiksiz ve yazıldığı sırayla oku; hiçbir kelimeyi ya da satırı atlama.
+- Metin Türkçe, İngilizce ya da karışık olabilir: her kelimeyi kendi dilinde yaz, başka dile çevirme.
+- Belirsiz harflerde cümlenin anlamına ve verilen önceki metne en uygun kelimeyi seç.
+- Yalnızca yazım hatalarını düzelt (eksik ya da yanlış harf, Türkçe karakterler ç ğ ı İ ö ş ü). Kelime ekleme ya da çıkarma, cümleyi yeniden kurma, anlamı değiştirme.
+- Satır sonunda bölünmüş kelimeyi birleştir; satırları aralarına boşluk koyarak tek paragraf yaz.
+- Büyük/küçük harf ve noktalamayı yazıldığı gibi bırak; yalnızca bariz hatayı düzelt.
+- Ok, çizgi, karalama gibi yazı olmayan işaretleri yok say.
+- Yalnızca metni yaz: açıklama, tırnak, başlık ya da yorum ekleme. Görüntüde okunacak yazı yoksa hiçbir şey yazma.`;
 
 window.__inkStatus = j => { try { HW.status = JSON.parse(j); } catch (e) { } if (HW.onStatus) HW.onStatus(); };
 window.__inkResult = j => { let r; try { r = JSON.parse(j); } catch (e) { return; } const f = HW.reqs.get(r.id); if (f) { HW.reqs.delete(r.id); f(r); } };
@@ -46,41 +64,46 @@ function handNative(strokes, mode, pre, area) {
 function handImage(strokes) {
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   for (const s of strokes) for (const p of s) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
-  const pad = 10, w = x1 - x0 + pad * 2, hh = y1 - y0 + pad * 2, k = Math.min(4, 1400 / Math.max(1, w), 900 / Math.max(1, hh));
+  const pad = 10, w = x1 - x0 + pad * 2, hh = y1 - y0 + pad * 2, k = Math.min(5, 2000 / Math.max(1, w), 1400 / Math.max(1, hh));
   const c = document.createElement('canvas'); c.width = Math.max(8, Math.round(w * k)); c.height = Math.max(8, Math.round(hh * k));
   const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.setTransform(k, 0, 0, k, (pad - x0) * k, (pad - y0) * k);
   g.strokeStyle = '#111'; g.lineCap = g.lineJoin = 'round'; g.lineWidth = Math.max(1.4, 2.2 / k * 2);
   for (const s of strokes) { g.beginPath(); s.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); if (s.length === 1) g.lineTo(s[0][0] + .5, s[0][1]); g.stroke(); }
   return c.toDataURL('image/png').split(',')[1];
 }
-async function handAi(strokes, mode) {
-  if (!aiReady()) throw Object.assign(new Error('Bu cihazda el yazısı tanıma yok; yapay zekâyı bağlayın'), { code: 'nokey' });
-  const hint = mode === 'tr' ? ' Metin Türkçe.' : mode === 'en' ? ' Metin İngilizce.' : '';
-  const { text } = await aiStream({ tag: 'hand', system: HAND_FIX_SYSTEM + hint, messages: [{ role: 'user', content: [{ type: 'image', mime: 'image/png', data: handImage(strokes) }, { type: 'text', text: 'Bu el yazısını metne çevir ve yazım hatalarını düzelt.' }] }], maxTokens: 500 });
-  const t = cleanAi(text);
+/* Gelişmiş okuma: model görüntüyü baştan okur (cihazın okuması verilmez; uzun cümlede çoğu zaman yanlış olduğu için yanıltır).
+   before: önceki metin (devam yazısı için bağlam) · maxLen: el yazısının genişliğine göre en uzun makul metin */
+async function handAiRead(strokes, { mode = S.hand.lang, before = '', lines = 1, maxLen = 0 } = {}) {
+  const hint = mode === 'tr' ? '\n- Metin Türkçe.' : mode === 'en' ? '\n- Metin İngilizce.' : '';
+  const ask = [];
+  if (before && before.trim()) ask.push('Önceki metin (yalnızca bağlam; bunu tekrar yazma): «' + before.trim().slice(-240) + '»');
+  if (lines > 1) ask.push('Yazı ' + lines + ' satır; hepsini sırayla oku.');
+  ask.push('El yazısının metni:');
+  const { text } = await aiStream({ tag: 'hand', ...handAiOpts(), system: HAND_READ_SYSTEM + hint, messages: [{ role: 'user', content: [{ type: 'image', mime: 'image/png', data: handImage(strokes) }, { type: 'text', text: ask.join('\n') }] }], maxTokens: 2048 });
+  const t = cleanAi(text).replace(/\s*\n+\s*/g, ' ');
   if (!t) throw new Error('Yazı okunamadı');
-  return { ok: true, lang: mode === 'tr' || mode === 'en' ? mode : HW_TR.test(t) ? 'tr' : 'en', text: t, corrected: t, kept: [], via: 'ai' };
-}
-/* Yapay zekâ ile son düzeltme: el yazısının görüntüsü + cihazın okuduğu metin (+ önceki metin bağlam olarak) */
-async function handAiFix(strokes, r, before) {
-  if (!strokes || !strokes.length) {
-    const { text } = await aiStream({ tag: 'hand', system: MERGE_FIX_SYSTEM, messages: [{ role: 'user', content: (r.text || r.corrected) + (r.corrected && r.corrected !== r.text ? '\n\n(Yazım denetleyicisinin önerisi: ' + r.corrected + ')' : '') }], maxTokens: 900 });
-    const t = cleanAi(text); return t && t.length < (r.corrected || '').length * 1.8 + 40 ? t : null;
-  }
-  const lines = [];
-  if (before) lines.push('Önceki metin (yalnızca bağlam; bunu tekrar yazma): «' + before.trim().slice(-240) + '»');
-  lines.push('Tanıma motorunun okuması: «' + (r.text || r.corrected) + '»');
-  if (r.corrected && r.corrected !== r.text) lines.push('Yazım denetleyicisinin önerisi: «' + r.corrected + '»');
-  if (r.alts && r.alts.length > 1) lines.push('Diğer olasılıklar: ' + r.alts.slice(1, 3).map(a => '«' + a + '»').join(', '));
-  lines.push('Düzeltilmiş metin:');
-  const { text } = await aiStream({ tag: 'hand', system: AI_FIX_SYSTEM, messages: [{ role: 'user', content: [{ type: 'image', mime: 'image/png', data: handImage(strokes) }, { type: 'text', text: lines.join('\n') }] }], maxTokens: 600 });
-  const t = cleanAi(text);
-  if (!t || t.length > (r.corrected || '').length * 1.8 + 30) return null;
+  if (maxLen && t.length > maxLen) throw new Error('sonuç yazının uzunluğuyla uyuşmadı');
   return t;
 }
+/* el yazısının kapladığı genişliğe göre: uzun mu, en fazla kaç harf olabilir */
+function handInkSize(lines, lh) {
+  const w = lines.reduce((a, l) => a + (l.bb.x1 - l.bb.x0), 0), k = w / Math.max(8, lh);
+  return { long: lines.length > 1 || k >= 14, maxLen: Math.round(k * 3.5 + 40) };
+}
+async function handAi(strokes, mode, pre = '', lines = 1) {
+  if (!aiReady()) throw Object.assign(new Error('Bu cihazda el yazısı tanıma yok; yapay zekâyı bağlayın'), { code: 'nokey' });
+  const t = await handAiRead(strokes, { mode, before: pre, lines });
+  return { ok: true, lang: mode === 'tr' || mode === 'en' ? mode : HW_TR.test(t) ? 'tr' : 'en', text: t, corrected: t, kept: [], via: 'ai' };
+}
+/* Yalnızca metin (birleştirilmiş parçalar, el yazısı yok): bölünmüş kelimeleri birleştir, en az değişiklikle düzelt */
+async function handAiText(r) {
+  const { text } = await aiStream({ tag: 'hand', ...handAiOpts(), system: MERGE_FIX_SYSTEM, messages: [{ role: 'user', content: (r.text || r.corrected) + (r.corrected && r.corrected !== r.text ? '\n\n(Yazım denetleyicisinin önerisi: ' + r.corrected + ')' : '') }], maxTokens: 2048 });
+  const t = cleanAi(text); return t && t.length < (r.corrected || '').length * 1.8 + 40 ? t : null;
+}
 /* Satırlar sırayla tanınır; her satıra öncesindeki metin bağlam olarak verilir. Olmazsa yapay zekâ. */
-async function handRecognizeLines(lineStrokes, mode = S.hand.lang, pre = '', area = null) {
+async function handRecognizeLines(lineStrokes, mode = S.hand.lang, pre = '', area = null, aiP = null) {
   const all = lineStrokes.flat();
+  const viaAi = async () => { const t = await aiP; return { ok: true, lang: mode === 'tr' || mode === 'en' ? mode : HW_TR.test(t) ? 'tr' : 'en', text: t, corrected: t, kept: [], via: 'ai' }; };
   if (HW_NATIVE()) {
     try {
       const outs = []; let ctx = pre || '';
@@ -92,10 +115,12 @@ async function handRecognizeLines(lineStrokes, mode = S.hand.lang, pre = '', are
     } catch (e) {
       if (e.code === 'nomodel') { handCheckModels(); if (!aiReady()) throw Object.assign(new Error('El yazısı modelleri indiriliyor (yaklaşık 40 MB). Birkaç dakika sonra tekrar deneyin.'), { code: 'nomodel' }); }
       else if (!aiReady()) throw e;
-      return handAi(all, mode);
+      if (aiP) return viaAi(); // gelişmiş okuma zaten yolda
+      return handAi(all, mode, pre, lineStrokes.length);
     }
   }
-  return handAi(all, mode);
+  if (aiP) return viaAi();
+  return handAi(all, mode, pre, lineStrokes.length);
 }
 async function handRecognize(strokes, mode = S.hand.lang, pre = '', area = null) { return handRecognizeLines([strokes], mode, pre, area); }
 /* Yalnızca metnin yazım düzeltmesi (cihazda) */
@@ -231,9 +256,14 @@ async function runGroup(g, auto) {
   const cont = S.hand.cont !== false ? findContinuation(g.pv, lines[0].bb, lh) : null;
   HW.busy++; showHandBusy(g.pv, bb);
   try {
-    const r = await handRecognizeLines(lines.map(l => l.strokes.map(strokePts)), S.hand.lang, cont ? cont.text : '', { lineH: lh, pageW: g.pv.meta.w });
+    const pts = lines.map(l => l.strokes.map(strokePts)), ink = handInkSize(lines, lh), before = cont ? cont.text : '';
+    // gelişmiş okuma cihazdakiyle AYNI ANDA başlar: cihaz sonucu hemen yazılır, model gelince o parça güncellenir
+    const mode = S.hand.ai || 'off', useAi = HW_NATIVE() && aiReady() && navigator.onLine && (mode === 'always' || (mode === 'long' && ink.long));
+    const aiAt = Date.now(), aiP = useAi ? handAiRead(pts.flat(), { before, lines: lines.length, maxLen: ink.maxLen }) : null;
+    if (aiP) aiP.catch(() => { });
+    const r = await handRecognizeLines(pts, S.hand.lang, before, { lineH: lh, pageW: g.pv.meta.w }, aiP);
     if (auto && r.corrected.replace(/\s/g, '').length < 2) return;
-    applyHandResult(g.pv, live, r, { cont, lines, lh });
+    applyHandResult(g.pv, live, r, { cont, lines, lh, aiP: r.via === 'ai' ? null : aiP, aiAt, maxLen: ink.maxLen, long: ink.long });
   } catch (e) {
     if (e.code === 'nokey') toastAction(e.message, 'Bağla', () => aiSettingsModal());
     else toast(e.message || 'El yazısı tanınamadı', 3200);
@@ -285,37 +315,65 @@ function applyHandResult(pv, strokes, r, info = {}) {
   A.s = A.s.filter(s => !live.includes(s));
   const op = { k: 'page', pid, b, a: snap(pid) }; pushOp(op);
   renderLayer(pv); requestFrame(true); refreshPanel && refreshPanel();
-  HW.last = { pv, t: nt, strokes: live, lines: lines.map(l => l.strokes), lh: lineH, r, op, prefix, mark, prevInk, at: Date.now() };
+  // seg/idx: bu işlemin kutuya eklediği parça ve yeri (sonradan gelen gelişmiş okuma yalnızca bu parçayı değiştirir)
+  HW.last = { pv, t: nt, strokes: live, lines: lines.map(l => l.strokes), lh: lineH, r, op, prefix, mark, prevInk, at: Date.now(),
+    seg: r.corrected, idx: cont ? prefix.length : mark ? mark.length + 1 : 0, mode: S.hand.lang, maxLen: info.maxLen || 0, long: !!info.long };
   showHandBar();
-  maybeAiImprove(HW.last);
+  maybeAiImprove(HW.last, info.aiP, info.aiAt);
 }
-const lastText = L => (L.prefix || '') + (L.mark ? L.mark + ' ' : '') + L.r.corrected;
-/* İsteğe bağlı: yapay zekâ ile son düzeltme (cihazdaki sonuç beklemeden yazılmıştır) */
-async function maybeAiImprove(L) {
+/* L'nin eklediği parça metnin neresinde? (kullanıcı o parçayı değiştirdiyse -1) */
+function segAt(L, text) {
+  if (!L.seg || !text) return -1;
+  if (text.substr(L.idx, L.seg.length) === L.seg) return L.idx;
+  const a = text.indexOf(L.seg); return a >= 0 && text.indexOf(L.seg, a + 1) < 0 ? a : -1;
+}
+function segReplace(L, seg) {
+  const t = curT(L); if (!t) return false;
+  const i = segAt(L, t.text); if (i < 0) return false;
+  const text = t.text.slice(0, i) + seg + t.text.slice(i + L.seg.length);
+  replaceT(L, () => ({ text }));
+  L.seg = seg; L.idx = i;
+  return true;
+}
+/* Gelişmiş okuma: cihazdaki sonuç beklemeden yazılmıştır; model gelince yalnızca bu işlemin parçası güncellenir.
+   Sonuç, kullanıcı bu arada başka satırlar düzeltse de kendi kutusuna uygulanır (parça değiştirilmediyse). */
+async function maybeAiImprove(L, aiP, at) {
+  if (!L) return;
   const mode = S.hand.ai || 'off';
-  if (mode === 'off' || !L || (L.r.via !== 'device' && L.r.via !== 'merge') || !aiReady()) return;
-  if (mode === 'long' && wordCount(L.r.corrected) < 6) return;
-  L.ai = 'busy'; if (HW.last === L && HW.bar) showHandBar();
+  if (!aiP) {
+    if (mode === 'off' || (L.r.via !== 'device' && L.r.via !== 'merge') || !aiReady() || !navigator.onLine) return;
+    if (L.lines && L.lines.length) {
+      if (mode === 'long' && !L.long && wordCount(L.seg) < 6) return;
+      aiP = handAiRead(L.lines.flat().map(strokePts), { mode: L.mode, before: L.prefix, lines: L.lines.length, maxLen: Math.max(L.maxLen, L.seg.length * 1.8 + 30) });
+    } else {
+      if (mode === 'long' && wordCount(L.r.corrected) < 6) return;
+      aiP = handAiText(L.r);
+    }
+    at = Date.now();
+  }
+  L.ai = 'busy'; L.aiModel = handModelInfo().short; if (HW.last === L && HW.bar) showHandBar();
   let imp = null;
-  try { imp = await handAiFix(L.lines.flat().map(strokePts), L.r, L.prefix); } catch (e) { L.ai = 'fail'; }
-  if (HW.last !== L) return;
-  const t = curLastT();
-  if (imp && t && t.text === lastText(L) && imp !== L.r.corrected) {
-    L.r = { ...L.r, corrected: imp, aiFixed: true };
-    replaceLastT(() => ({ text: lastText(L) }));
-    L.ai = 'done';
-  } else if (L.ai !== 'fail') L.ai = 'same';
-  if (HW.bar) showHandBar();
+  try { imp = await aiP; } catch (e) { L.ai = 'fail'; L.aiErr = e && e.message; }
+  L.aiMs = Date.now() - (at || Date.now());
+  if (L.ai === 'fail') { }
+  else if (imp && imp !== L.seg) {
+    const before = L.seg;
+    if (segReplace(L, imp)) { L.r = { ...L.r, corrected: imp, aiFixed: true, devText: before }; L.ai = 'done'; }
+    else L.ai = 'edited';
+  } else L.ai = 'same';
+  if (HW.last === L && HW.bar) showHandBar();
 }
-function curLastT() { const L = HW.last; if (!L || !ed.note) return null; const A = ann(L.pv.meta.id); return A.t.find(t => t.id === L.t.id) || null; }
-function replaceLastT(fn) {
-  const L = HW.last, t = curLastT(); if (!t) { hideHandBar(); return; }
+function curT(L) { if (!L || !ed.note || !ed.pvs.includes(L.pv)) return null; const A = ann(L.pv.meta.id); return A.t.find(t => t.id === L.t.id) || null; }
+function replaceT(L, fn) {
+  const t = curT(L); if (!t) return;
   const pid = L.pv.meta.id, A = ann(pid), b = snap(pid);
   const nt = { ...t, ...fn(t), w: 0, h: 0 };
   A.t = A.t.map(x => x === t ? nt : x); L.t = nt;
   pushOp({ k: 'page', pid, b, a: snap(pid) }); renderLayer(L.pv); requestFrame(true);
-  placeHandUi();
+  if (HW.last === L) placeHandUi();
 }
+function curLastT() { return curT(HW.last); }
+function replaceLastT(fn) { if (!curLastT()) { hideHandBar(); return; } replaceT(HW.last, fn); }
 function handResize(k) { replaceLastT(t => ({ size: Math.round(clamp(t.size * k, 6, 120) * 2) / 2 })); }
 async function handSwitchLang() {
   const L = HW.last; if (!L) return;
@@ -324,8 +382,8 @@ async function handSwitchLang() {
   try {
     const r = L.lines.length ? await handRecognizeLines(L.lines.map(l => l.map(strokePts)), to, L.prefix, { lineH: L.lh, pageW: L.pv.meta.w })
       : await handNativeText(L.raw || L.r.text, to);
-    L.r = r; L.ai = null;
-    replaceLastT(() => ({ text: lastText(L) }));
+    if (!segReplace(L, r.corrected)) { toast('Metin değiştirilmiş; yeniden okunmadı', 2200); if (bar) bar.classList.remove('busy'); return; }
+    L.r = r; L.ai = null; L.mode = to;
     showHandBar(); maybeAiImprove(L);
   } catch (e) { toast(e.message || 'Tanınamadı', 2600); if (bar) bar.classList.remove('busy'); }
 }
@@ -334,7 +392,8 @@ function handUndo() {
   if (ed.undo[ed.undo.length - 1] === L.op) undo();
   else {
     const pid = L.pv.meta.id, A = ann(pid), b = snap(pid); const t = curLastT();
-    if (t && L.prefix) A.t = A.t.map(x => x === t ? { ...t, text: L.prefix.replace(/\s+$/, ''), w: 0, h: 0, ink: L.prevInk } : x); // devamsa yalnızca eklenen kısım geri alınır
+    const i = t && L.prefix ? segAt(L, t.text) : -1;
+    if (t && L.prefix) A.t = A.t.map(x => x === t ? { ...t, text: i >= 0 ? (t.text.slice(0, i).replace(/\s+$/, '') + t.text.slice(i + L.seg.length)).trim() : L.prefix.replace(/\s+$/, ''), w: 0, h: 0, ink: L.prevInk } : x); // devamsa yalnızca eklenen kısım geri alınır
     else A.t = A.t.filter(x => x !== t);
     A.s.push(...L.strokes); pushOp({ k: 'page', pid, b, a: snap(pid) }); renderLayer(L.pv); requestFrame(true);
   }
@@ -355,9 +414,11 @@ function showHandBar() {
   hideHandBar(); const L = HW.last; if (!L) return;
   const r = L.r;
   const langBtn = h('button', { class: 'langb', type: 'button', title: (r.lang === 'tr' ? 'İngilizce' : 'Türkçe') + ' olarak yeniden oku', onclick: handSwitchLang }, (r.lang || '?').toUpperCase());
-  const info = L.ai === 'busy' ? 'Yapay zekâ düzeltiyor…' : L.ai === 'done' ? 'Yapay zekâ düzeltti' + (L.prefix ? ' · metnin devamına eklendi' : '')
+  const sec = L.aiMs ? ' · ' + (L.aiMs / 1000).toFixed(1).replace('.', ',') + ' sn' : '';
+  const info = L.ai === 'busy' ? (L.aiModel || 'Gelişmiş model') + ' okuyor…' : L.ai === 'done' ? (L.aiModel || 'Gelişmiş model') + ' düzeltti' + sec + (L.prefix ? ' · metnin devamına eklendi' : '')
+    : L.ai === 'same' ? (L.aiModel || 'Gelişmiş model') + ' de aynı okudu' + sec : L.ai === 'fail' ? 'Gelişmiş okuma olmadı' + (L.aiErr ? ': ' + L.aiErr : '') + '; cihazdaki sonuç kaldı' : L.ai === 'edited' ? 'Metni değiştirdiğin için gelişmiş okuma uygulanmadı'
     : r.kept && r.kept.length ? 'Korundu: ' + r.kept.join(', ') : r.text && r.text !== r.corrected ? 'Düzeltildi: ' + r.text
-    : L.prefix ? 'Metnin devamına eklendi' : r.via === 'merge' ? 'Parçalar birleştirildi ve hizalandı' : r.via === 'ai' ? 'Yapay zekâ ile okundu' : 'Yazım hatası yok';
+    : L.prefix ? 'Metnin devamına eklendi' : r.via === 'merge' ? 'Parçalar birleştirildi ve hizalandı' : r.via === 'ai' ? handModelInfo().short + ' ile okundu' : 'Yazım hatası yok';
   const shown = L.t.text.length > 60 ? '…' + L.t.text.slice(-58) : L.t.text;
   HW.bar = h('div', { class: 'floaty handbar' + (L.ai === 'busy' ? ' aibusy' : ''), role: 'toolbar', 'aria-label': 'El yazısı sonucu' },
     langBtn,
@@ -468,7 +529,7 @@ async function selAlignFix() {
     A.t = A.t.filter(t => !boxes.includes(t)); A.s = A.s.filter(s => !strokes.includes(s)); A.t.push(nt);
     const op = { k: 'page', pid, b, a: snap(pid) }; pushOp(op);
     renderLayer(pv); requestFrame(true);
-    HW.last = { pv, t: nt, strokes, lines: [], raw: text, lh: size, r, op, prefix: '', mark: '', at: Date.now() };
+    HW.last = { pv, t: nt, strokes, lines: [], raw: text, lh: size, r, op, prefix: '', mark: '', at: Date.now(), seg: r.corrected, idx: 0, mode: S.hand.lang };
     showHandBar(); maybeAiImprove(HW.last);
   } catch (e) { toast(e.message || 'Birleştirilemedi', 3000); }
   finally { HW.busy--; hideHandBusy(); }
@@ -504,12 +565,31 @@ function handStatusNote() {
   st._show = showSt;
   return st;
 }
+/* düzeltme başına maliyet: bu modelle yapılmış en az 3 el yazısı isteği varsa gerçek ortalama, yoksa tahmin */
+function handCost() {
+  const c = aiCfg(), m = handModelInfo(c), prov = c.provider === 'gemini' ? 'gemini' : 'claude';
+  try {
+    let n = 0, usd = 0; const d = uzLoad().d;
+    for (const day in d) { const r = d[day][prov + '|' + m.id + '|hand']; if (r) { n += r[0]; usd += r[4]; } }
+    if (n >= 3) return { usd: usd / n, real: true, n };
+  } catch (e) { }
+  const inp = prov === 'gemini' ? 1500 : 900, out = prov === 'gemini' && m.think === 'low' ? 300 : 70;
+  try { const pr = uzPrice(prov, m.id, uzDay(), inp); return { usd: (inp * pr.i + out * pr.o) / 1e6, real: false }; } catch (e) { return null; }
+}
 function handAiNote() {
   const aiNote = h('p', { class: 'notice' });
-  const showAi = () => { aiNote.textContent = (S.hand.ai || 'off') === 'off' ? 'Yalnızca cihazdaki tanıma ve yazım denetimi kullanılır.' : 'Cihazdaki sonuç hemen yazılır; ' + (aiReady() ? aiName() : 'bağlı yapay zekâ') + ' el yazısının görüntüsüne ve önceki metne bakıp birkaç saniye içinde son düzeltmeyi yapar' + (S.hand.ai === 'long' ? ' (6 kelime ve üzeri)' : '') + '. İnternet gerekir.' + (aiReady() ? '' : ' Önce yapay zekâyı bağlayın (Sözlük → ⚙).'); };
+  const showAi = () => {
+    const mode = S.hand.ai || 'off';
+    if (mode === 'off') { aiNote.textContent = 'Yalnızca cihazdaki tanıma ve yazım denetimi kullanılır (internetsiz, anında). Kısa yazılarda iyidir; uzun cümlelerde hata yapabilir.'; return; }
+    const k = handCost(), cost = k && window.uzUsd ? ' Düzeltme başına ' + (k.real ? 'ortalama ' : '≈ ') + uzUsd(k.usd) + ' (100 düzeltme ≈ ' + uzUsd(k.usd * 100) + ')' + (S.usage && S.usage.gFree && aiCfg().provider === 'gemini' ? '; ücretsiz katmanda ödenmez' : '') + '.' : '';
+    const head = HW_NATIVE() ? 'Önce cihazdaki sonuç anında yazılır; aynı anda ' + handModelName() + ' el yazısının görüntüsünü baştan okur ve genellikle 1–3 saniyede metni günceller' + (mode === 'long' ? ' (birden çok satır ya da yaklaşık 6 kelimeden uzun yazılarda)' : '') + '. İnternet gerekir; bağlantı yoksa cihazdaki sonuç kalır.'
+      : 'Bu tarayıcıda cihazda tanıma yok; el yazısını ' + handModelName() + ' okur (internet gerekir).';
+    aiNote.textContent = head + cost + (aiReady() ? '' : ' Önce yapay zekâyı bağlayın (Ayarlar → Yapay zekâ).');
+  };
   showAi(); aiNote._show = showAi;
   return aiNote;
 }
+const handModelSub = () => { const c = aiCfg(), M = HAND_MODELS[c.provider === 'gemini' ? 'gemini' : 'claude']; return 'En doğru: ' + M.best.name + ' · En hızlı: ' + M.fast.name; };
 function handSettingsRows() {
   const st = handStatusNote(), showSt = st._show, aiNote = handAiNote(), showAi = aiNote._show;
   const rows = h('div', { class: 'col handset' },
@@ -524,8 +604,10 @@ function handSettingsRows() {
     rangeRow('hScale', 'Metin boyutu', 50, 200, 5, S.hand.scale, v => '%' + Math.round(v), v => { S.hand.scale = v; saveSettings(); }),
     toggleRow('hCont', 'Metnin devamına ekle', S.hand.cont !== false, v => { S.hand.cont = v; saveSettings(); showSt(); }, 'Düzeltilmiş bir metnin yanına ya da altına yazdığın devam o metne eklenir'),
     S.hand.style ? h('p', { class: 'notice' }, 'Seçili kalem stili: ' + S.hand.style.name + ' (' + (FONT_LABEL[S.hand.style.font] || '') + ' ' + String(S.hand.style.size).replace('.', ',') + ' pt). Yazı tipi ve boyut bu stilden gelir; araç çubuğundaki stil düğmesinden değiştirin.') : null,
-    h('small', { class: 'segcap' }, 'Yapay zekâ ile son düzeltme (isteğe bağlı)'),
-    segRow([['off', 'Kapalı'], ['long', 'Uzun cümlelerde'], ['always', 'Her zaman']], S.hand.ai || 'off', v => { S.hand.ai = v; saveSettings(); showAi(); }),
+    h('small', { class: 'segcap' }, 'Gelişmiş okuma (yapay zekâ)'),
+    segRow([['off', 'Yalnız cihaz'], ['long', 'Uzun yazılarda'], ['always', 'Her zaman']], S.hand.ai || 'off', v => { S.hand.ai = v; saveSettings(); showAi(); }),
+    h('small', { class: 'segcap' }, 'Gelişmiş model'),
+    segRow([['best', 'En doğru'], ['fast', 'En hızlı']], S.hand.model === 'fast' ? 'fast' : 'best', v => { S.hand.model = v; saveSettings(); showAi(); }),
     aiNote,
     st);
   return rows;
@@ -546,8 +628,9 @@ function handSettingsGroups() {
       toggleRow('sHCont', 'Metnin devamına ekle', S.hand.cont !== false, v => { S.hand.cont = v; saveSettings(); showSt(); }, 'Düzeltilmiş bir metnin yanına ya da altına yazdığın devam, ayrı kutu olmadan o metnin arkasına eklenir'),
       toggleRow('sScratch', 'Karalayarak sil', S.feel.scratch !== false, v => { S.feel.scratch = v; saveSettings(); }, 'Yazının üzerini zikzakla karalayınca silinir')
     ]),
-    sGroup('Yapay zekâ ile son düzeltme', [
-      sRow('Ne zaman', null, segRow([['off', 'Kapalı'], ['long', 'Uzun cümlelerde'], ['always', 'Her zaman']], S.hand.ai || 'off', v => { S.hand.ai = v; saveSettings(); showAi(); }), true)
+    sGroup('Gelişmiş okuma', [
+      sRow('Ne zaman', 'Cihazdaki model kısa yazılarda iyi, uzun cümlelerde zayıf. Gelişmiş model el yazısının görüntüsünü baştan okur.', segRow([['off', 'Yalnız cihaz'], ['long', 'Uzun yazılarda'], ['always', 'Her zaman']], S.hand.ai || 'off', v => { S.hand.ai = v; saveSettings(); showAi(); }), true),
+      sRow('Model', handModelSub(), segRow([['best', 'En doğru'], ['fast', 'En hızlı']], S.hand.model === 'fast' ? 'fast' : 'best', v => { S.hand.model = v; saveSettings(); showAi(); }), true)
     ], aiNote)
   ];
 }

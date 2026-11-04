@@ -4,7 +4,7 @@
    Solda bölümler, sağda o bölümün ayarları (gruplu kartlar). Dar ekranda bölümler üstte yatay sekme olur.
    Düzenleyicideki ⋯ paneli yalnızca sık kullanılan işlemleri gösterir; ayrıntılar buradadır.
    ========================================================= */
-const APP_VERSION = '2.5.9';
+const APP_VERSION = '2.6.0';
 const SET_SECTIONS = [
   { id: 'view', name: 'Görünüm', ic: 'moon', lead: 'Tema, düzenleyici göstergeleri ve yan yana belge.' },
   { id: 'pen', name: 'S Pen ve dokunma', ic: 'pen', lead: 'Parmakla çizim, yan tuş ve hareketler.' },
@@ -55,6 +55,8 @@ function setBuild(id, close) {
     sGroup('Düzenleyici', [
       toggleRow('setZoom', 'Yakınlaştırma düğmeleri', S.prefs.zoomCtl, v => { S.prefs.zoomCtl = v; saveSettings(); refresh(); }, 'Sağ alttaki − % + kontrolü'),
       toggleRow('setPager', 'Sayfa numarası', S.prefs.pager, v => { S.prefs.pager = v; saveSettings(); refresh(); }, 'Alttaki “3 / 12” göstergesi'),
+      sRow('Kaydırma düğmeleri', 'Üst çubukta, Geri al’ın solunda. Yazarken diğer elinle dokun: sayfa kayar; basılı tutunca kaymaya devam eder.', segRow([['off', 'Kapalı'], ['rd', 'Sağa ve aşağı'], ['all', 'Dört yön']], S.prefs.pan || 'rd', v => { S.prefs.pan = v; saveSettings(); if (window.buildPanBtns) buildPanBtns(); }, 'Kaydırma düğmeleri'), true),
+      sRow('Bir dokunuşta kayma', 'Ekranın ne kadarı kadar kaysın', segRow([['30', 'Az · %30'], ['50', 'Orta · %50'], ['75', 'Çok · %75']], String(S.prefs.panStep || 50), v => { S.prefs.panStep = +v; saveSettings(); }, 'Bir dokunuşta kayma'), true),
       h('div', { class: 'sbtns' }, h('button', { class: 'btn small', type: 'button', onclick: () => { close(); if (ed && ed.note && typeof toolbarEditor === 'function') openPop($('#moreBtn'), toolbarEditor); else toast('Araç çubuğunu bir not açıkken ⋯ menüsünden düzenleyin.', 2600); } }, icon(IC.gear), 'Araç çubuğunu düzenle'))
     ]),
     sGroup('Yan yana belge', [

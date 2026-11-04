@@ -164,6 +164,9 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:4px 0;width:100%}
 #edView{flex-direction:column}
 .ebar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"back title acts" "tools tools tools";align-items:center;gap:6px 8px;padding-block:8px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));background:var(--chrome);border-bottom:1px solid var(--line);position:relative;z-index:20}
 @media (min-width:1180px){.ebar{grid-template-columns:auto minmax(180px,1fr) minmax(0,max-content) auto;grid-template-areas:"back title tools acts"}.e-acts{justify-content:flex-end}}
+.ebar.tight .exbtn span{display:none}
+.ebar.tight .exbtn{padding:0 12px}
+@media (min-width:1180px){.ebar.tight{grid-template-columns:auto minmax(120px,1fr) minmax(0,max-content) auto}.ebar.tight2{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"back title acts" "tools tools tools"}}
 .e-back{grid-area:back}
 .e-title{grid-area:title;min-width:0;display:flex;flex-direction:column}
 .e-title input{width:100%;min-width:0;border:0;background:transparent;font:700 17px var(--f-display);padding:4px 6px;border-radius:8px;outline:none;text-overflow:ellipsis;color:var(--ink);-webkit-user-select:text;user-select:text}
@@ -195,6 +198,16 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:4px 0;width:100%}
 .fav canvas{width:30px;height:30px}
 @media (max-width:760px){.quick{display:none}.e-acts .wide{display:none}}
 .exbtn{margin-left:6px}
+/* kaydırma düğmeleri (Geri al'ın solunda) */
+.panpill{display:flex;align-items:center;gap:2px;padding:2px;margin-right:6px;border-radius:14px;background:var(--chrome-2)}
+.panpill[hidden]{display:none}
+.panpill .ibtn{width:44px;height:44px;color:var(--ink);touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.panpill .ibtn:hover{background:var(--chrome)}
+.panpill .ibtn:active,.panpill .ibtn.hold{background:var(--accent-soft);color:var(--accent)}
+.panpill .ibtn.dis{opacity:.35}
+.panpill .ibtn.edge{animation:panEdge .32s ease-out}
+@keyframes panEdge{30%{transform:translate(var(--ex),var(--ey))}60%{transform:translate(calc(var(--ex) * -.5),calc(var(--ey) * -.5))}}
+@media (prefers-reduced-motion:reduce){.panpill .ibtn.edge{animation:none}}
 @media (max-width:560px){.exbtn span{display:none}.exbtn{padding:0 12px}}
 
 /* ---------- düzenleyici gövde ---------- */
@@ -545,12 +558,13 @@ html:not(.embed) .sidechip{display:none}
 @keyframes hwIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
 .handbusy{position:absolute;border-radius:10px;border:2px dashed var(--accent);background:var(--accent-soft);pointer-events:none;z-index:5;animation:hwPulse 1s ease-in-out infinite alternate}
 @keyframes hwPulse{from{opacity:.45}to{opacity:1}}
-.handbar{z-index:6;gap:4px;padding:4px 4px 4px 6px;max-width:min(560px,calc(100% - 16px));animation:hwIn .16s ease-out}
+.handbar{z-index:6;gap:4px;padding:4px 4px 4px 6px;max-width:min(620px,calc(100% - 16px));animation:hwIn .16s ease-out}
 .handbar.busy{opacity:.6;pointer-events:none}
 .handbar .langb{flex:none;height:34px;min-width:40px;padding:0 8px;border-radius:9px;border:0;background:var(--accent-soft);color:var(--accent);font:700 13px var(--f-ui);letter-spacing:.04em;cursor:pointer}
 .handbar .hinfo{min-width:0;flex:1;display:flex;flex-direction:column;padding:0 6px;line-height:1.25}
 .handbar .hinfo b{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.handbar .hinfo small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.handbar .hinfo{min-width:150px}
+.handbar .hinfo small{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .handbar .ibtn{width:38px;height:38px;flex:none}
 .handbar .btn.small{height:36px;flex:none}
 .handset .seg{margin-bottom:2px}
