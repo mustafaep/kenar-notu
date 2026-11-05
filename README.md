@@ -5,7 +5,8 @@ PDF'i açıyorum, üzerine kalemle yazıyorum; el yazımı düzgün metne çevir
 basılı tutunca İngiliz aksanıyla okuyor, seçtiğim paragrafı açıklıyor ya da çeviriyor ve notlu PDF'i
 OneDrive'daki aynı dosyaya geri kaydediyor. Böylece bilgisayarda da aynı notları görüyorum.
 
-Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan oluşuyor. Tablette APK olarak kurulu.
+Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan oluşuyor. Tablette APK olarak kurulu;
+aynı APK telefonda kalemsiz bir okuma ve not görünümüyle açılıyor.
 
 ![Kitaplık](docs/ekran/kitaplik.jpg)
 
@@ -25,6 +26,8 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
   sayfa düzeltme de sağdaki defterde çalışıyor. Tableti dik tutunca defter alta geçiyor.
 - **Ekrandan parça almak.** Bir tablonun ya da şeklin ekran görüntüsünü alıp not sayfama yapıştırıyorum.
 - **Bilgisayarla eşitlemek.** Dosyalar OneDrive'da; tablette notladığım PDF bilgisayarımdaki aynı dosyada güncelleniyor.
+- **Telefonda okumak.** Aynı PDF'i telefonda açıp okuyorum, açılır-kapanır notları görüyor, düzeltiyor ya da yenisini
+  ekliyorum. Tablete döndüğümde notlar birleşiyor; kimse kimsenin üzerine yazmıyor.
 
 ---
 
@@ -131,7 +134,8 @@ olduğu için (A4 = 595 × 842 pt) boyutlar birebir aynıdır.
 **Belge ve sayfalar**
 - Sayfa paneli (küçük resimler, içindekiler, yer imleri, belgede arama), tüm sayfalar ızgarası,
   sürükleyerek sıralama, sayfa ekleme/çoğaltma/silme.
-- Yapışkan notlar, metin kutuları, görsel ekleme, bölge ekran görüntüsü.
+- Yapışkan notlar (PDF'e gerçek, açılır-kapanır not olarak yazılır; diğer okuyucularda da görünür), metin kutuları,
+  görsel ekleme, bölge ekran görüntüsü.
 - Kitaplıkta klasörler, favoriler, son açılanlar, çoklu seçim.
 - Yan yana iki belge (dik tutunca alt alta); açık/koyu tema; okuma modu; PDF renklerini ters çevirme.
 - Bölümlere ayrılmış Ayarlar ekranı (Görünüm, S Pen, El yazısı, Sayfayı düzelt, Sesli okuma, Yapay zekâ, OneDrive).
@@ -139,7 +143,9 @@ olduğu için (A4 = 595 × 842 pt) boyutlar birebir aynıdır.
 
 **OneDrive**
 - Android'de: dosya OneDrive uygulaması üzerinden açılır, notlu PDF aynı dosyaya yazılır. Microsoft kaydı gerekmez.
-- Çakışma koruması; OneDrive önceki yüklemeyi bitirmeden aynı dosyaya yeniden yazılmaz
+- Üzerine yazmayan eşitleme: dosya başka cihazda değiştiyse yapışkan notlar üç yönlü birleştirilir (iki yerde
+  birden değişen notun ikisi de tutulur), tabletteki kalem yazıları korunur. Notlar dışında da değişmişse sorar.
+- OneDrive önceki yüklemeyi bitirmeden aynı dosyaya yeniden yazılmaz
   (bu, OneDrive'ın "Dosya 1.pdf" gibi kopyalar oluşturmasını önler); değişmeyen not yeniden yüklenmez.
 - Web'de: Microsoft Graph ile bağlanılır (bkz. [web ve OneDrive kurulumu](docs/web-ve-onedrive-kurulumu.md)).
 
@@ -199,6 +205,11 @@ sayfaya gelir. Sayfa, kabuğa `window.KenarNative` üzerinden ulaşır.
 > `android-uygulama/` içine bir keystore ve `storeFile`, `storePassword`, `keyAlias`, `keyPassword` alanlarını içeren
 > `keystore.properties` dosyası koyun.
 
+### Telefon
+
+Aynı APK telefona kurulur. Kısa kenarı 600 dp'den küçük ekranlarda telefon görünümü açılır: kalem araçları yok,
+parmak sayfayı kaydırır; notlar alttan açılan pencerede okunur ve düzenlenir. Web'de `?phone=1` ile denenebilir.
+
 ### Web (PWA)
 
 Klasörü herhangi bir statik sunucuyla yayınlayın (`python -m http.server 8080`), tablette tarayıcıdan açıp
@@ -221,6 +232,8 @@ Okuyan model'de açıkça "Bulut" seçilirse yapay zekâ sağlayıcısına gönd
 ## Bilinen sınırlar
 
 - S Pen'in Air Actions hareketleri desteklenmez.
+- Başka PDF okuyucularda eklenen notlar Kenar Notu'na alınmaz; Kenar Notu'nun notları orada simge olarak görünür.
+- Eşitleme birleştirmesi Android'deki OneDrive bağlantısında çalışır; web (Graph) sürümü değişiklikte sorar.
 - Parola ile açılan (açılış şifreli) PDF'ler açılmaz.
 - Kurşun kalemin doku görünümü dışa aktarılan PDF'te düz gri çıkar.
 - Tabletteki Gemma modelinin Türkçe el yazısındaki başarısı ve hızı cihaza göre değişir; Ayarlar → El yazısı → Karşılaştır ile denenebilir.

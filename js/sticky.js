@@ -49,7 +49,7 @@ function addSticky(pv, opt = {}) {
   let x = opt.x != null ? opt.x : clamp((ed.W / 2 - v.tx) / v.z - pv.x - w / 2, 4, pv.meta.w - w - 4);
   let y = opt.y != null ? opt.y : clamp((ed.H / 2 - v.ty) / v.z - pv.y - 40, 4, pv.meta.h - 40);
   x = clamp(x, 0, Math.max(0, pv.meta.w - w)); y = clamp(y, 0, pv.meta.h - 20);
-  const n = { id: uid(), x, y, w, h: 0, text: opt.text || '', color: opt.color || S.stickyColor || STICKY_COLORS[0][0], open: true, title: opt.title || '' };
+  const n = { id: uid(), x, y, w, h: 0, text: opt.text || '', color: opt.color || S.stickyColor || STICKY_COLORS[0][0], open: opt.open !== false, title: opt.title || '' };
   const pid = pv.meta.id, b = snap(pid); ann(pid).n.push(n); renderStickies(pv); pushOp({ k: 'page', pid, b, a: snap(pid) });
   if (opt.edit) requestAnimationFrame(() => { const el = stickw.querySelector(`.sticky[data-id="${n.id}"]`); if (el) beginStickyEdit(el); });
   return n;
@@ -88,6 +88,54 @@ function finishSticky() {
   if (text !== E.before) stickySet(E.pv, E.id, { text, h: E.el.offsetHeight });
   else renderStickies(E.pv);
 }
+/* ---------- telefonda not penceresi ----------
+   Telefonda sayfadaki not küçük kalır; dokununca alttan açılan pencerede okunaklı yazıyla okunur ve düzenlenir.
+   Buradan sayfada açık ya da küçük (simge) gösterilmesi, rengi ve silinmesi seçilir. Geri tuşu da kaydederek kapatır. */
+function phoneStickySheet(pv, id, isNew) {
+  const n0 = stickyFind(pv, id); if (!n0) return;
+  document.querySelectorAll('.nsheet-back').forEach(x => x._close ? x._close() : x.remove());
+  let color = n0.color || STICKY_COLORS[0][0], open = n0.open !== false, done = false;
+  const ta = h('textarea', { class: 'nsta', rows: 6, placeholder: 'Notunu yaz…', 'aria-label': 'Not metni' }); ta.value = n0.text || '';
+  const sw = h('div', { class: 'fcolors nscolors', role: 'radiogroup', 'aria-label': 'Not rengi' });
+  const back = h('div', { class: 'modal-back nsheet-back' });
+  const sheet = h('div', { class: 'nsheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': n0.title || 'Not' });
+  const paint = () => {
+    sheet.style.setProperty('--nc', color); sw.innerHTML = '';
+    for (const [c, name] of STICKY_COLORS) sw.append(h('button', { type: 'button', class: 'sw' + (c === color ? ' on' : ''), role: 'radio', 'aria-checked': c === color ? 'true' : 'false', style: { background: c }, 'aria-label': name, onclick: () => { color = c; S.stickyColor = c; saveSettings(); paint(); } }));
+  };
+  const close = () => {
+    if (done) return; done = true; back.remove();
+    const n = stickyFind(pv, id); if (!n) return;
+    const text = ta.value.replace(/\s+$/, '');
+    const pid = pv.meta.id;
+    if (isNew && !text.trim()) { const b = snap(pid), A = ann(pid); A.n = A.n.filter(x => x.id !== id); renderStickies(pv); pushOp({ k: 'page', pid, b, a: snap(pid) }); return; }
+    const patch = {};
+    if (text !== (n.text || '')) { patch.text = text; patch.h = 0; }
+    if (color !== n.color) patch.color = color;
+    if (open !== (n.open !== false)) patch.open = open;
+    if (Object.keys(patch).length) stickySet(pv, id, patch);
+  };
+  back._close = close;
+  const openRow = toggleRow('nsOpen', 'Sayfada açık göster', open, v => { open = v; }, 'Kapalıyken sayfada küçük bir simge olarak durur');
+  sheet.append(
+    h('div', { class: 'nshead' }, h('i', { class: 'nsdot', 'aria-hidden': 'true' }), h('b', null, n0.title || (isNew ? 'Yeni not' : 'Not')), h('span', { class: 'grow' }),
+      h('button', { class: 'ibtn', type: 'button', 'aria-label': 'Kaydet ve kapat', onclick: close }, icon(IC.close))),
+    ta, sw, openRow,
+    h('div', { class: 'nsacts' },
+      isNew ? null : h('button', { class: 'btn danger', type: 'button', onclick: () => {
+        done = true; back.remove(); const pid = pv.meta.id, b = snap(pid), A = ann(pid); A.n = A.n.filter(x => x.id !== id); renderStickies(pv); pushOp({ k: 'page', pid, b, a: snap(pid) }); toast('Not silindi · Geri al ile geri getirin', 2000);
+      } }, icon(IC.trash), 'Sil'),
+      n0.text ? h('button', { class: 'btn', type: 'button', onclick: () => copyText(ta.value) }, icon(IC.copy), 'Kopyala') : null,
+      h('span', { class: 'grow' }),
+      h('button', { class: 'btn primary', type: 'button', onclick: close }, 'Bitti')));
+  back.append(sheet);
+  back.addEventListener('pointerdown', e => { if (e.target === back) close(); });
+  ta.addEventListener('keydown', e => e.stopPropagation());
+  document.body.append(back); paint();
+  if (isNew || !n0.text) setTimeout(() => ta.focus(), 60);
+}
+window.phoneStickySheet = phoneStickySheet;
+
 /* ---------- sürükleme, boyutlandırma, dokunma (editor onDown'dan çağrılır) ---------- */
 function stickyDown(e, el) {
   const pv = el._pv, n = el._n; if (!pv || !n) return;
@@ -110,7 +158,7 @@ function endSticky(st, cancel) {
   st.el.classList.remove('dragging');
   if (cancel) { renderStickies(st.pv); return; }
   const n = st.el._n;
-  if (!st.moved) { if (n.open === false) stickySet(st.pv, st.id, { open: true }); else if (st.onBody) beginStickyEdit(st.el); return; }
+  if (!st.moved) { if (PHONE) { phoneStickySheet(st.pv, st.id); return; } if (n.open === false) stickySet(st.pv, st.id, { open: true }); else if (st.onBody) beginStickyEdit(st.el); return; }
   if (st.g === 'stickyrz') { stickySet(st.pv, st.id, { w: st.nw || n.w, h: 0 }); return; }
   const pv = st.pv, ew = st.el.offsetWidth, eh = st.el.offsetHeight;
   const cw = { x: pv.x + st.nx + Math.min(ew, 60) / 2, y: pv.y + st.ny + Math.min(eh, 30) / 2 };

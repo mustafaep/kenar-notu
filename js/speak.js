@@ -41,7 +41,7 @@ function speakText(text, opts = {}) {
   if (TTS_NATIVE()) {
     let r = 'error'; try { r = KenarNative.speak(text, lang, rate, lang.startsWith('en') ? (S.voice.name || '') : ''); } catch (e) { }
     if (r === 'nolang') toastAction(lang.startsWith('tr') ? 'Türkçe ses yüklü değil.' : 'İngiliz İngilizcesi ses paketi yüklü değil.', 'Ses ayarları', () => { try { KenarNative.ttsSettings(); } catch (e) { } });
-    else if (r === 'noengine') toast('Tablette metin okuma motoru bulunamadı (Ayarlar → Genel yönetim → Metin okuma).', 4200);
+    else if (r === 'noengine') toast((PHONE ? 'Telefonda' : 'Tablette') + ' metin okuma motoru bulunamadı (Ayarlar → Genel yönetim → Metin okuma).', 4200);
     return;
   }
   if (!('speechSynthesis' in window)) { toast('Bu tarayıcı sesli okumayı desteklemiyor', 2400); return; }

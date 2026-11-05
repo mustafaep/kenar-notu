@@ -103,9 +103,9 @@ async function openFromOneDrive(item, closeSheet) {
     if (n && n.od && n.od.eTag === item.eTag) { if (closeSheet) closeSheet(); openNote(local.id); return; }
     if (n) {
       modal({
-        title: 'Dosya OneDrive’da değişmiş', text: `“${item.name}” bu tabletteki notlu sürümünüzden sonra başka bir yerde güncellenmiş.`,
+        title: 'Dosya OneDrive’da değişmiş', text: `“${item.name}” bu ${DV.daki} notlu sürümünüzden sonra başka bir yerde güncellenmiş.`,
         actions: [
-          { label: 'Tabletteki notu aç', onClick: () => { if (closeSheet) closeSheet(); openNote(local.id); } },
+          { label: DV.Daki + ' notu aç', onClick: () => { if (closeSheet) closeSheet(); openNote(local.id); } },
           { label: 'OneDrive sürümünü aç', kind: 'primary', onClick: async () => { if (closeSheet) closeSheet(); await importFromOneDrive(item, local.id); } }
         ]
       });
@@ -182,16 +182,18 @@ async function syncGraph(note, bytes, opt = {}) {
   }
 }
 function resolveConflict(note, bytes) {
-  const always = note.od.kind === 'saf' ? toggleRow('odAlways', 'Bu dosya için bir daha sorma', false, () => { }, 'Hep tabletteki notlu sürümü yaz') : null;
+  const saf = note.od.kind === 'saf';
   modal({
     title: 'OneDrive’daki dosya değişmiş',
-    text: 'Bu PDF siz açtıktan sonra başka bir yerde (bilgisayar, başka bir cihaz) güncellenmiş görünüyor. Ne yapalım?',
-    body: always,
+    text: saf ? 'Bu PDF başka bir yerde, notlar dışında da değişmiş (ör. bilgisayarda düzenlenmiş) ya da güncel sürümü okunamadı. Kendiliğinden birleştirmedim, hiçbir şeyin üzerine yazmadım. Ne yapalım?'
+      : 'Bu PDF siz açtıktan sonra başka bir yerde (bilgisayar, başka bir cihaz) güncellenmiş görünüyor. Ne yapalım?',
     actions: [
       { label: 'Vazgeç' },
+      saf ? { label: 'Yeniden dene', onClick: async () => { note.od.state = 'pending'; const r = await syncNote(note, bytes); if (r === 'conflict') resolveConflict(note, ed.note === note ? ed.pdfBytes : bytes); } } : null,
       { label: 'Notlu kopya kaydet', onClick: async () => { note.od.mode = 'copy'; const r = await syncNote(note, bytes); if (r === 'ok' && note.od.kind !== 'saf') toast('“' + (note.od.copyName || 'notlu kopya') + '” olarak kaydedildi', 3500); } },
-      { label: 'Üzerine yaz', kind: 'primary', onClick: async () => { if (always && always.querySelector('input').checked) note.od.alwaysOverwrite = true; const r = await syncNote(note, bytes, { force: true }); if (r === 'ok') toast('OneDrive’daki dosya güncellendi'); } }
-    ]
+      saf && window.safOpenRemote ? { label: 'Dosyadaki sürümü aç', onClick: () => safOpenRemote(note) } : null,
+      { label: 'Üzerine yaz (dosyadaki değişiklikler kaybolur)', kind: saf ? 'danger' : 'primary', onClick: async () => { const r = await syncNote(note, bytes, { force: true }); if (r === 'ok') toast('OneDrive’daki dosya güncellendi'); } }
+    ].filter(Boolean)
   });
 }
 function setSyncState(note, st, err) { if (ed.note === note) renderStatus(st, err); }
@@ -225,7 +227,7 @@ function openOneDrive(opts = {}) {
   const setupView = () => {
     const wrap = h('div', { class: 'od-setup' });
     if (!OD.supported()) {
-      wrap.append(h('p', null, 'OneDrive bağlantısı yalnızca uygulama güvenli bir adresten (https) açıldığında çalışır. README dosyasındaki “Yayınlama” adımlarıyla uygulamayı yayınlayıp tabletten o adresle açın.'));
+      wrap.append(h('p', null, 'OneDrive bağlantısı yalnızca uygulama güvenli bir adresten (https) açıldığında çalışır. README dosyasındaki “Yayınlama” adımlarıyla uygulamayı yayınlayıp ' + DV.dan + ' o adresle açın.'));
       return wrap;
     }
     if (!OD.clientId()) {
@@ -266,7 +268,7 @@ function openOneDrive(opts = {}) {
     const foot = h('div', { class: 'od-foot' },
       h('div', { class: 'grp' }, h('span', { class: 'lbl' }, 'Kaydederken'), segRow([['overwrite', 'Dosyanın üzerine yaz'], ['copy', 'Notlu kopya oluştur']], S.od.saveMode, v => { S.od.saveMode = v; saveSettings(); }, 'Kaydetme biçimi')),
       toggleRow('odAuto', 'Değişiklikleri otomatik eşitle', S.od.auto, v => { S.od.auto = v; saveSettings(); }),
-      h('p', { class: 'notice' }, 'Başka bir cihazda değişen dosyanın üzerine sormadan yazılmaz. Notlar dosyaya kalıcı olarak işlenir; düzenlenebilir katmanlar bu tablette kalır.'));
+      h('p', { class: 'notice' }, 'Başka bir cihazda değişen dosyanın üzerine sormadan yazılmaz. Notlar dosyaya kalıcı olarak işlenir; düzenlenebilir katmanlar bu ' + DV.da + ' kalır.'));
     return [bar, listEl, foot];
   };
   const crumbs = () => {
@@ -282,7 +284,7 @@ function openOneDrive(opts = {}) {
     if (!items.length) { listEl.append(h('div', { class: 'od-msg' }, st.q ? 'Aramayla eşleşen PDF ya da klasör yok.' : 'Bu klasörde PDF ya da klasör yok.')); return; }
     for (const it of items) {
       const local = idx.get(it.id); let chip = null;
-      if (local) chip = local.odETag && local.odETag !== it.eTag ? h('span', { class: 'chip warn' }, 'Başka yerde değişti') : h('span', { class: 'chip ok' }, icon(IC.check), 'Bu tablette notlu');
+      if (local) chip = local.odETag && local.odETag !== it.eTag ? h('span', { class: 'chip warn' }, 'Başka yerde değişti') : h('span', { class: 'chip ok' }, icon(IC.check), 'Bu ' + DV.da + ' notlu');
       const isF = !!it.folder;
       const b = h('button', { class: 'od-row', type: 'button', role: 'listitem', disabled: mode === 'save' && !isF ? true : null },
         h('span', { class: 'nm' }, h('span', { class: 'fi ' + (isF ? 'f' : 'p') }, isF ? icon(IC.folder) : 'PDF'), h('span', null, it.name)),

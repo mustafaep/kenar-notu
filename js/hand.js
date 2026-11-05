@@ -368,7 +368,7 @@ function splitLines(strokes) {
 function medianLineH(lines) { const a = lines.map(l => l.bb.y1 - l.bb.y0).sort((x, y) => x - y); return Math.max(10, a[a.length >> 1] || 14); }
 
 /* Hangi belgede çalışır: ana belge, yan yana açılan yan belge ya da ikisi */
-const handHere = () => { const w = S.hand.where || 'both'; return w === 'both' || (w === 'side' ? EMBED : !EMBED); };
+const handHere = () => { if (PHONE) return false; const w = S.hand.where || 'both'; return w === 'both' || (w === 'side' ? EMBED : !EMBED); };
 /* iki belgedeki bekleyen düğmeleri ve çubukları birlikte temizle */
 function handResetAll() {
   handReset();

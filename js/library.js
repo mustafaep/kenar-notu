@@ -91,11 +91,27 @@ async function createNoteFromPdf(name, bytes, opt = {}) {
   const pages = await pdfPagesMeta(doc, opt.onProg);
   const t = Date.now();
   const note = { id: opt.id || uid(), name: name || 'Adsız PDF', created: t, updated: t, opened: t, pages, ann: {}, od: opt.od || null };
-  const th = await renderThumb(pages[0], null, doc, 240);
+  // PDF'te Kenar Notu'nun yazdığı yapışkan notlar varsa geri al (açılır kapanır notlar olarak)
+  await knImportInto(note, doc, bytes);
+  const th = await renderThumb(pages[0], note.ann[pages[0].id] || null, doc, 240);
   await doc.destroy();
   await Store.put('pdfs', { id: note.id, bytes });
   await persistNoteRecord(note, th.toDataURL('image/jpeg', .82));
   return note;
+}
+/* kaynak PDF'in bilgileri ve içindeki notlar → nota; OneDrive bağlıysa senkronizasyon tabanı da kurulur */
+async function knImportInto(note, doc, bytes) {
+  note.srcPages = note.pages.length;
+  let cu = {}; try { const md = await doc.getMetadata(); cu = (md && md.info && md.info.Custom) || {}; } catch (e) { }
+  note.srcBody = typeof cu.KNBody === 'string' ? cu.KNBody : null;
+  try { note.srcHash = await knSha(bytes); } catch (e) { }
+  if (+cu.KNNotes > 0) {
+    try {
+      const kn = await readKnNotes(bytes, note.pages);
+      kn.pages.forEach((list, i) => { const p = note.pages[i]; if (p && list.length) { const A = note.ann[p.id] || (note.ann[p.id] = { s: [], t: [], i: [], n: [] }); A.n = list; } });
+    } catch (e) { }
+  }
+  if (note.od) { note.od.base = stickyBase(note); note.od.bodyKey = await noteBodyFp(note, bytes); }
 }
 async function importPdf(file) {
   if (!file) return;
@@ -151,7 +167,7 @@ async function refreshRail() {
   if (!folders().length) fnav.append(h('button', { type: 'button', class: 'navi dim', onclick: () => newFolder(null) }, icon(IC.folderPlus), h('span', null, 'Klasör oluştur')));
   const cloud = $('#navCloud'); cloud.innerHTML = '';
   cloud.append(h('span', { class: 'lbl' }, 'Bulut'),
-    h('button', { type: 'button', class: 'navi', onclick: () => openOneDrive() }, icon(IC.cloud), h('span', null, 'OneDrive', h('small', null, OD.signedIn() ? OD.accountName() : Native ? 'Tabletteki OneDrive ile' : OD.clientId() ? 'Giriş yapılmadı' : 'Bağlanmadı')), h('span', { class: 'dot' + (OD.signedIn() || Native ? ' ok' : '') })),
+    h('button', { type: 'button', class: 'navi', onclick: () => openOneDrive() }, icon(IC.cloud), h('span', null, 'OneDrive', h('small', null, OD.signedIn() ? OD.accountName() : Native ? DV.Daki + ' OneDrive ile' : OD.clientId() ? 'Giriş yapılmadı' : 'Bağlanmadı')), h('span', { class: 'dot' + (OD.signedIn() || Native ? ' ok' : '') })),
     h('button', { type: 'button', class: 'navi', onclick: () => openSettings() }, icon(IC.gear), h('span', null, 'Ayarlar')));
   $('#penCard').innerHTML = '';
   $('#penCard').append(h('span', null, h('small', null, 'S Pen')), h('div', { class: 'row' }, h('span', { class: 'dot' + (S.prefs.penSeen ? ' ok' : '') }), S.prefs.penSeen ? 'Algılandı: basınç ve eğim açık' : 'Kalemle ekrana dokunun'));
@@ -241,7 +257,7 @@ function renderSelBar() {
   bar.append(h('b', null, ids.length ? `${ids.length} not seçildi` : 'Not seçin'),
     h('button', { class: 'btn small', type: 'button', disabled: !ids.length, onclick: () => folderPicker(`${ids.length} not nereye taşınsın?`, null, fid => moveNotesTo(ids, fid).then(() => { libState.sel = null; renderLibrary(); })) }, icon(IC.folder), 'Klasöre taşı'),
     h('button', { class: 'btn small', type: 'button', disabled: !ids.length, onclick: async () => { const ms = await Promise.all(ids.map(id => Store.get('meta', id))); const on = !ms.every(m => m && m.fav); for (const m of ms) if (m) { m.fav = on; await Store.put('meta', m); } renderLibrary(); } }, icon(IC.star), 'Favori'),
-    h('button', { class: 'btn small danger', type: 'button', disabled: !ids.length, onclick: () => modal({ title: `${ids.length} not silinsin mi?`, text: 'Seçilen notlar ve üzerlerindeki tüm yazılar bu tabletten kalıcı olarak silinir. OneDrive’daki dosyalara dokunulmaz.', actions: [{ label: 'Vazgeç' }, { label: 'Sil', kind: 'danger', onClick: async () => { for (const id of ids) { await Store.del('meta', id); await Store.del('notes', id); await Store.del('pdfs', id); } libState.sel = null; renderLibrary(); toast(`${ids.length} not silindi`); } }] }) }, icon(IC.trash), 'Sil'),
+    h('button', { class: 'btn small danger', type: 'button', disabled: !ids.length, onclick: () => modal({ title: `${ids.length} not silinsin mi?`, text: 'Seçilen notlar ve üzerlerindeki tüm yazılar bu ' + DV.dan + ' kalıcı olarak silinir. OneDrive’daki dosyalara dokunulmaz.', actions: [{ label: 'Vazgeç' }, { label: 'Sil', kind: 'danger', onClick: async () => { for (const id of ids) { await Store.del('meta', id); await Store.del('notes', id); await Store.del('pdfs', id); } libState.sel = null; renderLibrary(); toast(`${ids.length} not silindi`); } }] }) }, icon(IC.trash), 'Sil'),
     h('button', { class: 'btn small primary', type: 'button', onclick: libSelectEnd }, 'Bitti'));
 }
 function noteMenu(anchor, m) {
@@ -252,7 +268,7 @@ function noteMenu(anchor, m) {
     { label: 'Seç', icon: IC.checkSq, onClick: () => { libState.sel = new Set([m.id]); renderLibrary(); } },
     { label: 'PDF olarak kaydet', icon: IC.dl, onClick: () => exportFromLibrary(m.id) },
     navigator.canShare ? { label: 'Paylaş', icon: IC.up, onClick: () => exportFromLibrary(m.id, true) } : null,
-    m.odId ? { label: 'OneDrive bağlantısını kaldır', icon: IC.cloudOff, sub: 'Not bu tablette kalır', onClick: async () => { const n = await Store.get('notes', m.id); if (n) { n.od = null; await persistNoteRecord(n); renderLibrary(); toast('OneDrive bağlantısı kaldırıldı'); } } } : null,
+    m.odId ? { label: 'OneDrive bağlantısını kaldır', icon: IC.cloudOff, sub: 'Not bu ' + DV.da + ' kalır', onClick: async () => { const n = await Store.get('notes', m.id); if (n) { n.od = null; await persistNoteRecord(n); renderLibrary(); toast('OneDrive bağlantısı kaldırıldı'); } } } : null,
     { label: 'Çoğalt', icon: IC.copy, onClick: () => duplicateNote(m.id) },
     '-',
     { label: 'Sil', icon: IC.trash, danger: true, onClick: () => confirmDelete(m) }
@@ -263,7 +279,7 @@ function renameNote(m) {
   modal({ title: 'Yeniden adlandır', body: h('label', { class: 'field', for: 'renameIn' }, 'Not adı', inp), actions: [{ label: 'Vazgeç' }, { label: 'Kaydet', kind: 'primary', onClick: async () => { const v = inp.value.trim(); if (!v) return false; const n = await Store.get('notes', m.id); if (n) { n.name = v; await Store.put('notes', n); } m.name = v; await Store.put('meta', m); renderLibrary(); } }] });
 }
 function confirmDelete(m) {
-  modal({ title: 'Not silinsin mi?', text: `“${m.name}” ve üzerindeki tüm notlar bu tabletten kalıcı olarak silinir.${m.odId ? ' OneDrive’daki dosyaya dokunulmaz.' : ''}`, actions: [{ label: 'Vazgeç' }, { label: 'Sil', kind: 'danger', onClick: async () => { await Store.del('meta', m.id); await Store.del('notes', m.id); await Store.del('pdfs', m.id); renderLibrary(); toast('Not silindi'); } }] });
+  modal({ title: 'Not silinsin mi?', text: `“${m.name}” ve üzerindeki tüm notlar bu ${DV.dan} kalıcı olarak silinir.${m.odId ? ' OneDrive’daki dosyaya dokunulmaz.' : ''}`, actions: [{ label: 'Vazgeç' }, { label: 'Sil', kind: 'danger', onClick: async () => { await Store.del('meta', m.id); await Store.del('notes', m.id); await Store.del('pdfs', m.id); renderLibrary(); toast('Not silindi'); } }] });
 }
 async function duplicateNote(id) {
   const n = await Store.get('notes', id), m = await Store.get('meta', id); if (!n || !m) return;

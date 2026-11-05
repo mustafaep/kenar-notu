@@ -835,3 +835,32 @@ html:not(.embed) .sidechip{display:none}
 .hchead small{color:var(--muted)}
 .hctext{font-size:17px;line-height:1.4;color:var(--ink);word-break:break-word}
 @media (prefers-reduced-motion:reduce){.lmbar.busy i{animation:none}}
+
+/* ---------- telefon düzeni ---------- */
+html.phone .ebar{padding-block:4px;gap:4px;padding-left:max(6px,env(safe-area-inset-left,0px));padding-right:max(6px,env(safe-area-inset-right,0px))}
+html.phone #redoBtn{display:none}
+html.phone .e-back .ibtn,html.phone .e-acts .ibtn{width:40px;height:40px}
+html.phone .e-title input{font-size:15px;padding:2px 4px}
+html.phone .status{font-size:11px;padding:0 4px}
+html.phone .exbtn span{display:none}
+html.phone .exbtn{padding:0 11px;margin-left:2px}
+html.phone .e-tools{justify-content:center}
+html.phone .pill{padding:2px}
+html.phone .tool{width:52px;height:40px}
+html.phone .tool .caret,html.phone .tool .tip{display:none}
+/* telefon not penceresi (alttan) */
+.nsheet-back{place-items:end center;padding:0}
+.nsheet{--nc:#FFE58A;width:100%;max-width:640px;max-height:calc(100% - 24px);overflow:auto;background:var(--chrome);border-radius:18px 18px 0 0;border-top:6px solid var(--nc);box-shadow:var(--shadow);padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px;animation:nsIn .18s ease-out}
+@keyframes nsIn{from{transform:translateY(24px);opacity:.6}}
+@media (prefers-reduced-motion:reduce){.nsheet{animation:none}}
+.nshead{display:flex;align-items:center;gap:8px;font-size:16px}
+.nshead .grow,.nsacts .grow{flex:1}
+.nsdot{width:14px;height:14px;border-radius:50%;background:var(--nc);box-shadow:0 0 0 1px var(--ring)}
+.nsta{width:100%;min-height:150px;max-height:46vh;font:17px/1.45 var(--f-ui);border-radius:12px;border:1px solid var(--line);padding:10px 12px;background:color-mix(in srgb,var(--nc) 30%,var(--chrome));color:var(--ink);resize:vertical;-webkit-user-select:text;user-select:text}
+.nsta:focus{outline:2px solid var(--accent);outline-offset:1px}
+.nscolors{display:flex;gap:10px;flex-wrap:wrap}
+.nscolors .sw{width:34px;height:34px}
+.nsacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* telefon kitaplığı: iki sütun, daha sıkı boşluklar */
+html.phone .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 12px}
+html.phone .pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 12px;padding:14px}

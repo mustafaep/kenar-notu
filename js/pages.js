@@ -154,7 +154,7 @@ function placeAddEnd() {
   const b = $('#addEnd'); if (!ed.pvs.length) { b.hidden = true; return; }
   const last = ed.pvs[ed.pvs.length - 1], v = ed.view;
   const y = v.ty + (last.y + last.meta.h) * v.z + 14;
-  const show = !S.prefs.readOnly && y > 40 && y < ed.H - 50 && !ed.capture;
+  const show = !S.prefs.readOnly && !PHONE && y > 40 && y < ed.H - 50 && !ed.capture;
   if (b.hidden === show) b.hidden = !show;
   $('#pager').classList.toggle('away', show);
   if (show) { b.style.top = y + 'px'; b.style.left = v.tx + 'px'; }

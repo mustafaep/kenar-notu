@@ -169,7 +169,7 @@ if (EMBED) {
   const fwd = name => { const base = window[name]; window[name] = (...a) => { const r = base ? base(...a) : undefined; try { const w = sideWin(); if (w && w[name]) w[name](...a); } catch (e) { } return r; }; };
   fwd('__penButton'); fwd('kenarFlush');
   // el yazısı sonuçları ve tabletteki model durumu: isteği yan belge yaptıysa ona da ulaşsın (kimlikler bölmeye özgü)
-  fwd('__inkResult'); fwd('__inkStatus'); fwd('__localResult'); fwd('__localStatus');
+  fwd('__inkResult'); fwd('__inkStatus'); fwd('__localResult'); fwd('__localStatus'); fwd('__docFetched');
   const baseBack = window.kenarBack;
   if (baseBack) window.kenarBack = () => {
     const busy = document.querySelector('.modal-back, .od-back, .pfpick, .pfwin') || (pop && !pop.hidden) || ed.capture || ed.editing || ed.sel || TS.sel || dictEl;

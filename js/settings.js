@@ -4,7 +4,7 @@
    Solda bölümler, sağda o bölümün ayarları (gruplu kartlar). Dar ekranda bölümler üstte yatay sekme olur.
    Düzenleyicideki ⋯ paneli yalnızca sık kullanılan işlemleri gösterir; ayrıntılar buradadır.
    ========================================================= */
-const APP_VERSION = '2.6.2';
+const APP_VERSION = '2.7.0';
 const SET_SECTIONS = [
   { id: 'view', name: 'Görünüm', ic: 'moon', lead: 'Tema, düzenleyici göstergeleri ve yan yana belge.' },
   { id: 'pen', name: 'S Pen ve dokunma', ic: 'pen', lead: 'Parmakla çizim, yan tuş ve hareketler.' },
@@ -15,6 +15,7 @@ const SET_SECTIONS = [
   { id: 'usage', name: 'Harcama', ic: 'chart', lead: 'Yapay zekâ isteklerinin tahmini maliyeti; bu cihazda tutulur.' },
   { id: 'cloud', name: 'OneDrive ve depolama', ic: 'cloud', lead: 'Dosyaların nereye kaydedildiği.' }
 ];
+if (PHONE) for (const id of ['pen', 'hand', 'pagefix']) { const i = SET_SECTIONS.findIndex(s => s.id === id); if (i >= 0) SET_SECTIONS.splice(i, 1); }
 let setLast = 'view';
 function openSettings(section) {
   document.querySelectorAll('.setback').forEach(x => x.remove());
@@ -60,7 +61,7 @@ function setBuild(id, close) {
       h('div', { class: 'sbtns' }, h('button', { class: 'btn small', type: 'button', onclick: () => { close(); if (ed && ed.note && typeof toolbarEditor === 'function') openPop($('#moreBtn'), toolbarEditor); else toast('Araç çubuğunu bir not açıkken ⋯ menüsünden düzenleyin.', 2600); } }, icon(IC.gear), 'Araç çubuğunu düzenle'))
     ]),
     sGroup('Yan yana belge', [
-      sRow('İkinci belgenin yeri', 'Otomatik: tablet yataysa yanda, dikse altta açılır', segRow([['auto', 'Otomatik'], ['side', 'Hep yanda'], ['below', 'Hep altta']], S.prefs.splitPos || 'auto', v => { S.prefs.splitPos = v; saveSettings(); if (window.applySplitW) applySplitW(); }, 'İkinci belgenin yeri'), true)
+      sRow('İkinci belgenin yeri', 'Otomatik: ekran yataysa yanda, dikse altta açılır', segRow([['auto', 'Otomatik'], ['side', 'Hep yanda'], ['below', 'Hep altta']], S.prefs.splitPos || 'auto', v => { S.prefs.splitPos = v; saveSettings(); if (window.applySplitW) applySplitW(); }, 'İkinci belgenin yeri'), true)
     ])
   ];
   if (id === 'pen') return [
@@ -91,7 +92,7 @@ function setBuild(id, close) {
     ];
   }
   if (id === 'cloud') {
-    const info = h('p', { class: 'sfoot' }, Store.ok ? 'Notlar bu tabletin uygulama deposunda tutulur.' : 'Tarayıcı depolaması kapalı; notlar yalnızca bu oturumda kalır.');
+    const info = h('p', { class: 'sfoot' }, Store.ok ? 'Notlar bu ' + DV.in + ' uygulama deposunda tutulur.' : 'Tarayıcı depolaması kapalı; notlar yalnızca bu oturumda kalır.');
     try { navigator.storage.estimate().then(e => { if (info.isConnected && e.usage != null) info.textContent += ' Kullanılan: ' + fmtSize(e.usage) + '.'; }); } catch (e) { }
     const isApp = !!(window.KenarNative && window.KenarNative.openDocument);
     return [

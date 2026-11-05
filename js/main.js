@@ -8,7 +8,7 @@ addEventListener('resize', () => placePop());
 
 function newMenu(anchor) {
   openPop(anchor, () => menu([
-    { label: 'PDF ekle', icon: IC.fileIn, sub: 'Tabletteki dosyalardan', onClick: () => $('#fileIn').click() },
+    { label: 'PDF ekle', icon: IC.fileIn, sub: DV.Daki + ' dosyalardan', onClick: () => $('#fileIn').click() },
     { label: 'OneDrive’dan aç', icon: IC.cloud, sub: 'Değişiklikler dosyaya yazılır', onClick: () => openOneDrive() },
     { label: 'Boş not', icon: IC.blank, sub: 'Çizgili, kareli, noktalı', onClick: () => blankMenu(anchor) },
     { label: 'Klasör', icon: IC.folderPlus, sub: curFolder() ? 'Bu klasörün içinde' : 'Notlarınızı gruplayın', onClick: () => newFolder(curFolder()) }
@@ -36,11 +36,11 @@ if ('launchQueue' in window) {
   if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
   await Store.open();
   $('#storeNote').innerHTML = Store.ok
-    ? 'Notlar bu tabletin depolamasında tutulur. OneDrive’a bağlı notlar ayrıca dosyanın kendisine yazılır.'
+    ? 'Notlar bu ' + DV.in + ' depolamasında tutulur. OneDrive’a bağlı notlar ayrıca dosyanın kendisine yazılır.'
     : 'Tarayıcı depolaması kapalı olduğu için notlar yalnızca bu oturumda kalır. Çalışmanızı <b>Kaydet</b> menüsünden cihaza ya da OneDrive’a alın.';
   await OD.init();
   let seeded = false; try { seeded = localStorage.getItem('kn.seeded') === '1'; } catch (e) { }
-  if (!seeded) { const all = await Store.all('meta'); if (!all.length) await seedSample(); try { localStorage.setItem('kn.seeded', '1'); } catch (e) { } }
+  if (!seeded) { const all = await Store.all('meta'); if (!all.length && !PHONE) await seedSample(); try { localStorage.setItem('kn.seeded', '1'); } catch (e) { } }
   await renderLibrary();
   let resume = null; try { resume = JSON.parse(sessionStorage.getItem('kn.resume') || 'null'); sessionStorage.removeItem('kn.resume'); } catch (e) { }
   if (resume) {

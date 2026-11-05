@@ -9,6 +9,13 @@ const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(3
 const DPR = () => Math.min(window.devicePixelRatio || 1, 3);
 const now = () => performance.now();
 const EMBED = (() => { try { return window.parent !== window && /[?&]embed=1/.test(location.search); } catch (e) { return false; } })();
+/* Telefon: ekranın kısa kenarı 600 CSS pikselden küçük (Galaxy Tab dik tutulunca bile ~800). Telefonda okuma düzeni:
+   kalem araçları yok, parmak (ve kalem) yalnızca kaydırır; yapışkan notlar eklenir, okunur, düzenlenir, açılıp kapanır. */
+const PHONE = (() => { try { return /[?&]phone=1/.test(location.search) || Math.min(screen.width, screen.height) < 600; } catch (e) { return false; } })();
+if (PHONE) document.documentElement.classList.add('phone');
+/* cihaz adı ekleriyle (“bu tablette” / “bu telefonda”) */
+const DV = PHONE ? { da: 'telefonda', a: 'telefona', A: 'Telefona', dan: 'telefondan', in: 'telefonun', daki: 'telefondaki', Daki: 'Telefondaki' }
+  : { da: 'tablette', a: 'tablete', A: 'Tablete', dan: 'tabletten', in: 'tabletin', daki: 'tabletteki', Daki: 'Tabletteki' };
 
 function h(tag, attrs, ...kids) {
   const e = document.createElement(tag);

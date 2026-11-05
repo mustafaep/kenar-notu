@@ -1,6 +1,6 @@
 KENAR NOTU — ANDROID KURULUM NOTLARI
 =====================================
-Sürüm 2.4.3 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
+Sürüm 2.7.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
 
 
 A) APK'YI OLUŞTURMA (bilgisayarda, bir kez)
@@ -55,10 +55,11 @@ Tabletteki bir notu OneDrive'a kaydetmek:
   Bundan sonraki değişiklikler bu dosyaya yazılır.
 
 Bilmeniz gerekenler:
-- Dosya siz açtıktan sonra başka bir cihazda değiştiyse uygulama üzerine sormadan yazmaz;
-  "Üzerine yaz", "Notlu kopya kaydet" ya da "Vazgeç" seçeneklerini sunar.
-- Notlar PDF'e kalıcı olarak işlenir; bilgisayarda açtığınızda görünürler. Düzenlenebilir katmanlar
-  (silinebilir çizgiler, taşınabilir metinler) bu tablette kalır.
+- Dosya siz açtıktan sonra başka bir cihazda değiştiyse uygulama üzerine yazmaz: yapışkan notlar
+  kendiliğinden birleştirilir; notlar dışında da değiştiyse "Yeniden dene", "Notlu kopya kaydet",
+  "Dosyadaki sürümü aç", "Üzerine yaz" ya da "Vazgeç" seçeneklerini sunar (ayrıntı: Z bölümü).
+- Kalem yazıları PDF'e kalıcı olarak işlenir; bilgisayarda açtığınızda görünürler. Yapışkan notlar gerçek
+  PDF notu olarak yazılır. Düzenlenebilir katmanlar (silinebilir çizgiler, taşınabilir metinler) bu tablette kalır.
 - OneDrive uygulamasında bir PDF'e "Birlikte aç → Kenar Notu" ile dokunursanız dosya tablete kopyalanır;
   OneDrive'a geri yazmak için PDF'i Kenar Notu'nun içinden "OneDrive'dan aç" ile açın.
 - Samsung "Dosyalarım" uygulamasına bağlı OneDrive ya da Google Drive da aynı şekilde çalışır.
@@ -111,6 +112,43 @@ G) YENİ (2.2.0)
   (ya da "Araç çubuğunu düzenle" listesinden "Kaldır").
 - PDF renklerini ters çevirme: ⋯ → "PDF renklerini ters çevir" (gece okuma). İsterseniz araç çubuğuna da
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
+
+
+Z) YENİ (2.7.0) — telefon görünümü, gerçek PDF notları, üzerine yazmayan eşitleme
+-------------------------------------------------------------------------------------
+- TELEFON: Aynı APK telefona da kurulur (Android 8 ve üstü). Ekranın kısa kenarı 600 dp'den küçükse uygulama
+  kendiliğinden telefon görünümüne geçer:
+  · Kalem yok: parmak ve kalem yalnızca sayfayı kaydırır, iki parmakla yakınlaştırılır. Çizim, silgi, kement,
+    el yazısı, sayfa düzeltme ve kaydırma düğmeleri gizlenir.
+  · Araç çubuğunda: Not ekle, Belgede ara, Tüm sayfalar, Sözlük, Renkleri ters çevir. Sesli okuma, sözlük,
+    yapay zekâ (Açıkla/Çevir), yer imleri, içindekiler ve OneDrive olduğu gibi çalışır.
+  · Bir nota dokununca alttan bir pencere açılır: yazıyı düzelt, rengini değiştir, "Sayfada açık göster",
+    Kopyala, Sil, Bitti. Geri tuşu da kaydederek kapatır. Boş bırakılan yeni not silinir.
+  · Kitaplık iki sütun; "S Pen rehberi" örnek notu telefonda oluşturulmaz.
+- GERÇEK PDF NOTLARI: Yapışkan notlar artık sayfaya resim olarak basılmaz; PDF'e gerçek, açılır-kapanır not
+  (Text/Popup açıklaması) olarak yazılır. Telefon, tablet ve bilgisayardaki PDF okuyucular aynı notu görür.
+  Kenar Notu dosyayı açınca notlar yine düzenlenebilir yapışkan not olur (yeri, rengi, başlığı, açık/kapalı
+  durumu korunur). Başka okuyucular (Adobe, Edge, Samsung Notes…) notu kendi simgesiyle gösterir; orada
+  eklenen notlar Kenar Notu'nda görünmez.
+- ÜZERİNE YAZMAYAN EŞİTLEME (OneDrive): Kaydetmeden önce ve not açılırken dosyanın başka bir cihazda değişip
+  değişmediğine bakılır. Değiştiyse dosyanın güncel hâli okunur ve notlar birleştirilir; hiçbir şey sorulmadan
+  silinmez:
+  · Yalnız öbür cihazda değişen ya da eklenen not alınır, yalnız bu cihazda değişen korunur.
+  · İki cihazda birden değişen notun ikisi de tutulur; öbür cihazdaki "… · diğer cihaz" başlığıyla eklenir.
+  · Bir cihazda silinip öbüründe dokunulmayan not silinir.
+  · Tablette kalemle yazdıkların (çizgi, metin, görsel) birleştirmede korunur. Telefonda yalnız notlar
+    değiştiği için tablet bunu bilir ve kendi yazılarını kaybetmeden telefondaki notları alır.
+  · Telefonda PDF'in kendisinden başka bir şey olmadığı için telefon her açılışta dosyanın güncel sürümünü
+    alır (tabletteki yazılar dahil).
+  · Dosya notlar dışında da değiştiyse (ör. bilgisayarda düzenlendi) kendiliğinden birleştirilmez; durum
+    satırı "çakışma" olur ve şunlar sunulur: Vazgeç · Yeniden dene · Notlu kopya kaydet · Dosyadaki sürümü aç ·
+    Üzerine yaz (dosyadaki değişiklikler kaybolur). Eski "her zaman üzerine yaz" seçeneği kaldırıldı.
+  · Telefonda da dosyayı Kenar Notu'nun içinden "OneDrive'dan aç" ile açın ("Birlikte aç" dosyayı kopyalar,
+    eşitlemez).
+- 2.7.0'dan önce kaydedilmiş bir PDF tablette ilk açıldığında bir kez yeni biçimde yeniden yazılır (notlar
+  gerçek PDF notuna dönüşür, birleştirme için başlangıç noktası kaydedilir). Telefonda açmadan önce dosyayı
+  tablette bir kez açman yeterli.
+- Uygulama metinleri cihaza göre "bu telefonda" / "bu tablette" der.
 
 
 Y) YENİ (2.6.2) — kelime kelime okuma, satır ayırma düzeltmesi, Gemma yükleme hatası

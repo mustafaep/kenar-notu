@@ -7,7 +7,7 @@ const stage = $('#stage'), world = $('#world'), selw = $('#selw');
 const hlc = $('#hlc'), inkc = $('#inkc'), livec = $('#livec');
 const hlx = hlc.getContext('2d'), inkx = inkc.getContext('2d');
 let livex = null; try { livex = livec.getContext('2d', { desynchronized: true }); } catch (e) { } if (!livex) livex = livec.getContext('2d');
-const GAP = 28, MARGIN = 24, MAXPX = 8e6;
+const GAP = PHONE ? 14 : 28, MARGIN = PHONE ? 6 : 24, MAXPX = 8e6;
 const ed = {
   note: null, pdf: null, pdfBytes: null, pvs: [], view: { z: 1, tx: 0, ty: 0 }, W: 0, H: 0, rect: null, fitZ: 1, maxW: 595, totalH: 0,
   tool: 'pen', undo: [], redo: [], sel: null, editing: null, live: null, lasso: null, erase: null, capture: null,
@@ -235,7 +235,7 @@ function renderStatus(st, err) {
   if (st !== 'busy') { clearInterval(busyTick); busyTick = 0; ed.busyAt = 0; }
   else if (!busyTick) { ed.busyAt = Date.now(); busyTick = setInterval(() => { const sp = $('#status span'); const n = Math.round((Date.now() - ed.busyAt) / 1000); if (sp && ed.note && ed.note.od && n >= 3) sp.textContent = (ed.note.od.kind === 'saf' && ed.note.od.place !== 'OneDrive' ? 'Dosyaya' : 'OneDrive’a') + ' kaydediliyor… ' + n + ' sn' + (n > 20 ? ' · durum için dokunun' : ''); }, 1000); }
   const od = ed.note.od; el.className = 'status'; el.innerHTML = ''; el.title = '';
-  let ic = IC.check, txt = 'Bu tablete kaydedildi';
+  let ic = IC.check, txt = 'Bu ' + DV.a + ' kaydedildi';
   if (od) {
     st = st || od.state || (od.dirty ? 'pending' : 'synced');
     const P = od.kind === 'saf' && od.place !== 'OneDrive' ? 'Dosyaya' : 'OneDrive’a';
@@ -298,6 +298,8 @@ async function openNote(id) {
     if (!restorePos()) setView(ed.fitZ, ed.W / 2, MARGIN);
     refreshPanel();
   });
+  // OneDrive dosyası başka cihazda değiştiyse (ör. telefonda not eklendiyse) hemen birleştir
+  if (window.safCheckOnOpen) safCheckOnOpen(note);
 }
 async function closeEditor() {
   if (ed.capture) captureEnd();
@@ -311,7 +313,7 @@ async function closeEditor() {
       // arka planda yaz: kitaplığa hemen dön, kart üzerindeki bulut simgesi durumu gösterir
       const bytes = ed.pdfBytes, P = n.od.kind === 'saf' && n.od.place !== 'OneDrive' ? 'Dosyaya' : 'OneDrive’a';
       toast(P + ' arka planda kaydediliyor…', 1800);
-      syncNote(n, bytes).then(r => { if (r === 'ok') toast('“' + n.name + '” ' + (P === 'Dosyaya' ? 'dosyaya' : 'OneDrive’a') + ' kaydedildi', 2200); else if (r === 'readonly') toast('Not tablette kayıtlı. Dosya salt okunur; OneDrive’a kaydetmek için notu açıp durum satırına dokunun.', 5000); else if (r === 'wait') toast('OneDrive önceki kaydı yüklüyor; bitince “' + n.name + '” otomatik kaydedilecek.', 3200); else if (r !== 'skip') toast(P + ' yazılamadı; not tablette kayıtlı. Notu açıp durum satırına dokunarak tekrar deneyin.', 5000); if (!libView.hidden) renderLibrary(); });
+      syncNote(n, bytes).then(r => { if (r === 'ok') toast('“' + n.name + '” ' + (P === 'Dosyaya' ? 'dosyaya' : 'OneDrive’a') + ' kaydedildi', 2200); else if (r === 'readonly') toast('Not ' + DV.da + ' kayıtlı. Dosya salt okunur; OneDrive’a kaydetmek için notu açıp durum satırına dokunun.', 5000); else if (r === 'wait') toast('OneDrive önceki kaydı yüklüyor; bitince “' + n.name + '” otomatik kaydedilecek.', 3200); else if (r !== 'skip') toast(P + ' yazılamadı; not ' + DV.da + ' kayıtlı. Notu açıp durum satırına dokunarak tekrar deneyin.', 5000); if (!libView.hidden) renderLibrary(); });
       setTimeout(() => { if (!libView.hidden) renderLibrary(); }, 50);
     }
   } catch (e) { }
@@ -337,6 +339,8 @@ const TB_ITEMS = {
   readonly: { name: 'Okuma modu', ic: IC.lock }, aisel: { name: 'Alanı çevrele (YZ)', ic: IC.aisel, tool: true }, pagefix: { name: 'Sayfayı düzelt (YZ)', ic: IC.fixText }, sticky: { name: 'Yapışkan not', ic: IC.sticky }, find: { name: 'Belgede ara', ic: IC.search }, pgrid: { name: 'Tüm sayfalar', ic: IC.gridI }
 };
 const TB_DEFAULT = { order: ['pen', 'hl', 'eraser', 'lasso', 'aisel', 'pagefix', 'text', 'sticky', 'image', 'capture', 'invert', 'dict', 'split', 'readonly', 'find', 'pgrid'], hidden: ['invert', 'dict', 'readonly', 'find', 'pgrid', 'pagefix'], colors: true, favs: true };
+/* telefonda araç çubuğu: kalem araçları yok, okuma ve not araçları */
+const PHONE_TOOLS = ['sticky', 'find', 'pgrid', 'dict', 'invert'];
 function tbCfg() {
   const t = S.toolbar || {}; const order = (t.order || []).filter(k => TB_ITEMS[k]);
   TB_DEFAULT.order.forEach((k, i) => { if (order.includes(k)) return; const prev = TB_DEFAULT.order.slice(0, i).reverse().find(x => order.includes(x)); order.splice(prev ? order.indexOf(prev) + 1 : 0, 0, k); });
@@ -347,11 +351,11 @@ function buildTools() {
   const cfg = tbCfg();
   const pill = h('div', { class: 'pill', role: 'toolbar', 'aria-label': 'Araçlar' });
   let sepDone = false;
-  for (const id of cfg.order) {
-    if (cfg.hidden.includes(id)) continue;
+  for (const id of PHONE ? PHONE_TOOLS : cfg.order) {
+    if (!PHONE && cfg.hidden.includes(id)) continue;
     if (id === 'split' && EMBED) continue;
     const it = TB_ITEMS[id];
-    if (!it.tool && !sepDone) { pill.append(h('span', { class: 'vsep' })); sepDone = true; }
+    if (!it.tool && !sepDone && !PHONE) { pill.append(h('span', { class: 'vsep' })); sepDone = true; }
     const b = h('button', { class: 'tool' + (id === 'capture' ? ' cap' : ''), type: 'button', 'aria-label': it.name, title: it.name, 'data-item': id }, icon(it.ic));
     if (it.tool) {
       b.dataset.tool = id; b.append(h('span', { class: 'caret' }));
@@ -361,8 +365,8 @@ function buildTools() {
     pill.append(b);
   }
   box.append(pill);
-  if (cfg.colors) box.append(h('div', { class: 'quick', id: 'quick' }));
-  if (cfg.favs) box.append(h('div', { class: 'favs', id: 'favs' }));
+  if (cfg.colors && !PHONE) box.append(h('div', { class: 'quick', id: 'quick' }));
+  if (cfg.favs && !PHONE) box.append(h('div', { class: 'favs', id: 'favs' }));
   refreshToolbar();
 }
 function toolbarAction(id, b) {
@@ -372,7 +376,7 @@ function toolbarAction(id, b) {
   else if (id === 'dict') openDict('');
   else if (id === 'split') toggleSplit();
   else if (id === 'readonly') setReadOnly(!S.prefs.readOnly);
-  else if (id === 'sticky') { finishAll(); addSticky(currentPage(), { edit: true }); }
+  else if (id === 'sticky') { finishAll(); if (PHONE) { const pv = currentPage(), n = pv && addSticky(pv, { open: false }); if (n) phoneStickySheet(pv, n.id, true); } else addSticky(currentPage(), { edit: true }); }
   else if (id === 'find') { S.panelTab = 'find'; setPanel(true); }
   else if (id === 'pgrid') openPgrid();
   else if (id === 'pagefix') pageFixStart();
@@ -621,21 +625,21 @@ function settingsPanel() {
     side ? h('div', { class: 'mside' }, icon(IC.split), h('span', null, 'Sağdaki belge: ', h('b', null, E.note ? E.note.name : ''))) : null,
     h('div', { class: 'lbl' }, side ? 'Sağdaki sayfa' : 'Bu sayfa'),
     h('div', { class: 'mtiles' },
-      tile(IC.fixText, 'Sayfayı düzelt', () => W.pageFixStart()),
-      canFlow ? tile(IC.upArrow, 'Boşlukları kapat', () => W.flowPages()) : null,
+      PHONE ? tile(IC.sticky, 'Not ekle', () => toolbarAction('sticky')) : tile(IC.fixText, 'Sayfayı düzelt', () => W.pageFixStart()),
+      canFlow && !PHONE ? tile(IC.upArrow, 'Boşlukları kapat', () => W.flowPages()) : null,
       tile(IC.gridI, 'Tüm sayfalar', () => toolbarAction('pgrid')),
       tile(IC.search, 'Belgede ara', () => toolbarAction('find')),
       tile(IC.spark, 'Sözlük', () => openDict('')),
-      EMBED ? null : tile(IC.split, typeof splitOpen === 'function' && splitOpen() ? 'Yan belgeyi kapat' : 'Yan yana belge', () => toggleSplit()),
+      EMBED || PHONE ? null : tile(IC.split, typeof splitOpen === 'function' && splitOpen() ? 'Yan belgeyi kapat' : 'Yan yana belge', () => toggleSplit()),
       tile(IC.full, 'Tam ekran', full)),
     h('div', { class: 'lbl' }, 'Hızlı ayarlar'),
     h('div', { class: 'mtoggles' },
-      toggleRow('sRead', 'Okuma modu', S.prefs.readOnly, v => setReadOnly(v), 'Kalem ve parmak yalnızca kaydırır'),
+      PHONE ? null : toggleRow('sRead', 'Okuma modu', S.prefs.readOnly, v => setReadOnly(v), 'Kalem ve parmak yalnızca kaydırır'),
       toggleRow('sInvert', 'PDF renklerini ters çevir', S.prefs.invert, v => setInvert(v), 'Gece okumak için'),
       toggleRow('sVoice', 'Basılı tutunca sesli oku', S.voice.hold, v => { S.voice.hold = v; saveSettings(); }, 'İngiliz kadın sesi'),
-      toggleRow('sCont', 'Metnin devamına ekle', S.hand.cont !== false, v => { S.hand.cont = v; saveSettings(); }, 'El yazısı düzeltilmiş metnin arkasına eklenir')),
+      PHONE ? null : toggleRow('sCont', 'Metnin devamına ekle', S.hand.cont !== false, v => { S.hand.cont = v; saveSettings(); }, 'El yazısı düzeltilmiş metnin arkasına eklenir')),
     h('div', { class: 'mfoot' },
-      h('button', { type: 'button', class: 'btn small', onclick: () => openPop($('#moreBtn'), toolbarEditor) }, icon(IC.gear), 'Araç çubuğu'),
+      PHONE ? null : h('button', { type: 'button', class: 'btn small', onclick: () => openPop($('#moreBtn'), toolbarEditor) }, icon(IC.gear), 'Araç çubuğu'),
       h('button', { type: 'button', class: 'btn small primary', onclick: () => { closePop(); openSettings(); } }, icon(IC.gear), 'Tüm ayarlar')));
 }
 function renderReadout(e) {
@@ -694,7 +698,7 @@ function showCursor(e, toolOverride) {
 /* =========================================================
    Girdi: S Pen, parmak, fare
    ========================================================= */
-function fingerDraws() { if (S.prefs.readOnly) return false; const f = S.prefs.finger; return f === 'finger' || (f === 'auto' && !S.prefs.penSeen); }
+function fingerDraws() { if (S.prefs.readOnly || PHONE) return false; const f = S.prefs.finger; return f === 'finger' || (f === 'auto' && !S.prefs.penSeen); }
 function lastPenAny() {
   let t = ed.lastPenAt || 0;
   try { if (EMBED && parent.__ed) t = Math.max(t, parent.__ed.lastPenAt || 0); } catch (e) { }
@@ -751,7 +755,7 @@ function startTool(e, tool) {
   }
   if (ed.editing && tool !== 'text') finishText();
   const pv = pageAtWorld(w, true);
-  if (!pv || (S.prefs.readOnly && tool !== 'lasso' && tool !== 'aisel')) { if (ed.editing) finishText(); ed.ptrs.set(e.pointerId, { g: 'pan', lx: e.clientX, ly: e.clientY }); return; }
+  if (!pv || PHONE || (S.prefs.readOnly && tool !== 'lasso' && tool !== 'aisel')) { if (ed.editing) finishText(); ed.ptrs.set(e.pointerId, { g: 'pan', lx: e.clientX, ly: e.clientY }); return; }
   const P = local(pv, w);
   if (tool === 'pen' || tool === 'hl') return startDraw(e, pv, P, tool);
   if (tool === 'eraser') return startErase(e, pv, P);
@@ -1341,7 +1345,7 @@ addEventListener('keydown', e => {
   if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
   if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
   if (mod && e.key.toLowerCase() === 'f') { e.preventDefault(); S.panelTab = 'find'; setPanel(true); return; }
-  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); if (ed.note.od) syncNow(); else saveNote(true).then(() => toast('Tablete kaydedildi', 1200)); return; }
+  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); if (ed.note.od) syncNow(); else saveNote(true).then(() => toast(DV.A + ' kaydedildi', 1200)); return; }
   if ((e.key === 'Delete' || e.key === 'Backspace') && ed.sel) { $('#sDel').click(); return; }
   const map = { p: 'pen', h: 'hl', e: 'eraser', l: 'lasso', t: 'text' }; const k = e.key.toLowerCase();
   if (!mod && map[k]) { setTool(map[k]); return; }
@@ -1415,7 +1419,7 @@ function buildPanBtns() {
   let box = $('#panBtns');
   if (!box) { box = h('div', { class: 'panpill', id: 'panBtns', role: 'group', 'aria-label': 'Sayfayı kaydır' }); $('#undoBtn').before(box); }
   box.innerHTML = '';
-  const mode = S.prefs.pan || 'rd';
+  const mode = PHONE ? 'off' : S.prefs.pan || 'rd';
   box.hidden = mode === 'off';
   if (box.hidden) { fitEbar(); return; }
   for (const dir of mode === 'all' ? ['l', 'r', 'u', 'd'] : ['r', 'd']) {

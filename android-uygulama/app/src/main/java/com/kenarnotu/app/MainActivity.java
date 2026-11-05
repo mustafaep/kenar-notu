@@ -77,7 +77,8 @@ public class MainActivity extends Activity {
     boolean barsLight = true, immersive = false, penButton = false;
     HandwritingCorrector corrector;   // el yazısı tanıma + yazım düzeltme (ML Kit, cihazda)
     volatile Speaker speaker;         // sesli okuma (en-GB kadın sesi)
-    volatile LocalReader local;       // tabletteki gelişmiş el yazısı okuma (Gemma 4 E2B, LiteRT-LM)
+    volatile LocalReader local;
+    final HashMap<String, byte[]> fetches = new HashMap<>(); // docFetch ile okunan dosyalar (JS parça parça alır)       // tabletteki gelişmiş el yazısı okuma (Gemma 4 E2B, LiteRT-LM)
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -478,6 +479,57 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String docInfo(String uri) {
             return docMeta(Uri.parse(uri)).toString();
+        }
+
+        /* ---- OneDrive'daki güncel dosyayı oku: başka cihazda yapılan değişiklikleri üzerine yazmadan birleştirmek için ---- */
+        @JavascriptInterface
+        public void docFetch(final String uri, final String id) {
+            new Thread(() -> {
+                JSONObject r = new JSONObject();
+                try {
+                    r.put("id", id);
+                    Uri u = Uri.parse(uri);
+                    try { getContentResolver().refresh(u, null, null); } catch (Throwable ignored) { }
+                    InputStream in = getContentResolver().openInputStream(u);
+                    if (in == null) throw new IOException("Dosya okunamadı");
+                    ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                    byte[] buf = new byte[1 << 16];
+                    int n;
+                    long total = 0;
+                    try {
+                        while ((n = in.read(buf)) > 0) {
+                            total += n;
+                            if (total > MAX_INCOMING) throw new IOException("Dosya çok büyük");
+                            bo.write(buf, 0, n);
+                        }
+                    } finally { in.close(); }
+                    byte[] data = bo.toByteArray();
+                    JSONObject m = docMeta(u);
+                    synchronized (fetches) { fetches.put(id, data); }
+                    r.put("ok", true);
+                    r.put("chunks", (data.length + CHUNK - 1) / CHUNK);
+                    r.put("size", data.length);
+                    r.put("lastModified", m.optLong("lastModified", 0));
+                } catch (Throwable e) {
+                    try { r.put("ok", false); r.put("error", e.getMessage() != null ? e.getMessage() : e.toString()); } catch (Exception ignored) { }
+                }
+                js("__docFetched", r.toString());
+            }).start();
+        }
+
+        @JavascriptInterface
+        public String docFetchChunk(String id, int i) {
+            byte[] b;
+            synchronized (fetches) { b = fetches.get(id); }
+            if (b == null) return "";
+            int off = i * CHUNK;
+            if (off >= b.length) return "";
+            return Base64.encodeToString(b, off, Math.min(CHUNK, b.length - off), Base64.NO_WRAP);
+        }
+
+        @JavascriptInterface
+        public void docFetchDone(String id) {
+            synchronized (fetches) { fetches.remove(id); }
         }
 
         @JavascriptInterface
