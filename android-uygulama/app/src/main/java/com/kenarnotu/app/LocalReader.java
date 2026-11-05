@@ -63,6 +63,7 @@ final class LocalReader {
     private volatile boolean loading;
     private volatile String error = "";
     private volatile long loadMs;
+    private volatile Integer visMax;   // motorun görüntü başına kabul ettiği en çok görsel token (bu model dosyasında 280)
     private boolean polling;
 
     LocalReader(Context c, Sink s) {
@@ -118,6 +119,7 @@ final class LocalReader {
             o.put("state", state);
             o.put("backend", backend);
             o.put("loadMs", loadMs);
+            if (visMax != null) o.put("visMax", visMax);
         } catch (Exception ignored) { }
         return o.toString();
     }
@@ -285,29 +287,39 @@ final class LocalReader {
         long t0 = System.currentTimeMillis();
         File cache = new File(ctx.getCacheDir(), "litertlm");
         if (!cache.exists()) cache.mkdirs();
-        // motorun görüntü başına en çok kaç görsel token kullanacağı (okuma başına 560 ya da 1120 seçilir)
-        ExperimentalFlags.INSTANCE.setVisualTokenBudget(1120);
         boolean gpuBad = prefs().getBoolean(K_GPU_BAD, false);
         String[][] plans = gpuBad ? new String[][]{{"CPU", "CPU"}} : new String[][]{{"GPU", "GPU"}, {"GPU", "CPU"}, {"CPU", "CPU"}};
         Throwable last = null;
         try {
             for (String[] plan : plans) {
-                Engine e = null;
-                boolean gpu = "GPU".equals(plan[0]) || "GPU".equals(plan[1]);
-                try {
-                    if (gpu) prefs().edit().putBoolean(K_GPU_TRY, true).commit();
-                    e = new Engine(new EngineConfig(modelFile().getAbsolutePath(), backendOf(plan[0]), backendOf(plan[1]), null, 4096, 1, cache.getAbsolutePath()));
-                    e.initialize();
-                    engine = e;
-                    backend = plan[0].equals(plan[1]) ? plan[0] : plan[0] + "+" + plan[1];
-                    loadMs = System.currentTimeMillis() - t0;
-                    error = "";
-                    return e;
-                } catch (Throwable t) {
-                    last = t;
-                    try { if (e != null && e.isInitialized()) e.close(); } catch (Throwable ignored) { }
-                } finally {
-                    if (gpu) prefs().edit().putBoolean(K_GPU_TRY, false).commit();
+                // Görsel token üst sınırı: bu model dosyası görüntü başına en çok 280 kabul ediyor (1120 istenince
+                // "Requested target capacity exceeds maximum available signature length (280)" hatası). Önce 280 denenir;
+                // hata başka bir sınır bildirirse onunla, olmazsa sınır belirtmeden yeniden denenir.
+                Integer budget = 280;
+                for (int attempt = 0; attempt < 3; attempt++) {
+                    Engine e = null;
+                    boolean gpu = "GPU".equals(plan[0]) || "GPU".equals(plan[1]);
+                    try {
+                        if (gpu) prefs().edit().putBoolean(K_GPU_TRY, true).commit();
+                        ExperimentalFlags.INSTANCE.setVisualTokenBudget(budget);
+                        e = new Engine(new EngineConfig(modelFile().getAbsolutePath(), backendOf(plan[0]), backendOf(plan[1]), null, 4096, 1, cache.getAbsolutePath()));
+                        e.initialize();
+                        engine = e;
+                        visMax = budget;
+                        backend = plan[0].equals(plan[1]) ? plan[0] : plan[0] + "+" + plan[1];
+                        loadMs = System.currentTimeMillis() - t0;
+                        error = "";
+                        return e;
+                    } catch (Throwable t) {
+                        last = t;
+                        try { if (e != null && e.isInitialized()) e.close(); } catch (Throwable ignored) { }
+                        Integer lim = signatureLimit(t);
+                        if (lim != null && !lim.equals(budget)) { budget = lim; continue; }
+                        if (budget != null && msg(t).toLowerCase().contains("signature")) { budget = null; continue; }
+                        break;
+                    } finally {
+                        if (gpu) prefs().edit().putBoolean(K_GPU_TRY, false).commit();
+                    }
                 }
             }
             error = "Model yüklenemedi: " + msg(last);
@@ -318,11 +330,19 @@ final class LocalReader {
         }
     }
 
+    /** "... maximum available signature length (280)" → 280 */
+    private static Integer signatureLimit(Throwable t) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("signature length \\((\\d+)\\)").matcher(msg(t));
+        if (!m.find()) return null;
+        try { int v = Integer.parseInt(m.group(1)); return v > 0 ? v : null; } catch (Exception ex) { return null; }
+    }
+
     private static Backend backendOf(String name) { return "GPU".equals(name) ? new Backend.GPU() : new Backend.CPU(); }
 
     private void closeEngine() {
         Engine e = engine;
         engine = null;
+        visMax = null;
         backend = "";
         if (e != null) { try { e.close(); } catch (Throwable ignored) { } }
     }
@@ -361,8 +381,9 @@ final class LocalReader {
                 boolean wasLoaded = engine != null;
                 Engine e = ensureEngine();
                 byte[] png = Base64.decode(req.getString("png"), Base64.DEFAULT);
-                int budget = req.optInt("budget", 560);
-                ExperimentalFlags.INSTANCE.setVisualTokenBudget(budget > 560 ? 1120 : 560);
+                // okuma başına görsel bütçe motorun sınırını aşamaz
+                Integer vm = visMax;
+                ExperimentalFlags.INSTANCE.setVisualTokenBudget(vm == null ? null : Integer.valueOf(Math.min(Math.max(70, req.optInt("budget", vm)), vm)));
                 // greedy (topK 1, sıcaklık 0): okuma için en tutarlı sonuç
                 ConversationConfig cc = new ConversationConfig(Contents.Companion.of(req.optString("system", "")), Collections.<Message>emptyList(), Collections.emptyList(), new SamplerConfig(1, 1.0, 0.0, 0));
                 conv = e.createConversation(cc);

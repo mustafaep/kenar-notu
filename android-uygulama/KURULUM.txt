@@ -113,6 +113,27 @@ G) YENİ (2.2.0)
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
 
 
+Y) YENİ (2.6.2) — kelime kelime okuma, satır ayırma düzeltmesi, Gemma yükleme hatası
+--------------------------------------------------------------------------------------
+- Cihazdaki tanıma artık varsayılan olarak KELİME KELİME okur: Düzelt'e bir kez basınca satır, kelimelerin
+  arasındaki boşluklardan bölünür; her kelime sırayla, öncesindeki kelimeler bağlam olarak verilerek okunur
+  ve sonra tek metinde birleştirilir (tek tek kelime düzeltmenin aynısı, tek dokunuşla).
+  · Kelime sınırı o satırdaki boşluklardan bulunur: harf araları ile kelime araları ayrı ayrı değerlendirilir.
+    i noktası, ü/ö noktaları, ç/ş çengeli, sonradan atılan t çizgisi kelimesinde kalır.
+  · Ayrı yazılmış nokta, virgül, ünlem önceki kelimeye boşluksuz eklenir. Satır sonunda tireyle bölünmüş
+    kelime ("kele-" / "me") alt satırdaki devamıyla birleşir.
+  · Ayarlar → El yazısı → "Cihazda okuma": Kelime kelime (varsayılan) / 3–4 kelime / Tüm satır.
+- Karşılaştır ekranı: "Tüm satır", "Kelime kelime" (sırayla, bağlamlı) ve "Kelime kelime, paralel" (aynı anda,
+  bağlamsız) ayrı satırlarda, süreleri ve kelime sayısıyla. Yazma alanında bulunan kelimeler kesik çizgili,
+  numaralı çerçeveyle gösterilir; kelimelerin doğru ayrılıp ayrılmadığını buradan görebilirsin.
+- Düzeltme: satır ayırma, bir satırın en soldaki kelimesini (ör. "Deneme") ayrı bir satır sayıp sona atabiliyor,
+  büyük harfi ya da i noktasını kopuk satır yapabiliyordu ("en yapıyoruz … Dene b … ir cümle" gibi okumalar).
+  Artık çizgiler dikey konumlarına göre en uygun satıra atanır; noktalar ve çengeller en yakın satıra eklenir.
+- Düzeltme: tabletteki model "Requested target capacity (1120) exceeds maximum available signature length (280)"
+  hatasıyla yüklenmiyordu. Bu model dosyası görüntü başına en çok 280 görsel parça kabul ediyor; artık 280 ile
+  yüklenir (hata başka bir sınır bildirirse onunla yeniden denenir). Modeli yeniden indirmen gerekmez.
+
+
 X) YENİ (2.6.1) — el yazısı tablette okunur (Gemma 4), buluta gitmez
 ---------------------------------------------------------------------
 - El yazısı artık Gemini'ye ya da Claude'a gönderilmez. 2.6.0'daki bulut okuması kapatıldı.

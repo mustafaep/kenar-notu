@@ -3,8 +3,9 @@
    El yazısını düzelt
    Kalemle yazılan satırları metne çevirir ve yazım hatalarını düzeltir.
    - Android: cihazda ML Kit el yazısı tanıma (Türkçe + İngilizce, aynı anda) ve sistemin yazım denetleyicisi
-     (HandwritingCorrector.java); modeller bir kez indirildikten sonra internetsiz çalışır. Uzun satırlar kelime
-     boşluklarından birkaç kelimelik parçalara bölünüp sırayla okunur (ML Kit kısa yazıda daha iyi).
+     (HandwritingCorrector.java); modeller bir kez indirildikten sonra internetsiz çalışır. Varsayılan olarak
+     KELİME KELİME okur: satır aradaki boşluklardan kelimelere bölünür, her kelime öncesindeki metinle (bağlam) sırayla
+     okunur, sonra birleştirilir (ML Kit tek kelimede çok daha iyi). İstenirse 3–4 kelimelik parçalar ya da tüm satır.
    - Gelişmiş okuma (isteğe bağlı): cihazdaki sonuç hemen yazılır; aynı anda gelişmiş model el yazısının görüntüsünü
      baştan okur ve o parçayı günceller. Varsayılan model TABLETTE çalışır: Gemma 4 E2B (LiteRT-LM, LocalReader.java;
      ≈2,6 GB, bir kez indirilir, sonra internetsiz). İstenirse bulut (Gemini / Claude) seçilebilir; kendiliğinden kullanılmaz.
@@ -21,6 +22,8 @@ const HW_TR = /[çğıöşüÇĞİÖŞÜ]/;
 if (S.hand.grammar && S.hand.ai === 'off') { S.hand.ai = 'always'; S.hand.grammar = false; saveSettings(); }
 // 2.6.1: el yazısı buluta gönderilmez; gelişmiş okuma tabletteki modelle yapılır (model inince açılır)
 if ((S.hand.mig || 0) < 2) { S.hand.mig = 2; S.hand.ai = 'off'; S.hand.engine = 'local'; saveSettings(); }
+// 2.6.2: cihazdaki tanıma varsayılan olarak kelime kelime (önceki "parça parça" kapalıysa tüm satır kalır)
+if (S.hand.mig < 3) { S.hand.mig = 3; S.hand.seg = S.hand.split === false ? 'line' : 'word'; saveSettings(); }
 const HAND_MODELS = {
   gemini: { best: { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', short: 'Flash', think: 'low' }, fast: { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite', short: 'Flash-Lite', think: 'minimal' } },
   claude: { best: { id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5', short: 'Sonnet' }, fast: { id: 'claude-haiku-5-5', name: 'Claude Haiku 5.5', short: 'Haiku' } }
@@ -115,6 +118,44 @@ function handChunks(ls, lh, per = 3) {
   const order = new Map(ls.map((s, i) => [s, i]));
   return chunks.map(c => c.map(it => it.s).sort((a, b) => order.get(a) - order.get(b)));
 }
+/* Satırı (çizgi noktaları) kelimelere böl: yatayda binen ya da çok yakın çizgiler aynı kelime (i noktası, ü/ö noktaları,
+   ç/ş çengeli, sonradan atılan t çizgisi kelimesinde kalır). Eşik o satırın kendi boşluklarından çıkar: harf araları ile
+   kelime araları iki ayrı küme oluşturur, aradaki en büyük sıçramadan kesilir. Kelimenin çizgileri yazılış sırasında kalır. */
+function handWords(ls) {
+  const items = ls.map((s, i) => ({ s, i, bb: ptsBB(s), t: (s[0] && s[0][2]) || 0 })).sort((a, b) => a.bb.x0 - b.bb.x0);
+  if (items.length < 2) return [ls];
+  const hs = items.map(it => it.bb.y1 - it.bb.y0).sort((a, b) => a - b), hMax = hs[hs.length - 1];
+  const big = hs.filter(h => h >= hMax * .25), hMed = Math.max(6, big[big.length >> 1] || hMax);
+  const blobs = [];
+  for (const it of items) { const B = blobs[blobs.length - 1]; if (B && it.bb.x0 <= B.x1 + hMed * .12) { B.items.push(it); B.x1 = Math.max(B.x1, it.bb.x1); } else blobs.push({ items: [it], x0: it.bb.x0, x1: it.bb.x1 }); }
+  if (blobs.length < 2) return [ls];
+  const gaps = blobs.slice(1).map((B, i) => B.x0 - blobs[i].x1), sg = gaps.slice().sort((a, b) => a - b), floor = hMed * .04;
+  let T;
+  if (sg[0] >= hMed * .4) T = sg[0] * .99; // hepsi kelime arası (her kelime tek çizgi)
+  else {
+    let bestR = 0;
+    for (let k = 0; k < sg.length - 1; k++) { if (sg[k] >= hMed * .4 || sg[k + 1] < hMed * .3) continue; const lo = Math.max(sg[k], floor), r = sg[k + 1] / lo; if (r > bestR) { bestR = r; T = Math.sqrt(lo * sg[k + 1]); } }
+    if (!(bestR >= 1.7)) T = hMed * .45;
+  }
+  T = clamp(T, hMed * .2, hMed * 1.2);
+  const words = [[...blobs[0].items]];
+  gaps.forEach((g, i) => { if (g > T) words.push([]); words[words.length - 1].push(...blobs[i + 1].items); });
+  const timed = items.every(it => it.t > 0);
+  return words.map(w => w.sort((a, b) => timed ? a.t - b.t : a.i - b.i).map(it => it.s));
+}
+/* okunan kelimeleri birleştir: noktalama önceki kelimeye boşluksuz eklenir */
+function handJoin(parts) {
+  let out = '';
+  for (const t0 of parts) {
+    const t = (t0 || '').trim(); if (!t) continue;
+    if (!out) out = t;
+    else if (/^[.,;:!?…%)\]}»”’]+$/.test(t) || /[(«“‘]$/.test(out)) out += t;
+    else out += ' ' + t;
+  }
+  return out;
+}
+/* satırları birleştir: satır sonunda tireyle bölünmüş kelime (kele- / me) alt satırdaki devamıyla birleşir */
+const handJoinLines = arr => arr.reduce((a, t) => !t ? a : !a ? t : /\p{L}-$/u.test(a) && /^\p{Ll}/u.test(t) ? a.slice(0, -1) + t : a + ' ' + t, '');
 function handImage(strokes) {
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   for (const s of strokes) for (const p of s) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
@@ -184,7 +225,7 @@ function handLocalRead(strokes, { mode = S.hand.lang, before = '', lines = 1, ma
     });
     try {
       const png = rr ? handImageRows(rr) : handImage(strokes);
-      KenarNative.localRead(JSON.stringify({ id, png, system: HAND_READ_SYSTEM + hint, prompt: handAsk(before, lines, extra), budget: (rr ? rr.length : lines) > 1 ? 1120 : 560, maxChars: maxLen ? Math.round(maxLen * 1.3) : 1500 }));
+      KenarNative.localRead(JSON.stringify({ id, png, system: HAND_READ_SYSTEM + hint, prompt: handAsk(before, lines, extra), budget: 280, maxChars: maxLen ? Math.round(maxLen * 1.3) : 1500 }));
     } catch (e) { clearTimeout(to); HW.reqs.delete(id); rej(e); }
   });
 }
@@ -213,12 +254,24 @@ async function handRecognizeLines(lineStrokes, mode = S.hand.lang, pre = '', are
   const viaAi = async () => { const t = await aiP; return { ok: true, lang: mode === 'tr' || mode === 'en' ? mode : HW_TR.test(t) ? 'tr' : 'en', text: t, corrected: t, kept: [], via: 'ai' }; };
   if (HW_NATIVE()) {
     try {
-      const split = o.split != null ? o.split : S.hand.split !== false, lh = area && area.lineH ? area.lineH : 20;
-      const outs = []; let ctx = pre || '', parts = 0;
-      for (const ls of lineStrokes) for (const ch of split ? handChunks(ls, lh) : [ls]) { const r = await handNative(ch, mode, ctx, area); outs.push(r); parts++; ctx = (ctx ? ctx + ' ' : '') + r.corrected; }
-      const langs = outs.map(o => o.lang);
-      return { ok: true, via: 'device', parts, lang: langs.filter(l => l === 'tr').length > langs.length / 2 ? 'tr' : langs[0],
-        text: outs.map(o => o.text).join(' '), corrected: outs.map(o => o.corrected).join(' '),
+      // seg: 'word' kelime kelime (varsayılan) · 'chunk' 3–4 kelimelik parçalar · 'line' tüm satır bir kerede
+      const seg = o.seg || S.hand.seg || 'word', lh = area && area.lineH ? area.lineH : 20;
+      const outs = [], lineFix = [], lineRaw = []; let ctx = pre || '', parts = 0;
+      // tek bir parça okunamazsa (ör. kopuk bir işaret) tüm yazı düşmesin; model yoksa ya da zaman aşımıysa düşsün
+      const one = (pc, c) => handNative(pc, mode, c, area).catch(e => { if (e.code === 'nomodel' || e.code === 'timeout' || seg === 'line') throw e; return { text: '', corrected: '', kept: [], lang: null }; });
+      for (const ls of lineStrokes) {
+        const pieces = seg === 'word' ? handWords(ls) : seg === 'chunk' ? handChunks(ls, lh) : [ls];
+        let rs;
+        if (o.parallel) { rs = await Promise.all(pieces.map(pc => one(pc, ''))); ctx = handJoin([ctx, ...rs.map(r => r.corrected)]); }
+        else { rs = []; for (const pc of pieces) { const r = await one(pc, ctx); rs.push(r); ctx = handJoin([ctx, r.corrected]); } } // her kelimeye öncesi bağlam olarak
+        parts += pieces.length; outs.push(...rs);
+        lineFix.push(handJoin(rs.map(r => r.corrected))); lineRaw.push(handJoin(rs.map(r => r.text)));
+      }
+      const corrected = handJoinLines(lineFix);
+      if (!corrected.replace(/\s/g, '')) throw Object.assign(new Error('Yazı tanınamadı'), { code: 'empty' });
+      const langs = outs.map(o => o.lang).filter(Boolean);
+      return { ok: true, via: 'device', parts, lang: langs.filter(l => l === 'tr').length >= langs.length / 2 ? 'tr' : langs[0] || 'en',
+        text: handJoinLines(lineRaw), corrected,
         kept: outs.flatMap(o => o.kept || []), alts: outs.length === 1 ? outs[0].alts || [] : [] };
     } catch (e) {
       if (o.deviceOnly) throw e;
@@ -268,17 +321,49 @@ function joinGroup(g, bb) {
   if (bb.y0 > g.line.y0 + lh * .5 && bb.y0 < g.line.y1 + lh * 1.3 && bb.x0 < g.bb.x0 + lh * 3 && bb.x1 > g.bb.x0 - lh) { g.line = { ...bb }; return true; }
   return false;
 }
+/* Çizgileri satırlara ayır. Önce normal boydaki çizgiler, dikey konumlarına göre en uygun satıra atanır (yatay uzaklık
+   bakılmaz: önceki sürüm, satırın solundaki kelimeyi işlem sırası yüzünden ayrı bir satır sayıp sona atabiliyordu).
+   Sonra küçük işaretler (i noktası, ü/ö noktaları, ç/ş çengeli, nokta, virgül) en yakın satıra eklenir. */
 function splitLines(strokes) {
-  const items = strokes.map(s => ({ s, bb: strokeBB(s) })).sort((a, b) => (a.bb.y0 + a.bb.y1) - (b.bb.y0 + b.bb.y1));
+  const items = strokes.map((s, i) => { const bb = strokeBB(s); return { s, i, bb, h: bb.y1 - bb.y0, cy: (bb.y0 + bb.y1) / 2 }; });
+  if (!items.length) return [];
+  const hs = items.map(it => it.h).sort((a, b) => a - b), hMax = hs[hs.length - 1];
+  // tipik harf boyu: küçük işaretleri saymadan ortanca
+  const big = hs.filter(h => h >= hMax * .25), hMed = Math.max(8, big[big.length >> 1] || hMax);
+  const isMark = it => it.h < hMed * .45 && (it.bb.x1 - it.bb.x0) < hMed * 1.2;
   const lines = [];
-  for (const it of items) {
-    const L = lines.find(l => sameLine(l, it.bb));
-    if (L) { L.strokes.push(it.s); L.bb = bbUnion(L.bb, it.bb); if (it.bb.y1 - it.bb.y0 > L.lineH * .6) L.lineH = Math.max(L.lineH, it.bb.y1 - it.bb.y0); }
-    else lines.push({ strokes: [it.s], bb: { ...it.bb }, lineH: Math.max(12, it.bb.y1 - it.bb.y0) });
+  const add = (L, it) => { L.items.push(it); L.bb = bbUnion(L.bb, it.bb); if (!isMark(it)) { L.n++; L.cy += (it.cy - L.cy) / L.n; L.core = bbUnion(L.core, it.bb); } };
+  for (const it of items.filter(x => !isMark(x)).sort((a, b) => a.cy - b.cy)) {
+    let best = null, bd = 1e9;
+    for (const L of lines) {
+      const d = Math.abs(it.cy - L.cy), ov = Math.min(L.core.y1, it.bb.y1) - Math.max(L.core.y0, it.bb.y0);
+      if ((d < hMed * .6 || ov > Math.min(it.h, L.core.y1 - L.core.y0) * .5) && d < bd) { bd = d; best = L; }
+    }
+    if (best) add(best, it); else { const L = { items: [], bb: null, core: null, cy: it.cy, n: 0 }; add(L, it); lines.push(L); }
   }
-  lines.sort((a, b) => a.bb.y0 - b.bb.y0);
-  for (const l of lines) l.strokes.sort((a, b) => strokeBB(a).x0 - strokeBB(b).x0);
-  return lines;
+  // birbirine çok binen satırları birleştir (eğik yazılmış bir satır ikiye bölünmesin)
+  lines.sort((a, b) => a.cy - b.cy);
+  for (let i = 1; i < lines.length; i++) {
+    const A = lines[i - 1], B = lines[i], ov = Math.min(A.core.y1, B.core.y1) - Math.max(A.core.y0, B.core.y0);
+    if (ov > Math.min(A.core.y1 - A.core.y0, B.core.y1 - B.core.y0) * .55) { for (const it of B.items) add(A, it); lines.splice(i--, 1); }
+  }
+  // küçük işaretler: yatayda üstünde/altında durduğu, dikeyde en yakın satıra (noktalar harfin üstünde, virgül altta)
+  for (const it of items.filter(isMark)) {
+    if (!lines.length) { const L = { items: [], bb: null, core: null, cy: it.cy, n: 0 }; add(L, it); L.core = { ...it.bb }; lines.push(L); continue; }
+    let best = null, bd = 1e9;
+    for (const L of lines) {
+      const c = L.core, dy = it.cy < c.y0 ? (c.y0 - it.cy) * .8 : it.cy > c.y1 ? (it.cy - c.y1) * 1.3 : 0;
+      const dx = Math.max(0, c.x0 - it.bb.x1, it.bb.x0 - c.x1);
+      const d = dy + dx * .5; if (d < bd) { bd = d; best = L; }
+    }
+    add(best, it);
+  }
+  const out = lines.map(L => {
+    const norm = L.items.filter(it => !isMark(it)).map(it => it.h).sort((a, b) => a - b);
+    return { strokes: L.items.sort((a, b) => a.bb.x0 - b.bb.x0).map(it => it.s), bb: L.bb, lineH: Math.max(12, norm.length ? norm[norm.length - 1] : L.bb.y1 - L.bb.y0) };
+  });
+  out.sort((a, b) => a.bb.y0 - b.bb.y0);
+  return out;
 }
 function medianLineH(lines) { const a = lines.map(l => l.bb.y1 - l.bb.y0).sort((x, y) => x - y); return Math.max(10, a[a.length >> 1] || 14); }
 
@@ -812,7 +897,7 @@ function handSettingsGroups() {
       sRow('El yazısını düzelt', 'Kalemle yazdığın satırlar metne çevrilir, yazım hataları düzeltilir', segRow([['off', 'Kapalı'], ['button', 'Düğmeyle'], ['auto', 'Otomatik']], S.hand.mode, v => { S.hand.mode = v; saveSettings(); handResetAll(); if (v !== 'off' && HW_NATIVE()) { const s = HW.status || {}; if (s.tr !== 'ready' || s.en !== 'ready') try { KenarNative.inkPrepare(); } catch (e) { } } showSt(); }), true),
       sRow('Hangi belgede çalışsın', 'Ana belge: soldaki (ya da tek açık) belge · Yan belge: “Yan yana belge” ile açılan ikinci belge', handWhereSeg(), true),
       sRow('Dil', null, segRow([['auto', 'Otomatik'], ['tr', 'Türkçe'], ['en', 'İngilizce']], S.hand.lang, v => { S.hand.lang = v; saveSettings(); }), true),
-      HW_NATIVE() ? toggleRow('sHSplit', 'Uzun satırları parça parça oku', S.hand.split !== false, v => { S.hand.split = v; saveSettings(); }, 'Cihazdaki tanıma uzun bir satırı kelime boşluklarından 3–4 kelimelik parçalara bölüp sırayla okur (bu model kısa yazıda daha iyi)') : null
+      HW_NATIVE() ? sRow('Cihazda okuma', 'Kelime kelime: her kelime ayrı okunur, önceki kelimeler bağlam olarak verilir; sonra birleştirilir (tek tek düzeltmenin aynısı). Kelimeler aralarındaki boşluktan ayrılır.', segRow([['word', 'Kelime kelime'], ['chunk', '3–4 kelime'], ['line', 'Tüm satır']], S.hand.seg || 'word', v => { S.hand.seg = v; saveSettings(); }, 'Cihazda okuma'), true) : null
     ], st),
     sGroup('Düzeltilen metin', [
       sRow('Yazı tipi', S.hand.style ? 'Seçili kalem stili kullanılıyor: ' + S.hand.style.name : null, segRow([['hand', 'El yazısı'], ['kalam', 'Kalam'], ['sans', 'Yalın'], ['serif', 'Tırnaklı']], S.hand.font, v => { S.hand.font = v; saveSettings(); }), true),
@@ -824,7 +909,7 @@ function handSettingsGroups() {
       sRow('Ne zaman', 'Cihazdaki model kısa yazılarda iyi, uzun cümlelerde zayıf. Gelişmiş model el yazısının görüntüsünü baştan okur.', whenSeg, true),
       HW_NATIVE() ? sRow('Okuyan model', 'Tablette: internetsiz, yazın tabletten çıkmaz · Bulut: görüntü Gemini’ye ya da Claude’a gider, internet ve ücret gerekir', segRow([['local', 'Tablette · Gemma 4'], ['cloud', 'Bulut']], S.hand.engine === 'cloud' ? 'cloud' : 'local', v => { S.hand.engine = v; saveSettings(); showEng(); showAi(); }), true) : null,
       localRow, cloudRow,
-      HW_NATIVE() ? h('div', { class: 'srow' }, h('div', { class: 'stext' }, h('b', null, 'Karşılaştır'), h('small', null, 'Bir cümle yaz: cihazdaki tanıma (tüm satır ve parçalı) ile tabletteki Gemma aynı yazıyı okusun, sonuçlar süreleriyle yan yana görünsün')),
+      HW_NATIVE() ? h('div', { class: 'srow' }, h('div', { class: 'stext' }, h('b', null, 'Karşılaştır'), h('small', null, 'Bir cümle yaz: cihazdaki tanıma (tüm satır, kelime kelime) ile tabletteki Gemma aynı yazıyı okusun, sonuçlar süreleriyle alt alta görünsün')),
         h('button', { class: 'btn small', type: 'button', onclick: () => handCompare() }, icon(IC.pen), 'Dene')) : null
     ], aiNote)
   ];
@@ -834,12 +919,16 @@ function handSettingsGroups() {
 function handCompare() {
   const cv = h('canvas', { class: 'hcpad', 'aria-label': 'Yazma alanı' });
   const list = h('div', { class: 'hclist' });
-  const strokes = []; let cur = null, W = 0, H = 0, busy = false;
+  const strokes = []; let cur = null, W = 0, H = 0, busy = false, boxes = [];
   const g = cv.getContext('2d');
   const paint = () => {
     const d = DPR(); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, W, H);
     g.strokeStyle = 'rgba(120,135,170,.35)'; g.lineWidth = 1;
     for (let y = 56; y < H; y += 56) { g.beginPath(); g.moveTo(12, y + .5); g.lineTo(W - 12, y + .5); g.stroke(); }
+    // bulunan kelimeler: kesik çizgili çerçeve ve sıra numarası
+    g.setLineDash([5, 4]); g.strokeStyle = 'rgba(47,91,234,.7)'; g.fillStyle = 'rgba(47,91,234,.07)'; g.lineWidth = 1.2; g.font = '600 11px system-ui, sans-serif';
+    boxes.forEach((b, i) => { const x = b.x0 - 5, y = b.y0 - 5, w = b.x1 - b.x0 + 10, hh = b.y1 - b.y0 + 10; g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, hh, 6); else g.rect(x, y, w, hh); g.fill(); g.stroke(); g.fillStyle = 'rgba(47,91,234,.9)'; g.fillText(String(i + 1), x + 3, y - 3); g.fillStyle = 'rgba(47,91,234,.07)'; });
+    g.setLineDash([]);
     g.strokeStyle = '#1f2f5c'; g.lineCap = g.lineJoin = 'round'; g.lineWidth = 2.2;
     for (const s of [...strokes, cur].filter(Boolean)) { const p = s.p; g.beginPath(); for (let i = 0; i < p.length; i += 3) i ? g.lineTo(p[i], p[i + 1]) : g.moveTo(p[i], p[i + 1]); if (p.length === 3) g.lineTo(p[0] + .5, p[1]); g.stroke(); }
   };
@@ -849,7 +938,7 @@ function handCompare() {
   cv.addEventListener('pointerdown', e => {
     if (e.pointerType === 'touch' && S.prefs.penSeen) return; // kalem varken parmak/avuç yazmasın
     e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (er) { }
-    const [x, y] = pos(e); pts = [x, y, 2.2]; t0 = Date.now(); cur = { id: uid(), t: 'ballpoint', c: '#1f2f5c', o: 1, p: new Float32Array(pts) }; paint();
+    const [x, y] = pos(e); pts = [x, y, 2.2]; t0 = Date.now(); boxes = []; cur = { id: uid(), t: 'ballpoint', c: '#1f2f5c', o: 1, p: new Float32Array(pts) }; paint();
   });
   cv.addEventListener('pointermove', e => {
     if (!cur) return; e.preventDefault();
@@ -859,6 +948,7 @@ function handCompare() {
   });
   const up = () => { if (!cur) return; const s = cur; cur = null; s.p = new Float32Array(pts); HW.times.set(s, { t0, t1: Date.now() }); strokes.push(s); paint(); };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  const clear = () => { strokes.length = 0; boxes = []; list.innerHTML = ''; paint(); };
   const row = (name, note) => { const t = h('div', { class: 'hctext' }, '…'), m = h('small', null, note || ''); const el = h('div', { class: 'hcrow' }, h('div', { class: 'hchead' }, h('b', null, name), m), t); list.append(el); return { t, m, el }; };
   const fmt = ms => (ms / 1000).toFixed(1).replace('.', ',') + ' sn';
   const run = async () => {
@@ -866,11 +956,17 @@ function handCompare() {
     busy = true; readBtn.disabled = true; list.innerHTML = '';
     const lines = splitLines(strokes.slice()), lh = medianLineH(lines), P = lines.map(l => l.strokes.map(strokePts)), area = { lineH: lh, pageW: W };
     const ink = handInkSize(lines, lh);
+    // kelimelere nasıl bölündüğünü yazma alanında göster
+    boxes = P.flatMap(ls => handWords(ls).map(w => w.reduce((b, st) => bbUnion(b, ptsBB(st)), null))); paint();
+    const dev = (o, note) => () => handRecognizeLines(P, S.hand.lang, '', area, null, { deviceOnly: true, ...o }).then(r => { note.parts = r.parts; return r.corrected; });
+    const nW = {}, nP = {};
     const jobs = [
-      ['Cihaz · tüm satır', 'ML Kit, satır bir kerede', () => handRecognizeLines(P, S.hand.lang, '', area, null, { split: false, deviceOnly: true }).then(r => r.corrected)],
-      ['Cihaz · parçalı', 'ML Kit, uzun satır 3–4 kelimelik parçalarla', () => handRecognizeLines(P, S.hand.lang, '', area, null, { split: true, deviceOnly: true }).then(r => { jobs.parts = r.parts; return r.corrected; })],
+      ['Cihaz · tüm satır', 'ML Kit, her satır bir kerede', dev({ seg: 'line' }, {})],
+      ['Cihaz · kelime kelime', 'sırayla; her kelimeye önceki kelimeler bağlam olarak verilir', dev({ seg: 'word' }, nW), nW],
+      ['Cihaz · kelime kelime, paralel', 'aynı anda; bağlam yok', dev({ seg: 'word', parallel: true }, nP), nP],
       ['Gemma 4 · tablette', 'internetsiz', null]
     ];
+    const GI = 3;
     if (S.hand.engine === 'cloud' && aiReady()) jobs.push([handModelName() + ' · bulut', 'internet', () => handAiRead(P.flat(), { lines: lines.length, maxLen: ink.maxLen })]);
     const rs = jobs.map(j => row(j[0], j[1]));
     for (let i = 0; i < jobs.length; i++) {
@@ -878,7 +974,7 @@ function handCompare() {
       R.t.textContent = 'okuyor…'; R.el.classList.add('busy');
       try {
         let text;
-        if (i === 2) {
+        if (i === GI) {
           if (!handLocalReady()) throw new Error('Model indirilmedi (yukarıdaki Ayarlar’dan indir)');
           const info = {};
           if (HW.local && HW.local.state !== 'loaded') R.t.textContent = 'model belleğe yükleniyor…';
@@ -886,7 +982,7 @@ function handCompare() {
           R.m.textContent = fmt(info.ms || performance.now() - t1) + (info.loadMs ? ' · ilk okuma, model yüklemesi ' + fmt(info.loadMs) : '') + (info.backend ? ' · ' + (info.backend === 'CPU' ? 'işlemci' : 'grafik işlemcisi') : '');
         } else {
           text = await jobs[i][2]();
-          R.m.textContent = fmt(performance.now() - t1) + (i === 1 && jobs.parts ? ' · ' + jobs.parts + ' parça' : '');
+          R.m.textContent = fmt(performance.now() - t1) + (jobs[i][3] && jobs[i][3].parts ? ' · ' + jobs[i][3].parts + ' kelime' : '');
         }
         R.t.textContent = text || '(boş)';
       } catch (e) { R.t.textContent = e.message || 'Okunamadı'; R.el.classList.add('fail'); R.m.textContent = ''; }
@@ -897,9 +993,9 @@ function handCompare() {
   const readBtn = h('button', { class: 'btn primary', type: 'button', onclick: run }, icon(IC.fixText), 'Oku ve karşılaştır');
   const body = h('div', { class: 'col hcwrap' },
     cv,
-    h('div', { class: 'sbtns' }, h('button', { class: 'btn', type: 'button', onclick: () => { strokes.length = 0; list.innerHTML = ''; paint(); } }, icon(IC.trash), 'Temizle'), readBtn),
+    h('div', { class: 'sbtns' }, h('button', { class: 'btn', type: 'button', onclick: clear }, icon(IC.trash), 'Temizle'), readBtn),
     list,
-    h('p', { class: 'notice' }, 'Yazılan hiçbir şey kaydedilmez. Sıra: önce cihazdaki tanıma (tüm satır, sonra parçalı), sonra Gemma. İlk Gemma okuması modelin belleğe yüklenmesini de içerir.'));
+    h('p', { class: 'notice' }, 'Yazılan hiçbir şey kaydedilmez. Kesik çizgili çerçeveler kelimelerin nereden ayrıldığını gösterir. Sıra: cihazdaki tanıma (tüm satır, kelime kelime, kelime kelime paralel), sonra Gemma. İlk Gemma okuması modelin belleğe yüklenmesini de içerir.'));
   modal({ title: 'El yazısı okumayı karşılaştır', body, wide: true, actions: [{ label: 'Kapat' }] });
   requestAnimationFrame(size);
 }

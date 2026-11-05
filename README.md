@@ -64,12 +64,15 @@ Uygulama bir web uygulaması (PWA) ve onu saran küçük bir Android kabuğundan
   hemen arkasına eklenir ve hizalı kalır (Ayarlar → El yazısı → "Metnin devamına ekle" ile kapatılabilir).
 - Daha önce yazılanlar için: kement ile seç → "Yazıya dök". Ayrı düşmüş parçalar için: kement ile seç →
   **Hizala ve düzelt** (parçalar okuma sırasıyla tek, sola hizalı metinde birleşir ve yeniden düzeltilir).
-- Uzun satırlar kelime boşluklarından 3–4 kelimelik parçalara bölünüp sırayla okunur (ML Kit kısa yazıda daha iyi).
+- **Kelime kelime okuma:** Düzelt'e bir kez basınca satır aradaki boşluklardan kelimelere bölünür, her kelime öncesindeki
+  kelimeler bağlam olarak verilerek sırayla okunur ve birleştirilir (ML Kit tek kelimede çok daha iyi). Noktalama önceki
+  kelimeye eklenir, satır sonu tiresiyle bölünmüş kelime birleşir. İstenirse 3–4 kelimelik parçalar ya da tüm satır.
 - **Gelişmiş okuma, tablette** (Yalnız cihaz / Uzun yazılarda / Her zaman): cihazdaki sonuç hemen yazılır, aynı anda
   **Gemma 4 E2B** (Google, Apache 2.0) el yazısının görüntüsünü baştan okur ve o parçayı günceller. Model bir kez
   Hugging Face'ten indirilir (≈2,6 GB), sonra internetsiz çalışır; yazı tabletten çıkmaz (LiteRT-LM ile cihazda).
   İstenirse bulut (Gemini / Claude) da seçilebilir; kendiliğinden kullanılmaz.
-- **Karşılaştır:** bir cümle yazıp cihazdaki tanıma (tüm satır / parçalı) ile Gemma'nın sonucunu ve süresini yan yana görürüm.
+- **Karşılaştır:** bir cümle yazıp cihazdaki tanıma (tüm satır / kelime kelime / kelime kelime paralel) ile Gemma'nın sonucunu
+  ve süresini alt alta görürüm; kelimelerin nereden ayrıldığı yazma alanında çerçeveyle gösterilir.
 
 **Sayfayı düzelt (yapay zekâ)**
 - Önce düzeltilecek sayfaları seçiyorum (açık sayfa hazır seçili; "Yazılı sayfalar" hepsini seçer, en çok 20 sayfa).
