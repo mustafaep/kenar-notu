@@ -4,7 +4,7 @@
    Solda bölümler, sağda o bölümün ayarları (gruplu kartlar). Dar ekranda bölümler üstte yatay sekme olur.
    Düzenleyicideki ⋯ paneli yalnızca sık kullanılan işlemleri gösterir; ayrıntılar buradadır.
    ========================================================= */
-const APP_VERSION = '2.8.0';
+const APP_VERSION = '2.9.0';
 const SET_SECTIONS = [
   { id: 'view', name: 'Görünüm', ic: 'moon', lead: 'Tema, düzenleyici göstergeleri ve yan yana belge.' },
   { id: 'pen', name: 'S Pen ve dokunma', ic: 'pen', lead: 'Parmakla çizim, yan tuş ve hareketler.' },
@@ -58,7 +58,11 @@ function setBuild(id, close) {
       toggleRow('setPager', 'Sayfa numarası', S.prefs.pager, v => { S.prefs.pager = v; saveSettings(); refresh(); }, 'Alttaki “3 / 12” göstergesi'),
       sRow('Kaydırma düğmeleri', 'Üst çubukta, Geri al’ın solunda. Yazarken diğer elinle dokun: sayfa kayar; basılı tutunca kaymaya devam eder.', segRow([['off', 'Kapalı'], ['rd', 'Sağa ve aşağı'], ['all', 'Dört yön']], S.prefs.pan || 'rd', v => { S.prefs.pan = v; saveSettings(); if (window.buildPanBtns) buildPanBtns(); }, 'Kaydırma düğmeleri'), true),
       sRow('Bir dokunuşta kayma', 'Ekranın ne kadarı kadar kaysın', segRow([['30', 'Az · %30'], ['50', 'Orta · %50'], ['75', 'Çok · %75']], String(S.prefs.panStep || 50), v => { S.prefs.panStep = +v; saveSettings(); }, 'Bir dokunuşta kayma'), true),
-      h('div', { class: 'sbtns' }, h('button', { class: 'btn small', type: 'button', onclick: () => { close(); if (ed && ed.note && typeof toolbarEditor === 'function') openPop($('#moreBtn'), toolbarEditor); else toast('Araç çubuğunu bir not açıkken ⋯ menüsünden düzenleyin.', 2600); } }, icon(IC.gear), 'Araç çubuğunu düzenle'))
+      PHONE ? null : sRow('Sayfayı sağa-sola kaydırma', 'Sayfa ekrana sığsa da yana kayar: parmakla yana sürükle ya da alttaki konum şeridini kullan. Serbest: sayfanın yarısına kadar ekrandan taşabilir, eline yer açılır. Bıraktığın yer bütün belgelerde hatırlanır.', segRow([['off', 'Kapalı'], ['edge', 'Kenara kadar'], ['free', 'Serbest']], S.prefs.shift || 'free', v => { S.prefs.shift = v; saveSettings(); if (window.applyShiftPrefs) applyShiftPrefs(); }, 'Sayfayı sağa-sola kaydırma'), true),
+      PHONE ? null : toggleRow('setShiftCtl', 'Konum şeridi', S.prefs.shiftCtl !== false, v => { S.prefs.shiftCtl = v; saveSettings(); if (window.shiftSync) shiftSync(); }, 'Alttaki küçük şerit · sürükle: sayfa kayar · dokun: sayfa oraya gelir · iki kez dokun: ortalanır'),
+      PHONE ? null : toggleRow('setBarTab', 'Üst çubuğu gizleme dili', S.prefs.barTab !== false, v => { S.prefs.barTab = v; if (!v) S.prefs.barUp = false; saveSettings(); if (window.applyBarPrefs) applyBarPrefs(); }, 'Üstteki küçük dil çubuğu yukarı saklar; seçtiğin düğmeler kenarda kalır'),
+      toggleRow('setDockAlw', 'Kenar düğmeleri hep görünsün', !!S.prefs.dockAlways, v => { S.prefs.dockAlways = v; saveSettings(); if (window.buildDocks) buildDocks(); }, 'Kapalıyken yalnız üst çubuk gizliyken görünür'),
+      h('div', { class: 'sbtns' }, h('button', { class: 'btn small', type: 'button', onclick: () => { close(); if (ed && ed.note && typeof toolbarEditor === 'function') openPop($('#moreBtn'), toolbarEditor); else toast('Araç çubuğunu bir not açıkken ⋯ menüsünden düzenleyin.', 2600); } }, icon(IC.gear), 'Araç çubuğunu düzenle'), h('button', { class: 'btn small', type: 'button', onclick: () => { close(); if (ed && ed.note && window.pinManager) openPop($('#ui .edock .tool') || $('#moreBtn'), pinManager); else toast('Kenar düğmelerini bir not açıkken düzenleyin.', 2600); } }, icon(IC.gear), 'Kenar düğmeleri'))
     ]),
     sGroup('Yan yana belge', [
       sRow('İkinci belgenin yeri', 'Otomatik: ekran yataysa yanda, dikse altta · Pencere: sayfanın üzerinde taşınır, boyutlanır, tam ekran yapılır', segRow([['auto', 'Otomatik'], ['side', 'Hep yanda'], ['below', 'Hep altta'], ['win', 'Pencere']], S.prefs.splitPos || 'auto', v => { const was = S.prefs.splitPos === 'win'; if ((v === 'win') !== was && window.setSplitMode) setSplitMode(v); else { S.prefs.splitPos = v; saveSettings(); if (window.applySplitW) applySplitW(); } }, 'İkinci belgenin yeri'), true)

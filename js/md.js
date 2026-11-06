@@ -331,7 +331,7 @@ function mdCanvasCtx(n) {
   return {
     host: $('#mdUi'), key: 'canvas', title: mdBase(n.name) + '.canvas',
     getData: () => n.canvas || cvEmpty(),
-    setData: (d, why) => { n.canvas = JSON.parse(JSON.stringify(d)); n._cvDirty = true; n.updated = Date.now(); persistNoteRecord(n); drawMarks(); if (n.vault && vaultReady()) { clearTimeout(n._cvT); n._cvT = setTimeout(() => vaultCanvasSave(n).catch(e => setMdStatus('Tuval kasaya yazılamadı: ' + (e.message || e), true)), why === 'close' ? 0 : 2500); } },
+    setData: (d, why) => { n.canvas = JSON.parse(JSON.stringify(d)); n._cvDirty = true; n.updated = Date.now(); persistNoteRecord(n); drawMarks(); if (n.vault && vaultReady()) { clearTimeout(n._cvT); n._cvT = setTimeout(() => vaultCanvasSave(n, why === 'close').catch(e => setMdStatus('Tuval kasaya yazılamadı: ' + (e.message || e), true)), why === 'close' ? 0 : 2500); } },
     view: n.canvasView || null, saveView: v => { n.canvasView = v; persistNoteRecord(n); },
     docNode: () => ({ file: path }),
     isDoc: x => x.type === 'file' && (x.file === path || x.file.split('/').pop() === path.split('/').pop()),
@@ -365,7 +365,7 @@ function pdfCanvasCtx(n) {
   return {
     host: $('#edView .ebody'), key: 'canvas', title: mdBase(String(path).split('/').pop().replace(/\.pdf$/i, '')) + '.canvas',
     getData: () => n.canvas || cvEmpty(),
-    setData: (d, why) => { n.canvas = JSON.parse(JSON.stringify(d)); n._cvDirty = true; if (ed.note === n) scheduleSave(); else persistNoteRecord(n); if (n.vault && vaultReady()) { clearTimeout(n._cvT); n._cvT = setTimeout(() => vaultCanvasSave(n).catch(e => toast('Tuval kasaya yazılamadı: ' + (e.message || e), 3000)), why === 'close' ? 0 : 2500); } },
+    setData: (d, why) => { n.canvas = JSON.parse(JSON.stringify(d)); n._cvDirty = true; if (ed.note === n) scheduleSave(); else persistNoteRecord(n); if (n.vault && vaultReady()) { clearTimeout(n._cvT); n._cvT = setTimeout(() => vaultCanvasSave(n, why === 'close').catch(e => toast('Tuval kasaya yazılamadı: ' + (e.message || e), 3000)), why === 'close' ? 0 : 2500); } },
     view: n.canvasView || null, saveView: v => { n.canvasView = v; },
     docNode: () => ({ file: path }),
     isDoc: x => x.type === 'file' && (x.file === path || x.file.split('/').pop() === String(path).split('/').pop()),
@@ -492,8 +492,11 @@ async function vaultCanvasLoad(n) {
   if (stats.added + stats.changed + stats.removed + stats.both) toast('Tuval başka yerde değişmiş; birleştirildi (' + [stats.added && stats.added + ' yeni', stats.changed && stats.changed + ' değişen', stats.removed && stats.removed + ' silinen', stats.both && stats.both + ' iki yerde değişen'].filter(Boolean).join(', ') + ')', 3400);
   if (n._cvDirty) vaultCanvasSave(n).catch(() => { });
 }
-async function vaultCanvasSave(n) {
+async function vaultCanvasSave(n, force) {
   if (!n.vault || !vaultReady()) return;
+  // tuvalle uğraşılırken klasöre yazılmaz (Android'de yazma bir an ekranı durdurabilir); el çekilince yazılır
+  const wait = (window.cvBusyUntil || 0) - Date.now();
+  if (!force && wait > 0) { clearTimeout(n._cvT); n._cvT = setTimeout(() => vaultCanvasSave(n).catch(() => { }), wait + 300); return; }
   if (n._cvSaving) { n._cvAgain = true; return; }
   n._cvSaving = true;
   try {

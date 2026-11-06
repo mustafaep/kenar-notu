@@ -36,15 +36,30 @@ function layout() {
   ed.totalH = Math.max(0, y - GAP); ed.maxW = maxW || 595;
 }
 function computeFit() { return Math.max(.05, Math.min((ed.W - 2 * MARGIN) / ed.maxW, 1000 / ed.maxW)); }
+/* Sayfayı sağa-sola kaydırma (Ayarlar → Görünüm): sayfa ekrana sığsa da ortada kilitli kalmaz.
+   'edge': sayfanın kenarı ekranın kenarına gelene kadar · 'free': sayfanın yarısı ekrandan taşabilir
+   (eli dayayacak yer açmak için; solaklar ve kenara yakın yazarken) · 'off': eskisi gibi ortada. */
+function shiftMode() { return PHONE || EMBED ? 'off' : (S.prefs.shift || 'free'); }
+function hRange(z) {
+  const cw = ed.maxW * (z == null ? ed.view.z : z), a = ed.W - MARGIN - cw / 2, b = MARGIN + cw / 2, m = shiftMode();
+  if (m === 'off' && a >= b) return [ed.W / 2, ed.W / 2];
+  let lo = Math.min(a, b), hi = Math.max(a, b);
+  if (m === 'free') { const ex = Math.min(cw * .5, ed.W * .4); lo -= ex; hi += ex; }
+  return [lo, hi];
+}
+const fitsAt = z => ed.maxW * z + 2 * MARGIN <= ed.W + .5;
+/* sayfanın "ev" konumu: sığıyorsa en son bırakılan yan konum (tüm belgelerde aynı; el alışkanlığı), sığmıyorsa orta */
+function homeTx(z) { return ed.W / 2 + (fitsAt(z) && shiftMode() !== 'off' ? (S.prefs.shiftX || 0) * ed.W : 0); }
+window.hRange = hRange; window.homeTx = homeTx; window.shiftMode = shiftMode;
 function clampView() {
-  const v = ed.view, cw = ed.maxW * v.z, ch = ed.totalH * v.z;
-  v.tx = cw + 2 * MARGIN <= ed.W ? ed.W / 2 : clamp(v.tx, ed.W - MARGIN - cw / 2, MARGIN + cw / 2);
+  const v = ed.view, ch = ed.totalH * v.z;
+  { const [lo, hi] = hRange(); v.tx = clamp(v.tx, lo, hi); }
   v.ty = ch + 2 * MARGIN + 64 <= ed.H ? Math.max(MARGIN, (ed.H - ch - 64) / 2) : clamp(v.ty, ed.H - MARGIN - 64 - ch, MARGIN);
 }
 function zLimits() { return [Math.max(.08, ed.fitZ * .4), Math.max(ed.fitZ * 6, 5)]; }
 function setView(z, tx, ty) { const [a, b] = zLimits(); ed.view.z = clamp(z, a, b); ed.view.tx = tx; ed.view.ty = ty; clampView(); applyView(); }
 function zoomAt(z, sx, sy) { const v = ed.view; const [a, b] = zLimits(); z = clamp(z, a, b); const wx = (sx - v.tx) / v.z, wy = (sy - v.ty) / v.z; setView(z, sx - wx * z, sy - wy * z); }
-function fitWidth() { const v = ed.view; const cy = (ed.H / 2 - v.ty) / v.z; const z = ed.fitZ; setView(z, ed.W / 2, ed.H / 2 - cy * z); }
+function fitWidth() { const v = ed.view; const cy = (ed.H / 2 - v.ty) / v.z; const z = ed.fitZ; setView(z, homeTx(z), ed.H / 2 - cy * z); }
 function applyView() {
   const { z, tx, ty } = ed.view; const tr = `translate(${tx}px,${ty}px) scale(${z})`;
   world.style.transform = tr; selw.style.transform = tr; stickw.style.transform = tr;
@@ -62,7 +77,12 @@ function frame() {
   updatePager(); placeSelbar(); placeGrip(); placeAddEnd(); placeAiBar(); if (window.placeHandUi) placeHandUi(); if (window.placePageFixUi) placePageFixUi(); panSync();
   if (TS.sel) textSelDraw();
 }
-function settle() { if (ed.note) { updateVisible(true); savePos(); } }
+function settle() { if (ed.note) { updateVisible(true); savePos(); rememberShift(); } }
+function rememberShift() {
+  if (shiftMode() === 'off' || !ed.W || !fitsAt(ed.view.z) || ed.touches.size) return;
+  const s = +((ed.view.tx - ed.W / 2) / ed.W).toFixed(4);
+  if (Math.abs(s - (S.prefs.shiftX || 0)) > .002) { S.prefs.shiftX = Math.abs(s) < .004 ? 0 : s; saveSettings(); }
+}
 
 /* ---------- kaldığın yer ---------- */
 function readPos(id) { try { return (JSON.parse(localStorage.getItem('kn.pos') || '{}'))[id] || null; } catch (e) { return null; } }
@@ -77,7 +97,7 @@ function restorePos() {
   const pos = ed.note && readPos(ed.note.id); if (!pos) return false;
   const pv = ed.pvs[Math.min(pos.p, ed.pvs.length - 1)]; if (!pv) return false;
   const z = ed.fitZ * clamp(pos.z || 1, .4, 6);
-  setView(z, ed.W / 2, -(pv.y + (pos.r || 0) * pv.meta.h) * z);
+  setView(z, homeTx(z), -(pv.y + (pos.r || 0) * pv.meta.h) * z);
   if (pos.p > 0) toast(`Sayfa ${pos.p + 1}’de kaldığınız yerden devam ediyorsunuz`, 2200);
   return true;
 }
@@ -88,9 +108,14 @@ function sizeCanvases() {
 function onResize() {
   if (edView.hidden || !ed.note) return;
   const r = stage.getBoundingClientRect(); if (r.width < 10 || r.height < 10) return;
-  const oldFit = ed.fitZ, oldW = ed.W, v = ed.view; const cy = ed.H ? (ed.H / 2 - v.ty) / v.z : 0;
+  const oldFit = ed.fitZ, oldW = ed.W, v = ed.view, oR = ed.rect; const cy = ed.H ? (ed.H / 2 - v.ty) / v.z : 0;
+  const wasFit = oldW && fitsAt(v.z), relX = oldW ? (v.tx - oldW / 2) / oldW : 0;
   ed.W = r.width; ed.H = r.height; ed.rect = r; sizeCanvases(); ed.fitZ = computeFit();
-  if (oldW) { const z = v.z * ed.fitZ / oldFit; setView(z, ed.W / 2, ed.H / 2 - cy * z); } else applyView();
+  if (oldW && ed.keepScreen && oR && Math.abs(oldW - ed.W) < 1) {
+    // üst çubuk açılıp kapandı: sayfa ekranda olduğu yerde kalsın (yukarı-aşağı zıplamasın)
+    setView(v.z, v.tx + (oR.left - r.left), v.ty + (oR.top - r.top));
+  } else if (oldW) { const z = v.z * ed.fitZ / oldFit; setView(z, wasFit && fitsAt(z) ? ed.W / 2 + relX * ed.W : ed.W / 2, ed.H / 2 - cy * z); } else applyView();
+  ed.keepScreen = false;
   requestFrame(true);
   if (ed.capture) captureResize();
   fitEbar();
@@ -298,7 +323,7 @@ async function openNote(id) {
   ed.textIdx = null; findState.results = []; findState.q = ''; closePgrid(); applyViewPrefs();
   requestAnimationFrame(() => {
     const r = stage.getBoundingClientRect(); ed.W = r.width; ed.H = r.height; ed.rect = r; sizeCanvases(); ed.fitZ = computeFit();
-    if (!restorePos()) setView(ed.fitZ, ed.W / 2, MARGIN);
+    if (!restorePos()) setView(ed.fitZ, homeTx(ed.fitZ), MARGIN);
     refreshPanel();
   });
   // OneDrive dosyası başka cihazda değiştiyse (ör. telefonda not eklendiyse) hemen birleştir
@@ -783,7 +808,7 @@ function onMove(e) {
     case 'selmove': case 'selscale': case 'selrot': moveSel(e, st); break;
     case 'grip': moveGrip(e, st); break;
     case 'sticky': case 'stickyrz': moveSticky(e, st); break;
-    case 'pan': { stopInertia(); const dx = e.clientX - st.lx, dy = e.clientY - st.ly; st.lx = e.clientX; st.ly = e.clientY; setView(ed.view.z, ed.view.tx + dx, ed.view.ty + dy); break; }
+    case 'pan': { stopInertia(); if (st.sx == null) { st.sx = st.lx; st.sy = st.ly; } const [dx, dy] = axisLock(st, e.clientX, e.clientY, e.clientX - st.lx, e.clientY - st.ly); st.lx = e.clientX; st.ly = e.clientY; setView(ed.view.z, ed.view.tx + dx, ed.view.ty + dy); break; }
   }
 }
 function onUp(e, cancel) {
@@ -850,6 +875,13 @@ function startPinch() {
   const r = ed.rect, v = ed.view;
   ed.pinch = { d0: d, z0: v.z, wx: (c.x - r.left - v.tx) / v.z, wy: (c.y - r.top - v.ty) / v.z };
 }
+/* sayfa ekrana sığarken parmakla kaydırma yön kilitlidir: dikey kaydırırken sayfa yana kaçmaz,
+   belirgin yatay sürükleme sayfayı sağa-sola taşır */
+function axisLock(st, x, y, dx, dy) {
+  if (!fitsAt(ed.view.z) || shiftMode() === 'off') return [dx, dy];
+  if (!st.axis) { const ax = Math.abs(x - st.sx), ay = Math.abs(y - st.sy); if (ax + ay > 12) st.axis = ax > ay * 1.3 ? 'x' : 'y'; }
+  return st.axis === 'x' ? [dx, 0] : [0, dy];
+}
 function touchMove(e) {
   const t = ed.touches.get(e.pointerId); if (!t) return;
   e.preventDefault();
@@ -864,8 +896,9 @@ function touchMove(e) {
     const [a, b] = zLimits(); const z = clamp(ed.pinch.z0 * d / ed.pinch.d0, a, b); const r = ed.rect;
     setView(z, c.x - r.left - ed.pinch.wx * z, c.y - r.top - ed.pinch.wy * z);
   } else if (ed.touches.size === 1) {
-    setView(ed.view.z, ed.view.tx + dx, ed.view.ty + dy);
-    const s = ed.panSamples; s.push({ t: now(), dx, dy }); while (s.length && now() - s[0].t > 90) s.shift();
+    const [mx, my] = axisLock(t, t.x, t.y, dx, dy);
+    setView(ed.view.z, ed.view.tx + mx, ed.view.ty + my);
+    const s = ed.panSamples; s.push({ t: now(), dx: mx, dy: my }); while (s.length && now() - s[0].t > 90) s.shift();
   }
 }
 function touchUp(e, cancel) {
@@ -1433,7 +1466,7 @@ function buildPanBtns() {
       const w = panPane();
       if (w.panStep(dir)) return true;
       b.classList.remove('edge'); void b.offsetWidth; b.classList.add('edge');
-      if (dx && w.panFitsW && w.panFitsW() && !panHintShown) { panHintShown = true; toast('Sayfa genişliği ekrana sığıyor; sağa-sola kaydırmak için önce yakınlaştırın.', 2800); }
+      if (dx && w.panFitsW && w.panFitsW() && !panHintShown && w.shiftMode && w.shiftMode() === 'off') { panHintShown = true; toast('Sayfa genişliği ekrana sığıyor. Sağa-sola kaydırmayı Ayarlar → Görünüm’den açabilirsiniz.', 2800); }
       return false;
     };
     const stop = () => { clearTimeout(holdT); if (held) { held = false; try { panPane().panHold(dir, false); } catch (e) { } } b.classList.remove('hold'); };
@@ -1477,22 +1510,4 @@ window.__penButton = on => {
   }
 };
 
-/* ---------- telefon yan çevrilince: üst çubuk yukarı saklanır, ortadaki küçük dille açılıp kapanır ---------- */
-if (PHONE) (() => {
-  const ev = $('#edView'), bar = ev && ev.querySelector('.ebar'); if (!bar) return;
-  const tab = h('button', { class: 'bartab', id: 'barTab', type: 'button' }, icon('<path d="M6 9l6 6 6-6"/>'));
-  bar.append(tab);
-  // ekran klavyesi açılınca görünüm yatay orana dönebilir; bu yüzden ekranın kendi yönüne bakılır
-  const land = () => { const t = screen.orientation && screen.orientation.type; return t ? t.startsWith('landscape') : screen.width > screen.height; };
-  const setUp = up => {
-    ev.classList.toggle('barup', up);
-    tab.setAttribute('aria-expanded', String(!up)); tab.setAttribute('aria-label', up ? 'Üst çubuğu göster' : 'Üst çubuğu gizle');
-    if (!up) requestAnimationFrame(fitEbar);
-  };
-  let was = null;
-  const apply = () => { const L = land(); if (L === was) return; was = L; document.documentElement.classList.toggle('land', L); setUp(L); };
-  tab.addEventListener('click', e => { e.stopPropagation(); setUp(!ev.classList.contains('barup')); });
-  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', apply);
-  addEventListener('resize', apply); apply();
-  window.phoneBar = setUp;
-})();
+/* üst çubuğu gizleme ve kenar düğmeleri: edgeui.js */

@@ -213,6 +213,12 @@ Notlar belgenin yanındaki `Ad.canvas` tuvaline (Obsidian Canvas / JSON Canvas b
 PDF sayfasına bağlı kartlar belgede işaretlenir. Tuval sayfanın üzerinde kayan, boyutlanan bir pencerede açılır. Yazmadan önce
 dosya okunur ve kart kart birleştirilir. İkinci belge de istenirse aynı kayan pencerede açılır.
 
+### Sayfa kaydırma ve kenar düğmeleri
+
+Sayfa ekrana sığsa da parmakla yana sürüklenir ya da alttaki konum şeridiyle sağa-sola kaydırılır (yön kilidi sayesinde
+yukarı-aşağı kaydırırken yana kaçmaz; bırakılan konum hatırlanır). Üst çubuk ortadaki küçük dille gizlenir; seçilen düğmeler
+(ör. silgi) o sırada sayfanın köşesinde ya da kenarında kalır. Düğmeye basılı tutunca yeri seçilir.
+
 ### Telefon
 
 Aynı APK telefona kurulur. Kısa kenarı 600 dp'den küçük ekranlarda telefon görünümü açılır: kalem araçları yok,

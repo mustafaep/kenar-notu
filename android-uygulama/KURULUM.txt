@@ -1,6 +1,6 @@
 KENAR NOTU — ANDROID KURULUM NOTLARI
 =====================================
-Sürüm 2.8.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
+Sürüm 2.9.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
 
 
 A) APK'YI OLUŞTURMA (bilgisayarda, bir kez)
@@ -112,6 +112,45 @@ G) YENİ (2.2.0)
   (ya da "Araç çubuğunu düzenle" listesinden "Kaldır").
 - PDF renklerini ters çevirme: ⋯ → "PDF renklerini ters çevir" (gece okuma). İsterseniz araç çubuğuna da
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
+
+
+BB) YENİ (2.9.0) — sayfayı sağa-sola kaydırma, gizlenen üst çubuk ve kenar düğmeleri, yeni tuval
+-----------------------------------------------------------------------------------------------
+- SAYFAYI SAĞA-SOLA KAYDIRMA: Sayfa ekrana sığsa da artık ortada kilitli değil.
+  · Parmakla belirgin biçimde yana sürükle: sayfa yana kayar. Yukarı-aşağı kaydırırken sayfa yana kaçmaz
+    (yön kilidi). Yakınlaştırınca her yöne serbest kaydırma eskisi gibi.
+  · Alttaki küçük KONUM ŞERİDİ: ekranı (çerçeve) ve sayfayı (mavi dikdörtgen) gösterir. Sürükle: sayfa kayar.
+    Bir yere dokun: sayfa oraya gelir. İki kez dokun: ortalanır. Yazarken kalemin ardından gelen parmak
+    dokunuşları sayfada yok sayıldığından, şerit ve üst çubuktaki ok düğmeleri yazarken de çalışır.
+  · Bıraktığın yan konum bütün belgelerde hatırlanır (sol elle ya da kenara yakın yazarken eline yer kalır).
+  · Ayarlar → Görünüm → "Sayfayı sağa-sola kaydırma": Kapalı / Kenara kadar / Serbest (sayfanın yarısına kadar
+    ekrandan taşabilir). "Konum şeridi" ayrıca kapatılabilir.
+- ÜST ÇUBUĞU GİZLEME: Çubuğun altındaki ortadaki küçük dile dokun: çubuk yukarı saklanır, sayfa ekranın
+  tamamını kullanır (sayfa yerinden zıplamaz). Aynı dile dokununca geri gelir. Durum hatırlanır.
+  Kaydetme/eşitleme uyarısı varsa dilin üzerinde küçük bir nokta yanar.
+- KENAR DÜĞMELERİ: Çubuk gizliyken seçtiğin düğmeler sayfanın kenarında kalır (başlangıçta sol üstte Kalem,
+  Silgi, Geri al).
+  · Çubuktaki ya da kenardaki bir düğmeye BASILI TUT → ekran şeması açılır, altı yerden birini seç:
+    Sol üst, Sağ üst, Sol kenar, Sağ kenar, Sol alt, Sağ alt (ya da "Kenarda tutma").
+  · Kenar grubunu baştaki ⋮⋮ tutamacından sürükleyip başka köşeye bırak. Tutamaca dokununca menü açılır.
+  · Toplu düzenleme: ⋯ → Araç çubuğunu düzenle → "Kenar düğmeleri" (her düğmenin yeri, "çubuk açıkken de görünsün").
+- TUVAL YENİLENDİ:
+  · Renkler artık kartın içini boyar (yapışkan not gibi; koyu temada da). Eskiden renk düğmeleri beyaz
+    görünüyordu: renk değişkeni öğeye yanlış yolla atanıyordu, düzeltildi. 10 renk: Obsidian'ın 6 rengi
+    (Obsidian'da aynı görünür) + mavi, pembe, gri. Seçtiğin son renk yeni kartlara da verilir.
+  · Takılma giderildi: sürüklerken artık her harekette bütün oklar baştan çizilmiyor, ekran her olayda yeniden
+    ölçülmüyor; yalnız taşınan karta bağlı oklar güncelleniyor ve her şey ekran karesi başına bir kez işleniyor.
+    Kasaya (.canvas) yazma da sen tuvalle uğraşırken bekletiliyor; el çekince yazılıyor.
+  · Seçili kartın üstünde küçük bir çubuk çıkar: Renk · Metni düzenle · Kalemle yaz · Kopyala · Sil
+    (okta: Renk · Etiket · ⟷ iki yönlü · ⇄ yönü çevir · Sil).
+  · Taşırken hizalama kılavuzları: öbür kartların kenarına ve ortasına yapışır (kırmızı çizgi).
+  · Kartı ya da oku pencerenin kenarına götürünce tuval kendiliğinden kayar.
+  · Ok çekerken bırakılacak kart vurgulanır. Noktalar ve köşe tutamacı uzaklaşınca küçülmez (parmakla tutulur).
+  · Grup: araç çubuğundaki kesik çerçeve düğmesi (seçili kartın çevresine ya da ortaya). Grup taşınınca
+    içindeki kartlar da taşınır.
+  · ⋯ (tuval seçenekleri): Arka plan (Noktalar / Kareler / Düz), Hizalama kılavuzları, Tümünü göster,
+    Kalemle yeni kart. Yakınlık yüzdesine dokununca tümü gösterilir. Ctrl+D kopyalar.
+- Bunların hepsi tarayıcıda denendi; gerçek tablette denenmedi. APK'yı APK-OLUSTUR.bat ile yeniden oluşturun.
 
 
 AA) YENİ (2.8.0) — Markdown okuyucu, Obsidian kasası, tuval, pencere olarak ikinci belge
