@@ -4,9 +4,20 @@
    İki taraf aynı kitaplığı paylaşır; aynı not iki yerde açılamaz.
    ========================================================= */
 window.__ed = ed;
-let splitEl = null;
+let splitEl = null, splitWin = null;   // splitWin: "Pencere" yerleşiminde ikinci belgeyi taşıyan kayan pencere
 function sideWin() { try { return splitEl && !splitEl.hidden ? splitEl.querySelector('iframe').contentWindow : null; } catch (e) { return null; } }
 function splitOpen() { return !!(splitEl && !splitEl.hidden); }
+function splitIsWin() { return S.prefs.splitPos === 'win'; }
+/* yerleşimi değiştir (yan yana/altta ↔ pencere): iframe taşınınca yeniden yüklendiği için belge kapatılıp aynı yerden yeniden açılır */
+async function setSplitMode(mode) {
+  const was = splitOpen(), id = otherNoteId();
+  if (was) await closeSplit();
+  if (splitWin) { splitWin.close(); splitWin = null; }
+  if (splitEl) { splitEl.remove(); splitEl = null; }
+  S.prefs.splitPos = mode; saveSettings();
+  if (was) openSplit(id || undefined);
+}
+window.setSplitMode = setSplitMode;
 function otherNoteId() {
   try {
     if (EMBED) { const pe = parent.__ed; return pe && pe.note ? pe.note.id : null; }
@@ -18,6 +29,7 @@ function toolbarSplitState() { $$('.tool[data-item="split"]').forEach(b => b.cla
 function splitBelow() { const p = S.prefs.splitPos || 'auto'; return p === 'below' || (p === 'auto' && innerHeight > innerWidth); }
 function applySplitW() {
   if (!splitEl) return;
+  if (splitWin) { $('#edView .ebody').classList.remove('split-below'); splitEl.style.width = ''; splitEl.style.height = ''; splitWin.apply(); return; }
   const below = splitBelow(), eb = $('#edView .ebody');
   eb.classList.toggle('split-below', below);
   splitEl.style.width = below ? '' : Math.round(clamp(S.splitW || .42, .25, .75) * 100) + '%';
@@ -34,7 +46,12 @@ function openSplit(openId) {
     const handle = h('div', { class: 'split-handle', title: 'Boyutu ayarlamak için sürükleyin', role: 'separator', 'aria-orientation': 'vertical' }, h('i'));
     const closeBtn = h('button', { class: 'ibtn split-close', type: 'button', 'aria-label': 'Yan belgeyi kapat', title: 'Yan belgeyi kapat', onclick: closeSplit }, icon(IC.close));
     splitEl = h('div', { class: 'sidepane' }, handle, iframe, closeBtn);
-    $('#edView .ebody').append(splitEl);
+    if (splitIsWin()) {
+      const dock = h('button', { class: 'ibtn', type: 'button', 'aria-label': 'Yana yerleştir', title: 'Yana yerleştir' }, icon(IC.split));
+      dock.addEventListener('click', () => setSplitMode('auto'));
+      splitWin = makeFwin($('#edView .ebody'), { key: 'side', cls: 'sidewin', title: 'Yan belge', icon: IC.split, buttons: [dock], body: splitEl, onClose: closeSplit, minW: 320, minH: 260 });
+      splitWin.el.addEventListener('pointerdown', () => { if (window.__setActivePane) window.__setActivePane('side'); });
+    } else $('#edView .ebody').append(splitEl);
     handle.addEventListener('pointerdown', e => {
       e.preventDefault(); try { handle.setPointerCapture(e.pointerId); } catch (er) { }
       handle.classList.add('drag'); document.body.classList.add('split-dragging');
@@ -46,7 +63,7 @@ function openSplit(openId) {
       handle.addEventListener('pointerup', up, { once: true }); handle.addEventListener('pointercancel', up, { once: true });
     });
   } else {
-    splitEl.hidden = false;
+    splitEl.hidden = false; if (splitWin) splitWin.show();
     if (openId) { const w = sideWin(); if (w && w.openNote) w.openNote(openId); }
   }
   applySplitW(); toolbarSplitState(); activePane = 'side'; markActive(); updateUndoBtns(); if (window.__syncHeader) window.__syncHeader();
@@ -55,7 +72,7 @@ async function closeSplit() {
   if (!splitEl) return;
   const w = sideWin();
   try { if (w && w.__ed && w.__ed.note && w.closeEditor) await w.closeEditor(); } catch (e) { }
-  splitEl.hidden = true; toolbarSplitState(); activePane = 'main'; markActive(); updateUndoBtns(); if (window.__syncHeader) window.__syncHeader();
+  splitEl.hidden = true; if (splitWin) splitWin.hide(); toolbarSplitState(); activePane = 'main'; markActive(); updateUndoBtns(); if (window.__syncHeader) window.__syncHeader();
 }
 
 /* Aynı not iki tarafta açılmasın */
@@ -99,6 +116,9 @@ if (EMBED) {
       { label: 'Tüm sayfalar', icon: IC.gridI, onClick: openPgrid },
       { label: 'Belgede ara', icon: IC.search, onClick: () => { S.panelTab = 'find'; setPanel(true); } },
       '-',
+      (() => { let win = false; try { win = parent.S.prefs.splitPos === 'win'; } catch (e) { } return win
+        ? { label: 'Yana yerleştir', icon: IC.split, sub: 'Ekranı ikiye böler', onClick: () => { try { parent.setSplitMode('auto'); } catch (e) { } } }
+        : { label: 'Pencere olarak aç', icon: IC.expand, sub: 'Sayfanın üzerinde taşınır, boyutlanır', onClick: () => { try { parent.setSplitMode('win'); } catch (e) { } } }; })(),
       { label: 'Yan pencereyi kapat', icon: IC.close, onClick: () => { try { parent.closeSplit(); } catch (e) { } } }
     ]));
   });
@@ -126,7 +146,7 @@ if (EMBED) {
     }
     if (window.panSync) panSync();
   }
-  window.__sideStatus = () => { if (activeSide()) syncHeader(); };
+  window.__sideStatus = () => { if (splitWin) { const w = sideWin(); try { splitWin.setTitle(w && w.__ed && w.__ed.note ? w.__ed.note.name : 'Yan belge'); } catch (e) { } } if (activeSide()) syncHeader(); };
   window.__syncHeader = syncHeader;
   const capt = (sel, ev, fn) => $(sel).addEventListener(ev, e => { const w = activeSide(); if (!w) return; e.stopImmediatePropagation(); e.preventDefault(); fn(w, e); }, true);
   capt('#titleIn', 'change', w => { const v = $('#titleIn').value.trim(); if (!v) { $('#titleIn').value = w.__ed.note.name; return; } w.__ed.note.name = v; w.document.getElementById('titleIn').value = v; w.scheduleSave(); if (w.__chipUpd) w.__chipUpd(); });

@@ -232,6 +232,7 @@ async function renderLibrary() {
     more.addEventListener('click', e => { e.stopPropagation(); noteMenu(more, m); });
     const thumb = h('div', { class: 'thumb' }, m.thumb ? h('img', { src: m.thumb, alt: '' }) : h('span', { class: 'ph' }, 'Önizleme yok'));
     if (m.sample) thumb.append(h('span', { class: 'badge' }, 'Örnek'));
+    if (m.kind === 'md') thumb.append(h('span', { class: 'kindb' }, 'MD'));
     if (m.fav) thumb.append(h('span', { class: 'starb', title: 'Favori' }, icon(IC.star)));
     if (m.odId) { const busy = syncingIds.has(m.id), bad = !busy && (m.odState === 'conflict' || m.odState === 'error' || m.odState === 'readonly'); thumb.append(h('span', { class: 'cloudb' + (bad ? ' warn' : '') + (busy ? ' busy' : ''), title: busy ? 'Kaydediliyor…' : bad ? 'OneDrive’a yazılamadı' : 'OneDrive’a bağlı' }, icon(busy ? IC.sync : bad ? IC.cloudOff : IC.cloudOk))); }
     if (sel) thumb.append(h('span', { class: 'chk' + (sel.has(m.id) ? ' on' : '') }, icon(IC.check)));

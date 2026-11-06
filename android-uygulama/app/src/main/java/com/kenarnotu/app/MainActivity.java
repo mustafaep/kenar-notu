@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.view.MotionEvent;
 import android.os.Parcelable;
@@ -29,6 +30,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
@@ -56,6 +58,8 @@ public class MainActivity extends Activity {
     static final int REQ_SAVE = 42;
     static final int REQ_OPEN_DOC = 43;
     static final int REQ_SAVE_LINK = 44;
+    static final int REQ_TREE = 45;
+    static final long MAX_TREE_READ = 40L * 1024 * 1024;
     static final int GRANT_READ = 1, GRANT_WRITE = 2, GRANT_PERSIST = 0x40;
     static final int CHUNK = 3 * 1024 * 1024;           // 3'ün katı: her parça ayrı base64 çözülebilir
     static final long MAX_INCOMING = 400L * 1024 * 1024;
@@ -198,6 +202,21 @@ public class MainActivity extends Activity {
                     public void run() { readIncoming(uri, "doc", canWrite); }
                 }).start();
             }
+            return;
+        }
+        if (requestCode == REQ_TREE) {
+            JSONObject o = new JSONObject();
+            try {
+                if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+                    Uri t = data.getData();
+                    try { getContentResolver().takePersistableUriPermission(t, GRANT_READ | GRANT_WRITE); }
+                    catch (Exception e) { try { getContentResolver().takePersistableUriPermission(t, GRANT_READ); } catch (Exception ignored) { } }
+                    String root = DocumentsContract.getTreeDocumentId(t);
+                    o.put("uri", t.toString()); o.put("root", root); o.put("provider", t.getAuthority());
+                    o.put("name", treeName(t, root));
+                } else o.put("cancel", true);
+            } catch (Exception e) { try { o.put("error", errText(e)); } catch (Exception ignored) { } }
+            js("__treePicked", o.toString());
             return;
         }
         if (requestCode == REQ_SAVE_LINK) {
@@ -457,6 +476,107 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public boolean hasPenButton() { return penButton; }
+
+        @JavascriptInterface
+        public void treePick() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+                    i.addFlags(GRANT_READ | GRANT_WRITE | GRANT_PERSIST | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+                    try { startActivityForResult(i, REQ_TREE); }
+                    catch (ActivityNotFoundException e) { MainActivity.this.toast("Klasör seçici açılamadı"); js("__treePicked", "{\"cancel\":true}"); }
+                }
+            });
+        }
+
+        /* klasörün içindekiler: [{id,name,dir,mime,size,lm}] */
+        @JavascriptInterface
+        public String treeList(String tree, String docId) {
+            JSONArray a = new JSONArray();
+            try {
+                Uri t = Uri.parse(tree);
+                Uri u = DocumentsContract.buildChildDocumentsUriUsingTree(t, docId);
+                String[] cols = {DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_MIME_TYPE, DocumentsContract.Document.COLUMN_SIZE, DocumentsContract.Document.COLUMN_LAST_MODIFIED};
+                try (Cursor c = getContentResolver().query(u, cols, null, null, null)) {
+                    while (c != null && c.moveToNext()) {
+                        JSONObject o = new JSONObject();
+                        String mime = c.getString(2);
+                        o.put("id", c.getString(0)); o.put("name", c.getString(1)); o.put("mime", mime);
+                        o.put("dir", DocumentsContract.Document.MIME_TYPE_DIR.equals(mime));
+                        o.put("size", c.isNull(3) ? -1 : c.getLong(3)); o.put("lm", c.isNull(4) ? 0 : c.getLong(4));
+                        o.put("parent", docId);
+                        a.put(o);
+                    }
+                }
+            } catch (Exception e) { return "[]"; }
+            return a.toString();
+        }
+
+        @JavascriptInterface
+        public String treeStat(String tree, String docId) {
+            try { return treeStatObj(Uri.parse(tree), docId).toString(); }
+            catch (Exception e) { return "{\"ok\":false,\"error\":" + JSONObject.quote(errText(e)) + "}"; }
+        }
+
+        /* metin (UTF-8) ya da base64 olarak oku: {ok,text|b64,lm,size} */
+        @JavascriptInterface
+        public String treeRead(String tree, String docId, String as) {
+            try {
+                Uri t = Uri.parse(tree);
+                JSONObject o = treeStatObj(t, docId);
+                Uri u = DocumentsContract.buildDocumentUriUsingTree(t, docId);
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                try (InputStream in = getContentResolver().openInputStream(u)) {
+                    if (in == null) throw new IOException("Dosya açılamadı");
+                    byte[] buf = new byte[65536]; int n; long total = 0;
+                    while ((n = in.read(buf)) > 0) { total += n; if (total > MAX_TREE_READ) throw new IOException("Dosya çok büyük"); bo.write(buf, 0, n); }
+                }
+                byte[] b = bo.toByteArray();
+                if ("b64".equals(as)) o.put("b64", Base64.encodeToString(b, Base64.NO_WRAP));
+                else o.put("text", new String(b, "UTF-8"));
+                o.put("size", b.length);
+                return o.toString();
+            } catch (Exception e) {
+                return "{\"ok\":false,\"error\":" + JSONObject.quote(errText(e)) + "}";
+            }
+        }
+
+        /* metin yaz: docId boşsa klasörde yeni dosya oluşturur. Dönen: {ok,doc,lm,size} */
+        @JavascriptInterface
+        public String treeWrite(String tree, String parentId, String docId, String name, String text, String mime) {
+            try {
+                Uri t = Uri.parse(tree);
+                String id = docId;
+                if (id == null || id.isEmpty()) {
+                    Uri parent = DocumentsContract.buildDocumentUriUsingTree(t, parentId);
+                    Uri created = DocumentsContract.createDocument(getContentResolver(), parent, mime == null || mime.isEmpty() ? "application/octet-stream" : mime, name);
+                    if (created == null) throw new IOException("Dosya oluşturulamadı");
+                    id = DocumentsContract.getDocumentId(created);
+                }
+                Uri u = DocumentsContract.buildDocumentUriUsingTree(t, id);
+                byte[] b = text.getBytes("UTF-8");
+                try (OutputStream out = getContentResolver().openOutputStream(u, "wt")) {
+                    if (out == null) throw new IOException("Dosyaya yazılamadı");
+                    out.write(b); out.flush();
+                }
+                JSONObject o = treeStatObj(t, id);
+                o.put("doc", id);
+                return o.toString();
+            } catch (Exception e) {
+                return "{\"ok\":false,\"error\":" + JSONObject.quote(errText(e)) + "}";
+            }
+        }
+
+        /* kasadaki PDF'i olağan "OneDrive'dan aç" yolundan aç (değişiklikler dosyaya yazılır) */
+        @JavascriptInterface
+        public void treeOpenDoc(String tree, String docId) {
+            final Uri u = DocumentsContract.buildDocumentUriUsingTree(Uri.parse(tree), docId);
+            new Thread(new Runnable() {
+                @Override
+                public void run() { readIncoming(u, "doc", true); }
+            }).start();
+        }
 
         @JavascriptInterface
         public void openDocument() {
@@ -779,6 +899,27 @@ public class MainActivity extends Activity {
     static String errText(Exception e) {
         String m = e.getMessage();
         return e.getClass().getSimpleName() + (m == null ? "" : ": " + m);
+    }
+
+    /* ---------------- Obsidian kasası: klasör izni (OPEN_DOCUMENT_TREE) ---------------- */
+    String treeName(Uri tree, String docId) {
+        Uri u = DocumentsContract.buildDocumentUriUsingTree(tree, docId);
+        try (Cursor c = getContentResolver().query(u, new String[]{DocumentsContract.Document.COLUMN_DISPLAY_NAME}, null, null, null)) {
+            if (c != null && c.moveToFirst()) return c.getString(0);
+        } catch (Exception ignored) { }
+        return "Kasa";
+    }
+    JSONObject treeStatObj(Uri tree, String docId) throws Exception {
+        Uri u = DocumentsContract.buildDocumentUriUsingTree(tree, docId);
+        JSONObject o = new JSONObject();
+        try (Cursor c = getContentResolver().query(u, new String[]{DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_SIZE, DocumentsContract.Document.COLUMN_LAST_MODIFIED}, null, null, null)) {
+            if (c == null || !c.moveToFirst()) throw new IOException("Dosya bulunamadı");
+            o.put("name", c.getString(0));
+            o.put("size", c.isNull(1) ? -1 : c.getLong(1));
+            o.put("lm", c.isNull(2) ? 0 : c.getLong(2));
+        }
+        o.put("ok", true);
+        return o;
     }
 
     /* ---------------- OneDrive / cihaz dosyasına doğrudan yazma (Storage Access Framework) ---------------- */

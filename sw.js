@@ -1,5 +1,5 @@
 /* Kenar Notu · çevrimdışı çalışma için hizmet çalışanı */
-const VERSION = 'kenar-notu-v2.7.1';
+const VERSION = 'kenar-notu-v2.8.0';
 const CORE = [
   './',
   'index.html',
@@ -32,6 +32,10 @@ const CORE = [
   'js/split.js',
   'js/native.js',
   'js/main.js',
+  'js/fwin.js',
+  'js/mdparse.js',
+  'js/canvas.js',
+  'js/md.js',
   'fonts/kalam-latin-300-normal.woff2',
   'fonts/kalam-latin-ext-300-normal.woff2',
   'fonts/kalam-latin-400-normal.woff2',

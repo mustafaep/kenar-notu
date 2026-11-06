@@ -206,6 +206,13 @@ sayfaya gelir. Sayfa, kabuğa `window.KenarNative` üzerinden ulaşır.
 > `android-uygulama/` içine bir keystore ve `storeFile`, `storePassword`, `keyAlias`, `keyPassword` alanlarını içeren
 > `keystore.properties` dosyası koyun.
 
+### Markdown ve tuval
+
+Markdown dosyaları (tek tek ya da Android'de Obsidian kasası klasöründen) okunur, aranır, sesli okunur; dosyaya yazılmaz.
+Notlar belgenin yanındaki `Ad.canvas` tuvaline (Obsidian Canvas / JSON Canvas biçimi) kart ve ok olarak yazılır; satıra ya da
+PDF sayfasına bağlı kartlar belgede işaretlenir. Tuval sayfanın üzerinde kayan, boyutlanan bir pencerede açılır. Yazmadan önce
+dosya okunur ve kart kart birleştirilir. İkinci belge de istenirse aynı kayan pencerede açılır.
+
 ### Telefon
 
 Aynı APK telefona kurulur. Kısa kenarı 600 dp'den küçük ekranlarda telefon görünümü açılır: kalem araçları yok,

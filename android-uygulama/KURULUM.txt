@@ -1,6 +1,6 @@
 KENAR NOTU — ANDROID KURULUM NOTLARI
 =====================================
-Sürüm 2.7.1 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
+Sürüm 2.8.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
 
 
 A) APK'YI OLUŞTURMA (bilgisayarda, bir kez)
@@ -112,6 +112,39 @@ G) YENİ (2.2.0)
   (ya da "Araç çubuğunu düzenle" listesinden "Kaldır").
 - PDF renklerini ters çevirme: ⋯ → "PDF renklerini ters çevir" (gece okuma). İsterseniz araç çubuğuna da
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
+
+
+AA) YENİ (2.8.0) — Markdown okuyucu, Obsidian kasası, tuval, pencere olarak ikinci belge
+--------------------------------------------------------------------------------------
+- MARKDOWN: Kitaplık → Yeni → "Markdown dosyası ekle" ya da "Obsidian kasasından aç". md dosyası okunur;
+  dosyanın kendisine HİÇ yazılmaz. Başlıklar, listeler (görev kutuları), tablolar, kod, alıntılar, Obsidian
+  not kutuları (> [!tip]), [[wiki bağlantıları]], ![[gömülü resimler]], #etiketler, dipnotlar gösterilir.
+  Üst çubuk: İçindekiler, Belgede ara, Sesli oku (seçili yerden ya da ekrandakinden itibaren), Sözlük,
+  Tuval, ⋯ (yazı boyutu, yazı tipi, sütun genişliği, tema, dosyayı yeniden oku, .canvas / .md indir).
+  Metin seçince: Tuvale not · Anlamı · Çevir · Dinle · Kopyala. Bir satıra dokununca "N. satıra not" düğmesi çıkar.
+- OBSİDİAN KASASI: İlk seferde kasanın klasörünü seçersin (Android klasör izni; bir kez). Sonra klasörler
+  arasında gezip .md ve .pdf dosyalarını açarsın. Dosya başka yerde değiştiyse açarken güncel hâli okunur.
+  ÖNEMLİ: Android'de OneDrive uygulamasının klasör seçmeye izin vermeyebilir; o zaman kasa klasörünü
+  telefonda/tablette yerel bir klasörde tut (Obsidian'ın Android'de de yaptığı gibi; OneDrive ile eşitlemek
+  için FolderSync vb.). Klasör seçilemezse "Markdown dosyası ekle" ile açıp tuvali "⋯ → Tuvali indir" ile alabilirsin.
+- TUVAL (Obsidian Canvas ile aynı biçim, .canvas): Sayfanın üzerinde kayan pencere. Başlığından sürükle,
+  kenar ve köşelerinden boyutlandır, ⤢ ile tam ekran yap (başlığa çift dokunmak da olur). Telefonda tam ekran açılır.
+  · Kart: "+ Kart" ya da boş yere iki kez dokun. Karta iki kez dokun (ya da seçiliyken bir kez) → yaz.
+  · Ok: kartı seç, kenarındaki noktadan sürükleyip başka karta bırak. Boş yere bırakırsan orada yeni kart açılır.
+  · Seçili kart/ok: Renk (6 renk), Sil, Metni düzenle; okta Etiket, İki yönlü, Yönü çevir.
+  · Kalem simgesi: S Pen ile yaz, yazı metne çevrilip karta eklenir.
+  · İki parmakla yakınlaştır, boş yerden sürükleyerek kaydır, ⤢ (araç çubuğunda) tümünü göster. Geri al / yinele.
+  · "Tuvale not": seçtiğin cümle alıntı olarak kartın başına yazılır; kart belge kartına "4. satır" etiketli okla
+    bağlanır. Belgede o satırın kenarında küçük tuval işareti çıkar; işarete dokununca kart, kartın altındaki
+    "4. satır" düğmesine dokununca belge o satıra gider. Dosya sonradan değişse de satır, alıntıdan yeniden bulunur.
+  · Tuval belgenin yanındaki "Ad.canvas" dosyasına yazılır (kasadan açılan dosyalarda). Obsidian'da aynı dosyayı
+    açınca kartlar ve oklar görünür. Yazmadan önce dosya okunur; Obsidian'da ya da öbür cihazda değiştiyse kart kart
+    birleştirilir (iki yerde birden metni değişen kartın ikisi de kalır) — üzerine yazılmaz.
+- PDF'te tuval: araç çubuğunda yeni "Tuval" düğmesi; PDF'te metin seçince "Tuvale not" (kart "N. sayfa"ya bağlanır).
+  Kasadan açılan PDF'in tuvali de yanına "Ad.canvas" olarak yazılır; diğer PDF'lerde tuval bu cihazda kalır.
+- İKİNCİ BELGE PENCERE OLARAK: Ayarlar → Görünüm → "İkinci belgenin yeri" → Pencere. Yan belge sayfanın üzerinde
+  kayan pencerede açılır (sürükle, boyutlandır, tam ekran). Pencere başlığındaki ◫ düğmesi yana yerleştirir; yan
+  belgenin ⋯ menüsünde "Pencere olarak aç" / "Yana yerleştir" var. Yerleşim değişince belge aynı yerden yeniden açılır.
 
 
 ZZ) YENİ (2.7.1) — açılışta dosya denetimi, yatay telefonda saklanan çubuk, el yazısı düzeltmeleri

@@ -4,7 +4,7 @@
    Solda bölümler, sağda o bölümün ayarları (gruplu kartlar). Dar ekranda bölümler üstte yatay sekme olur.
    Düzenleyicideki ⋯ paneli yalnızca sık kullanılan işlemleri gösterir; ayrıntılar buradadır.
    ========================================================= */
-const APP_VERSION = '2.7.1';
+const APP_VERSION = '2.8.0';
 const SET_SECTIONS = [
   { id: 'view', name: 'Görünüm', ic: 'moon', lead: 'Tema, düzenleyici göstergeleri ve yan yana belge.' },
   { id: 'pen', name: 'S Pen ve dokunma', ic: 'pen', lead: 'Parmakla çizim, yan tuş ve hareketler.' },
@@ -61,7 +61,7 @@ function setBuild(id, close) {
       h('div', { class: 'sbtns' }, h('button', { class: 'btn small', type: 'button', onclick: () => { close(); if (ed && ed.note && typeof toolbarEditor === 'function') openPop($('#moreBtn'), toolbarEditor); else toast('Araç çubuğunu bir not açıkken ⋯ menüsünden düzenleyin.', 2600); } }, icon(IC.gear), 'Araç çubuğunu düzenle'))
     ]),
     sGroup('Yan yana belge', [
-      sRow('İkinci belgenin yeri', 'Otomatik: ekran yataysa yanda, dikse altta açılır', segRow([['auto', 'Otomatik'], ['side', 'Hep yanda'], ['below', 'Hep altta']], S.prefs.splitPos || 'auto', v => { S.prefs.splitPos = v; saveSettings(); if (window.applySplitW) applySplitW(); }, 'İkinci belgenin yeri'), true)
+      sRow('İkinci belgenin yeri', 'Otomatik: ekran yataysa yanda, dikse altta · Pencere: sayfanın üzerinde taşınır, boyutlanır, tam ekran yapılır', segRow([['auto', 'Otomatik'], ['side', 'Hep yanda'], ['below', 'Hep altta'], ['win', 'Pencere']], S.prefs.splitPos || 'auto', v => { const was = S.prefs.splitPos === 'win'; if ((v === 'win') !== was && window.setSplitMode) setSplitMode(v); else { S.prefs.splitPos = v; saveSettings(); if (window.applySplitW) applySplitW(); } }, 'İkinci belgenin yeri'), true)
     ])
   ];
   if (id === 'pen') return [
