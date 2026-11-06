@@ -60,7 +60,7 @@ aynı APK telefonda kalemsiz bir okuma ve not görünümüyle açılıyor.
 - Yazdığın satır metne çevrilir ve yazım hataları düzeltilir. Türkçe ve İngilizce karışık yazılabilir.
 - Android'de tamamen cihazda çalışır (Google ML Kit el yazısı tanıma + Samsung Klavye'nin yazım denetleyicisi).
   Web'de bağlı yapay zekâ ile çalışır.
-- Kapalı / Düğmeyle / Otomatik modları; TR/EN düğmesiyle diğer dilde yeniden okuma; A− / A+; Geri al.
+- Kapalı / Düğmeyle / Otomatik modları; Düzelt düğmesinin çıkma süresi ayarlanabilir (0,5–8 sn); TR/EN düğmesiyle diğer dilde yeniden okuma; A− / A+; Geri al.
   Düzelt düğmesinin köşesindeki ✕ düğmeyi kapatır; düğmenin ana belgede mi, yan belgede mi, ikisinde mi
   çalışacağı kalem panelinden seçilir.
 - Alt satıra geçen yazı aynı paragrafta kalır; düzeltilmiş bir metnin yanına ya da altına yazılan devam, o metnin
@@ -145,6 +145,7 @@ olduğu için (A4 = 595 × 842 pt) boyutlar birebir aynıdır.
 - Android'de: dosya OneDrive uygulaması üzerinden açılır, notlu PDF aynı dosyaya yazılır. Microsoft kaydı gerekmez.
 - Üzerine yazmayan eşitleme: dosya başka cihazda değiştiyse yapışkan notlar üç yönlü birleştirilir (iki yerde
   birden değişen notun ikisi de tutulur), tabletteki kalem yazıları korunur. Notlar dışında da değişmişse sorar.
+  Not açılınca dosyanın içeriği okunup son yazılanla karşılaştırılır (OneDrive'ın tarih bilgisi gecikebilir).
 - OneDrive önceki yüklemeyi bitirmeden aynı dosyaya yeniden yazılmaz
   (bu, OneDrive'ın "Dosya 1.pdf" gibi kopyalar oluşturmasını önler); değişmeyen not yeniden yüklenmez.
 - Web'de: Microsoft Graph ile bağlanılır (bkz. [web ve OneDrive kurulumu](docs/web-ve-onedrive-kurulumu.md)).
@@ -208,7 +209,8 @@ sayfaya gelir. Sayfa, kabuğa `window.KenarNative` üzerinden ulaşır.
 ### Telefon
 
 Aynı APK telefona kurulur. Kısa kenarı 600 dp'den küçük ekranlarda telefon görünümü açılır: kalem araçları yok,
-parmak sayfayı kaydırır; notlar alttan açılan pencerede okunur ve düzenlenir. Web'de `?phone=1` ile denenebilir.
+parmak sayfayı kaydırır; notlar alttan açılan pencerede okunur ve düzenlenir. Yan çevrilince üst çubuk saklanır;
+ortadaki küçük dille açılıp kapanır. Web'de `?phone=1` ile denenebilir.
 
 ### Web (PWA)
 

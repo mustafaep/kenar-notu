@@ -1,6 +1,6 @@
 KENAR NOTU — ANDROID KURULUM NOTLARI
 =====================================
-Sürüm 2.7.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
+Sürüm 2.7.1 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
 
 
 A) APK'YI OLUŞTURMA (bilgisayarda, bir kez)
@@ -112,6 +112,33 @@ G) YENİ (2.2.0)
   (ya da "Araç çubuğunu düzenle" listesinden "Kaldır").
 - PDF renklerini ters çevirme: ⋯ → "PDF renklerini ters çevir" (gece okuma). İsterseniz araç çubuğuna da
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
+
+
+ZZ) YENİ (2.7.1) — açılışta dosya denetimi, yatay telefonda saklanan çubuk, el yazısı düzeltmeleri
+------------------------------------------------------------------------------------------------
+- DÜZELTME: Telefonda kaydedilen dosya tablette güncellenmiyordu. İki neden vardı:
+  · Tabletin dosyası 2.7.0'dan önce yazılmışsa telefonun yalnız not eklediği anlaşılamıyor, durum "çakışma"
+    oluyordu. Artık telefonun yazdığı dosyanın tabletin kendi yazdığı dosyadan türediği tanınıyor (dosyaya
+    /KNSrc yazılıyor; dünkü telefon kayıtları da tanınıyor) ve notlar kendiliğinden birleşiyor.
+  · OneDrive uygulaması dosyanın tarih/boyut bilgisini geç güncelleyebiliyor; tablet değişikliği görmüyordu.
+- Not açılınca OneDrive'daki dosyanın İÇERİĞİ okunur ve bu cihazın son yazdığıyla karşılaştırılır. Durum
+  satırında "Dosya başka yerde değişmiş mi bakılıyor…" görünür. Başka yerde değiştiyse notlar birleştirilir
+  ("Diğer cihazdaki notlar birleştirildi: 1 yeni"), değişmediyse hiçbir şey olmaz. Dosya okunamazsa (internet
+  yok, OneDrive oturumu kapalı) dosyaya bakılmadan üzerine yazılmaz; kaydederken yeniden denenir.
+  80 MB'tan büyük dosyalarda yalnız tarih/boyut bilgisine bakılır.
+- Durum satırına (OneDrive'a kaydedildi) dokununca dosya hemen yeniden denetlenir.
+- Çakışma penceresine "Dosyadaki notları al, çizimlerim kalsın" eklendi: öbür cihazda yalnız not eklediysen
+  bunu seç; notlar birleşir, bu cihazdaki çizimler korunur, sonra kaydedilir.
+- Başka bir uygulamanın (Acrobat, Edge…) kaydettiği dosya, Kenar Notu bilgileri içinde kalsa bile tanınır
+  (/ModDate ile /KNMod karşılaştırılır) ve kendiliğinden birleştirilmez, sorulur.
+- TELEFON YATAY: Telefonu yan çevirince üst çubuk yukarı saklanır, sayfa tüm ekranı kullanır. Üstte ortadaki
+  küçük dile dokununca çubuk iner, yine dokununca saklanır. Çubuk saklıyken çakışma ya da kaydetme durumu dilde
+  küçük bir noktayla gösterilir. Dik konumda çubuk her zaman görünür.
+- EL YAZISI: Seçip "Hizala ve düzelt" ile birleştirilen parçalar artık her zaman boşlukla ayrılır (yalnız
+  tireyle bölünmüş kelime "kele-" + "me" bitişik yazılır). Yazım denetimi kelimeleri bitiştirirse boşluklar
+  korunur.
+- EL YAZISI: Ayarlar → El yazısı → Mod → "Düzelt düğmesi çıkmadan önce bekle": 0,5–8 sn (varsayılan 1,5 sn;
+  önceden 0,65 sn idi). Otomatik modda da düzeltme en az bu kadar bekler.
 
 
 Z) YENİ (2.7.0) — telefon görünümü, gerçek PDF notları, üzerine yazmayan eşitleme

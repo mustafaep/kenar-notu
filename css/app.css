@@ -864,3 +864,17 @@ html.phone .tool .caret,html.phone .tool .tip{display:none}
 /* telefon kitaplığı: iki sütun, daha sıkı boşluklar */
 html.phone .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 12px}
 html.phone .pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 12px;padding:14px}
+/* telefon yatay: üst çubuk sayfanın üzerinde durur ve yukarı saklanabilir (ortadaki dil ile) */
+.bartab{display:none}
+html.phone.land #edView{position:relative}
+html.phone.land #edView .ebar{position:absolute;top:0;left:0;right:0;grid-template-columns:auto minmax(90px,1fr) max-content auto;grid-template-areas:"back title tools acts";box-shadow:0 2px 12px rgba(0,0,0,.14);transition:transform .2s ease}
+html.phone.land #edView.barup .ebar{transform:translateY(-100%);box-shadow:none}
+html.phone.land #edView.barup .ebar>:not(.bartab){visibility:hidden;transition:visibility 0s .2s}
+html.phone.land .bartab{display:grid;place-items:center;position:absolute;top:100%;left:50%;transform:translateX(-50%);width:64px;height:22px;padding:0;border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;background:var(--chrome);color:var(--muted);box-shadow:0 3px 8px rgba(0,0,0,.12)}
+html.phone.land .bartab::before{content:"";position:absolute;left:-10px;right:-10px;top:-4px;bottom:-18px}
+html.phone.land .bartab svg.i{width:18px;height:18px;transition:transform .2s ease}
+html.phone.land #edView:not(.barup) .bartab svg.i{transform:rotate(180deg)}
+html.phone.land .bartab[data-st=warn]::after,html.phone.land .bartab[data-st=busy]::after{content:"";position:absolute;right:9px;top:6px;width:7px;height:7px;border-radius:50%;background:var(--warn)}
+html.phone.land .bartab[data-st=busy]::after{background:var(--accent)}
+html.phone.land .nsta{min-height:84px}
+@media (prefers-reduced-motion:reduce){html.phone.land #edView .ebar,html.phone.land .bartab svg.i{transition:none}}

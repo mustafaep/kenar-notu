@@ -201,14 +201,17 @@ async function syncSaf(note, bytes, opt = {}) {
     od.dirty = true; await persistNoteRecord(note); setSyncState(note, 'uploading'); deferSafSync(note, bytes);
     return 'wait';
   }
+  const chk = checking.get(note); if (chk) { try { await chk; } catch (e) { } }
   setSyncState(note, 'busy');
   try {
-    // Yazmadan önce: dosya başka bir cihazda değiştiyse önce birleştir (üzerine yazma)
+    // Yazmadan önce: dosya başka bir cihazda değiştiyse önce birleştir (üzerine yazma).
+    // Açılıştaki denetim yapılamadıysa (od.verify) dosyanın içeriğine bakmadan yazılmaz.
     if (od.mode !== 'copy' && !opt.force && od.canWrite !== false) {
-      const ch = safRemoteChanged(od);
+      const ch = od.verify || safRemoteChanged(od);
       if (ch) {
         const m = await safAutoMerge(note, bytes);
         if (m === 'ask' || m === 'fail') { od.state = 'conflict'; await persistNoteRecord(note); setSyncState(note, 'conflict'); return 'conflict'; }
+        od.verify = false;
         if (m === 'synced') { setSyncState(note, 'synced'); return 'ok'; }
         if (note._adopted) bytes = note._adopted;
       }
@@ -220,7 +223,7 @@ async function syncSaf(note, bytes, opt = {}) {
     const hash = await sha256Hex(out);
     if (od.mode !== 'copy' && hash && od.hash === hash && !opt.force) {
       // içerik son kaydedilenle aynı: OneDrive'a yeniden yükleme yok
-      od.dirty = false; od.state = 'synced'; od.base = stickyBase(note); if (body) od.bodyKey = body; await persistNoteRecord(note); setSyncState(note, 'synced'); return 'ok';
+      od.dirty = false; od.state = 'synced'; od.base = stickyBase(note); pushBody(od, body); await persistNoteRecord(note); setSyncState(note, 'synced'); return 'ok';
     }
     if (od.mode === 'copy') {
       const r = await nativeDoc.saveLink(safeName(od.name.replace(/\.pdf$/i, '') + ' (notlu)') + '.pdf', blob);
@@ -235,7 +238,7 @@ async function syncSaf(note, bytes, opt = {}) {
     if (r.status === 'ok') { buildNotice(od);
       od.sizes = [...new Set([r.size, od.size, ...(od.sizes || [])].filter(x => x != null && x >= 0))].slice(0, 12);
       od.lm = r.lastModified || 0; od.eTag = String(od.lm); od.size = r.size; od.syncedAt = Date.now(); od.dirty = false; od.state = 'synced'; od.hash = hash;
-      od.base = stickyBase(note); if (body) od.bodyKey = body; // bir sonraki birleştirmenin tabanı
+      od.base = stickyBase(note); pushBody(od, body); // bir sonraki birleştirmenin tabanı
       od.hashes = [hash, ...(od.hashes || []).filter(x => x !== hash)].slice(0, 8);   // kendi yazdıklarımızı tanımak için
       od.settle = isOneDriveSaf(od) ? { lm0: od.lm, at: Date.now(), until: Date.now() + safSettleEstimate(r.size) } : null;
       await persistNoteRecord(note); setSyncState(note, 'synced'); return 'ok'; }
@@ -288,20 +291,37 @@ function safRemoteChanged(od) {
   if (m.size != null && m.size >= 0 && known.has(m.size)) return null;
   return m;
 }
-async function knMergeRemote(note, localBytes, remote) {
-  const doc = await loadPdf(remote.bytes);
-  let cu = {}; try { const md = await doc.getMetadata(); cu = (md && md.info && md.info.Custom) || {}; } catch (e) { }
-  const rPages = await pdfPagesMeta(doc); try { await doc.destroy(); } catch (e) { }
-  const rBody = typeof cu.KNBody === 'string' ? cu.KNBody : null, od = note.od;
-  // dosyadaki, bu cihazın yazdığı bayt bayt aynı içerik mi? (OneDrive tarihini sonradan değiştirmiş olabilir) → başkasının değişikliği yok.
+/* bu cihazın yazdığı ya da tamamen içine aldığı dosya içeriklerinin özetleri */
+function ownHashes(note) { const od = note.od || {}; return [...new Set([od.hash, ...(od.hashes || []), note.srcHash].filter(Boolean))]; }
+function pushBody(od, b) { if (!b) return; od.bodyKey = b; od.bodies = [b, ...(od.bodies || []).filter(x => x !== b)].slice(0, 8); }
+window.pushBody = pushBody;
+/* Dosyada notlar dışındaki içerik (çizim, metin, sayfalar) bu cihazın bildiği bir hâl mi? Öyleyse öbür cihaz yalnız notları değiştirmiştir. */
+async function remoteBodyKnown(note, info, rPages, own) {
+  if (!knTrusted(info)) return false;
+  const od = note.od, cu = (info && info.Custom) || {}, rBody = typeof cu.KNBody === 'string' ? cu.KNBody : null;
+  if (rPages.length !== note.pages.length) return false;
+  if (rBody && [od.bodyKey, ...(od.bodies || [])].includes(rBody)) return true;
+  if (typeof cu.KNSrc === 'string' && own.includes(cu.KNSrc)) return true;              // telefon: bu cihazın yazdığı dosyadan türemiş
+  if (rBody && rBody[0] === 'b') for (const H of own) if (await pristineFp(H, rPages) === rBody) return true;  // aynısı, eski telefon yazımı
+  return false;
+}
+async function knMergeRemote(note, localBytes, remote, forceMode) {
+  const od = note.od;
+  // dosyadaki, bu cihazın yazdığı (ya da zaten içine aldığı) bayt bayt aynı içerik mi? → başkasının değişikliği yok.
   // Etiket (/KNRev) tek başına yetmez: başka bir uygulama dosyayı düzenlerken belge bilgisini olduğu gibi bırakabilir.
-  const rh = await knSha(remote.bytes);
-  if (rh && (od.hashes || []).includes(rh)) {
+  const rh = await knSha(remote.bytes), own = ownHashes(note);
+  if (rh && own.includes(rh)) {
     od.lm = remote.lm || od.lm; od.eTag = String(od.lm); if (remote.size != null) { od.size = remote.size; od.sizes = [...new Set([remote.size, ...(od.sizes || [])])].slice(0, 12); }
-    return { mode: 'own', latest: rh === od.hashes[0] };
+    if (od.state === 'conflict' || od.state === 'error') od.state = od.dirty ? 'pending' : 'synced';
+    return { mode: 'own' };
   }
+  const doc = await loadPdf(remote.bytes);
+  let info = {}; try { const md = await doc.getMetadata(); info = (md && md.info) || {}; } catch (e) { }
+  const cu = info.Custom || {};
+  const rPages = await pdfPagesMeta(doc); try { await doc.destroy(); } catch (e) { }
+  const rBody = typeof cu.KNBody === 'string' ? cu.KNBody : null;
   let mode;
-  if (rBody && od.bodyKey && rBody === od.bodyKey && rPages.length === note.pages.length) mode = 'stickies';
+  if (forceMode === 'stickies' || await remoteBodyKnown(note, info, rPages, own)) mode = 'stickies';   // forceMode: kullanıcı seçti
   else if (notePristine(note)) mode = 'adopt';
   else return { mode: 'ask' };
   const kn = +cu.KNNotes > 0 ? await readKnNotes(remote.bytes, rPages) : { pages: [] };
@@ -335,16 +355,19 @@ async function knMergeRemote(note, localBytes, remote) {
   for (const { n, pi } of out.values()) { const p = note.pages[Math.min(pi, note.pages.length - 1)]; const A = note.ann[p.id] || (note.ann[p.id] = { s: [], t: [], i: [], n: [] }); if (!A.n) A.n = []; A.n.push(n); }
   // dosyanın şimdiki hâli yeni taban (yazım başarılı olursa birleşmiş hâl taban olur)
   const rb = {}; R.forEach((v, id) => { rb[id] = { sig: stickySig(v.n), pi: v.pi }; });
-  od.base = rb; od.bodyKey = rBody || (mode === 'adopt' ? await noteBodyFp(note, remote.bytes) : od.bodyKey);
+  od.base = rb;
+  if (mode === 'adopt') pushBody(od, rBody || await noteBodyFp(note, remote.bytes));
+  else if (rBody) od.bodies = [...new Set([...(od.bodies || []), rBody])].slice(-8);   // öbür cihazın bildiği hâl de bizim geçmişimiz
+  if (rh) od.hashes = [rh, ...(od.hashes || []).filter(x => x !== rh)].slice(0, 8);      // bu içerik artık burada
   od.lm = remote.lm || od.lm; od.eTag = String(od.lm); if (remote.size != null) { od.size = remote.size; od.sizes = [...new Set([remote.size, ...(od.sizes || [])])].slice(0, 12); }
   od.hash = null; od.dirty = !sameAsRemote; od.state = od.dirty ? 'pending' : 'synced'; od.syncedAt = Date.now();
   note.updated = Date.now();
   return { mode, stats: st, needWrite: !sameAsRemote };
 }
 /* Dönen: 'merged' (birleşti, yazılması gerekiyor) · 'synced' (dosyadakiyle aynı) · 'ask' (kullanıcı seçmeli) · 'fail' */
-async function safAutoMerge(note, bytes, remote) {
+async function safAutoMerge(note, bytes, remote, forceMode) {
   try { remote = remote || await safFetch(note.od); } catch (e) { note.od.lastError = e.message; return 'fail'; }
-  let r; try { r = await knMergeRemote(note, bytes, remote); } catch (e) { note.od.lastError = e.message; return 'fail'; }
+  let r; try { r = await knMergeRemote(note, bytes, remote, forceMode); } catch (e) { note.od.lastError = e.message; return 'fail'; }
   if (r.mode === 'ask') return 'ask';
   if (r.mode === 'own') { await persistNoteRecord(note); return note.od.dirty ? 'own' : 'synced'; } // dosyadaki bizim yazımımız
   await persistNoteRecord(note);
@@ -357,22 +380,57 @@ async function safAutoMerge(note, bytes, remote) {
   return r.needWrite ? 'merged' : 'synced';
 }
 window.safAutoMerge = safAutoMerge;
-/* Not açılınca: dosya başka cihazda değiştiyse hemen birleştir; yeni biçimle hiç kaydedilmemişse bir kez kaydet */
-window.safCheckOnOpen = async note => {
-  if (!Native || !note || !note.od || note.od.kind !== 'saf' || note.od.mode === 'copy' || note.od.canWrite === false) return;
-  await new Promise(r => setTimeout(r, 700)); if (ed.note !== note || syncRuns.get(note)) return;
+/* Çakışmada kullanıcının seçimi: dosyadaki notları buraya al, çizimler/sayfalar bu cihazdaki gibi kalsın, sonra kaydet */
+window.safTakeNotes = async (note, bytes) => {
+  const pr = progress('Dosyadaki notlar alınıyor…');
+  const m = await safAutoMerge(note, bytes, null, 'stickies'); pr.done();
+  if (m === 'fail') { toast('Dosya okunamadı: ' + (note.od.lastError || '') + '. Hiçbir şeyin üzerine yazılmadı.', 4500); return; }
+  note.od.verify = false; note.od.state = 'pending';
+  const r = await syncNote(note, ed.note === note ? ed.pdfBytes : bytes);
+  if (r === 'conflict') resolveConflict(note, ed.note === note ? ed.pdfBytes : bytes);
+};
+/* Not açılınca: OneDrive'daki dosyanın İÇERİĞİ okunup bu cihazın son yazdığıyla karşılaştırılır (OneDrive'ın tarih/boyut
+   bilgisi başka cihazdaki değişikliği geç gösterebilir). Değiştiyse hemen birleştirilir; yeni biçimle hiç kaydedilmemişse bir kez kaydedilir. */
+const CHECK_MAX = 80 * 1024 * 1024, checking = new WeakMap();   // açılış denetimi sürerken yazma bekler (Promise nota konamaz: IndexedDB'ye yazılamaz)
+async function safCheckNow(note, manual) {
   const od = note.od;
-  if (!safRemoteChanged(od)) {
-    // 2.7 öncesi kaydedilmiş: notlar gerçek PDF notu olsun ve birleştirme tabanı kurulsun diye bir kez yeniden yaz
-    if (!od.bodyKey && S.od.auto && od.state !== 'conflict') { od.dirty = true; renderStatus('pending'); clearTimeout(ed.syncT); ed.syncT = setTimeout(autoSync, 4000); }
+  let info = null; try { info = JSON.parse(Native.docInfo(od.id) || '{}'); } catch (e) { }
+  const meta = safRemoteChanged(od);
+  if (!Native.docFetch || (info && info.size > CHECK_MAX && !meta && !manual)) return meta ? 'changed' : 'skip';
+  if (ed.note === note) renderStatus('checking');
+  const r = await safAutoMerge(note, ed.note === note ? ed.pdfBytes : null);
+  if (r === 'fail') {
+    // içerik okunamadı: dosyaya bakmadan yazılmaz; kaydederken yeniden denenir
+    od.verify = true; await persistNoteRecord(note);
+    if (meta) { od.state = 'conflict'; await persistNoteRecord(note); }
+  } else od.verify = false;
+  return r;
+}
+window.safCheckNow = safCheckNow;
+window.safCheckOnOpen = async (note, manual) => {
+  if (!Native || !note || !note.od || note.od.kind !== 'saf' || note.od.mode === 'copy' || note.od.canWrite === false) return;
+  if (!manual) { await new Promise(r => setTimeout(r, 700)); if (ed.note !== note) return; }
+  if (syncRuns.get(note) || checking.get(note)) return;
+  const od = note.od;
+  let done; checking.set(note, new Promise(r => { done = r; }));
+  let r;
+  try { r = await safCheckNow(note, manual); } catch (e) { r = 'fail'; od.lastError = e.message; } finally { checking.delete(note); done(); }
+  if (ed.note !== note) return;
+  if (r === 'skip' || r === 'changed') { if (r === 'changed') { od.state = 'conflict'; await persistNoteRecord(note); renderStatus('conflict'); } else renderStatus(); return; }
+  if (r === 'fail') {
+    renderStatus(od.state === 'conflict' ? 'conflict' : undefined);
+    toast('OneDrive’daki dosya denetlenemedi' + (od.lastError ? ' (' + od.lastError + ')' : '') + '. Dosyaya bakılmadan üzerine yazılmayacak; kaydederken yeniden denenecek.', 5200);
     return;
   }
-  renderStatus('busy');
-  const r = await safAutoMerge(note, ed.pdfBytes);
-  if (ed.note !== note) return;
-  if (r === 'ask' || r === 'fail') { od.state = 'conflict'; await persistNoteRecord(note); renderStatus('conflict'); toast(r === 'fail' ? 'Dosyanın güncel sürümü okunamadı; üzerine yazılmayacak. Durum satırına dokunarak tekrar deneyin.' : 'Bu dosya başka bir yerde, notlar dışında da değişmiş. Ne yapılacağını seçmek için üstteki durum satırına dokunun.', 5200); return; }
-  if (r === 'merged') { renderStatus('pending'); if (S.od.auto) { clearTimeout(ed.syncT); ed.syncT = setTimeout(autoSync, 1500); } }
-  else renderStatus('synced');
+  if (r === 'ask') { od.state = 'conflict'; await persistNoteRecord(note); renderStatus('conflict'); toast('Bu dosya başka bir yerde, notlar dışında da değişmiş. Ne yapılacağını seçmek için üstteki durum satırına dokunun.', 5200); return; }
+  if (r === 'merged' || r === 'own') { renderStatus('pending'); if (S.od.auto) { clearTimeout(ed.syncT); ed.syncT = setTimeout(autoSync, 1500); } return; }
+  // 'synced': dosya bu cihazdakiyle aynı
+  if (!od.bodyKey && S.od.auto) {
+    // 2.7 öncesi kaydedilmiş: notlar gerçek PDF notu olsun ve birleştirme tabanı kurulsun diye bir kez yeniden yaz
+    od.dirty = true; renderStatus('pending'); clearTimeout(ed.syncT); ed.syncT = setTimeout(autoSync, 4000); return;
+  }
+  renderStatus('synced');
+  if (manual) toast('OneDrive’daki dosya bu cihazdakiyle aynı; başka yerde değişiklik yok.', 2600);
 };
 /* Dosyadaki sürümü aç (bu cihazdaki çizimler dosyada zaten görünür; düzenlenebilir olmaktan çıkar) */
 async function safOpenRemote(note) {

@@ -243,6 +243,7 @@ function renderStatus(st, err) {
       synced: [IC.cloudOk, P + ' kaydedildi' + (od.syncedAt ? ' · ' + fmtDate(od.syncedAt) : ''), 'ok'],
       pending: [IC.cloud, S.od.auto ? 'Değişiklikler birazdan ' + P + ' yazılacak' : P + ' kaydetmek için dokunun', ''],
       busy: [IC.sync, P + ' kaydediliyor…', 'busy'],
+      checking: [IC.sync, 'Dosya başka yerde değişmiş mi bakılıyor…', 'busy'],
       uploading: [IC.cloud, 'OneDrive önceki kaydı yüklüyor · bitince kaydedilecek', ''],
       conflict: [IC.cloudOff, 'Dosya başka bir yerde değişmiş · çözmek için dokunun', 'warn'],
       error: [IC.cloudOff, P + ' yazılamadı · tekrar denemek için dokunun', 'warn'],
@@ -255,12 +256,14 @@ function renderStatus(st, err) {
     if (err && err.message) el.title = err.message;
   }
   el.append(icon(ic), h('span', null, txt));
+  const bt = $('#barTab'); if (bt) bt.dataset.st = el.classList.contains('warn') ? 'warn' : el.classList.contains('busy') ? 'busy' : '';
 }
 $('#status').addEventListener('click', () => {
   if (!ed.note || !ed.note.od) return;
   if (syncRuns.get(ed.note)) { busyDialog(ed.note, ed.pdfBytes); return; }
   if (ed.note.od.state === 'conflict') resolveConflict(ed.note, ed.pdfBytes);
   else if ((ed.note.od.state === 'error' || ed.note.od.state === 'readonly') && ed.note.od.kind === 'saf') safErrorDialog(ed.note, ed.pdfBytes);
+  else if (ed.note.od.kind === 'saf' && !ed.note.od.dirty && window.safCheckOnOpen) safCheckOnOpen(ed.note, true);   // dosya başka yerde değişti mi, şimdi bak
   else syncNow();
 });
 function busyDialog(note, bytes) {
@@ -1473,3 +1476,23 @@ window.__penButton = on => {
     else ed.ptrs.delete(id);
   }
 };
+
+/* ---------- telefon yan çevrilince: üst çubuk yukarı saklanır, ortadaki küçük dille açılıp kapanır ---------- */
+if (PHONE) (() => {
+  const ev = $('#edView'), bar = ev && ev.querySelector('.ebar'); if (!bar) return;
+  const tab = h('button', { class: 'bartab', id: 'barTab', type: 'button' }, icon('<path d="M6 9l6 6 6-6"/>'));
+  bar.append(tab);
+  // ekran klavyesi açılınca görünüm yatay orana dönebilir; bu yüzden ekranın kendi yönüne bakılır
+  const land = () => { const t = screen.orientation && screen.orientation.type; return t ? t.startsWith('landscape') : screen.width > screen.height; };
+  const setUp = up => {
+    ev.classList.toggle('barup', up);
+    tab.setAttribute('aria-expanded', String(!up)); tab.setAttribute('aria-label', up ? 'Üst çubuğu göster' : 'Üst çubuğu gizle');
+    if (!up) requestAnimationFrame(fitEbar);
+  };
+  let was = null;
+  const apply = () => { const L = land(); if (L === was) return; was = L; document.documentElement.classList.toggle('land', L); setUp(L); };
+  tab.addEventListener('click', e => { e.stopPropagation(); setUp(!ev.classList.contains('barup')); });
+  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', apply);
+  addEventListener('resize', apply); apply();
+  window.phoneBar = setUp;
+})();

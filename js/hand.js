@@ -296,7 +296,7 @@ function handNativeText(text, mode) {
     try { KenarNative.inkCorrectText(JSON.stringify({ id, text, mode })); } catch (e) { clearTimeout(to); HW.reqs.delete(id); rej(e); }
   });
 }
-const MERGE_FIX_SYSTEM = 'Aşağıdaki metin bir kişinin el yazısından tanınıp parça parça birleştirildi. Bölünmüş kelimeleri birleştir; tanıma, yazım ve bariz dil bilgisi hatalarını en az değişiklikle düzelt. Metin Türkçe, İngilizce ya da karışık olabilir: her kelimeyi kendi dilinde bırak; çevirme, yeniden yazma, anlamı değiştirme. Satır sonlarını (paragrafları) koru. Yalnızca düzeltilmiş metni yaz; açıklama ya da tırnak ekleme.';
+const MERGE_FIX_SYSTEM = 'Aşağıdaki metin bir kişinin el yazısından tanınıp parça parça birleştirildi. Yalnız tireyle bölünmüş kelimeleri birleştir; ayrı kelimeleri bitiştirme, kelimeler arasında boşluk olsun; tanıma, yazım ve bariz dil bilgisi hatalarını en az değişiklikle düzelt. Metin Türkçe, İngilizce ya da karışık olabilir: her kelimeyi kendi dilinde bırak; çevirme, yeniden yazma, anlamı değiştirme. Satır sonlarını (paragrafları) koru. Yalnızca düzeltilmiş metni yaz; açıklama ya da tırnak ekleme.';
 window.handRecognize = handRecognize;
 
 /* ---------- yazarken grup toplama ---------- */
@@ -395,10 +395,13 @@ window.handAfterStroke = (pv, s, t0p, t1p) => {
   if (S.hand.mode === 'auto') {
     // satır sonuna (sağ kenara) yakın bırakıldıysa alt satırda devam edilecek: biraz daha bekle
     const nearEdge = g.line.x1 > pv.meta.w - Math.max(50, g.lineH * 2.2);
-    HW.timer = setTimeout(() => { const gg = HW.group; HW.group = null; if (gg) runGroup(gg, true); }, nearEdge ? 3000 : 1500);
-  } else HW.timer = setTimeout(showHandChip, 650);
+    const w = Math.max(1500, handWaitMs());
+    HW.timer = setTimeout(() => { const gg = HW.group; HW.group = null; if (gg) runGroup(gg, true); }, nearEdge ? w + 1500 : w);
+  } else HW.timer = setTimeout(showHandChip, handWaitMs());
 };
 
+/* kalem kaldırıldıktan sonra Düzelt düğmesinin çıkması (Otomatik'te düzeltmenin başlaması) için bekleme — Ayarlar → El yazısı */
+function handWaitMs() { const v = +S.hand.wait; return Math.round((isFinite(v) && v > 0 ? Math.min(10, Math.max(.3, v)) : 1.5) * 1000); }
 function groupScreenBox(pv, bb) {
   const v = ed.view; return { x0: v.tx + (pv.x + bb.x0) * v.z, y0: v.ty + (pv.y + bb.y0) * v.z, x1: v.tx + (pv.x + bb.x1) * v.z, y1: v.ty + (pv.y + bb.y1) * v.z };
 }
@@ -704,7 +707,6 @@ async function selAlignFix() {
       if (row) { row.items.push(it); row.bb = bbUnion(row.bb, it.bb); } else rows.push({ items: [it], bb: { ...it.bb } });
     }
     rows.sort((a, b) => a.bb.y0 - b.bb.y0);
-    const letter = /[\p{L}\p{N}]/u;
     let text = '', prevRow = null;
     for (const row of rows) {
       row.items.sort((a, b) => a.bb.x0 - b.bb.x0);
@@ -712,7 +714,10 @@ async function selAlignFix() {
       for (const it of row.items) {
         if (!it.text) continue;
         if (!prev) line = it.text;
-        else { const gap = it.bb.x0 - prev.bb.x1, fs = Math.min(prev.size || 14, it.size || 14); line += (gap < fs * .3 && letter.test(line.slice(-1)) && letter.test(it.text[0]) ? '' : ' ') + it.text; } // çok yakınsa bölünmüş kelime: bitişik
+        // ayrı parçalar her zaman boşlukla birleşir (kutuların genişliği tahmini olduğundan "yakınlık" kelimeleri bitiştiriyordu);
+        // yalnız tireyle bölünmüş kelime ("kele-" + "me") bitişik yazılır
+        else if (/\p{L}-$/u.test(line) && /^\p{Ll}/u.test(it.text)) line = line.slice(0, -1) + it.text;
+        else line += (/^[.,;:!?…%)\]}»”’]/.test(it.text) ? '' : ' ') + it.text;
         prev = it;
       }
       if (!line) continue;
@@ -723,6 +728,8 @@ async function selAlignFix() {
     if (!text) return;
     let r = { ok: true, lang: HW_TR.test(text) ? 'tr' : 'en', text, corrected: text, kept: [], via: 'merge' };
     try { const d = await handNativeText(text, S.hand.lang); r = { ...d, via: 'merge' }; } catch (e) { }
+    // yazım denetimi kelimeleri bitiştirdiyse (aynı harfler, daha az boşluk) birleştirilmiş metnin boşlukları korunur
+    if (r.corrected && r.corrected.replace(/\s+/g, '') === text.replace(/\s+/g, '') && r.corrected.split(/\s+/).length < text.split(/\s+/).length) r = { ...r, corrected: text };
     // stil: okuma sırasındaki ilk metin kutusundan (yoksa kalem stili / ayarlar)
     const firstBox = rows.flatMap(rw => rw.items).find(it => it.t);
     const st = S.hand.style, base = firstBox ? firstBox.t : null;
@@ -895,6 +902,7 @@ function handSettingsGroups() {
   return [
     sGroup('Mod', [
       sRow('El yazısını düzelt', 'Kalemle yazdığın satırlar metne çevrilir, yazım hataları düzeltilir', segRow([['off', 'Kapalı'], ['button', 'Düğmeyle'], ['auto', 'Otomatik']], S.hand.mode, v => { S.hand.mode = v; saveSettings(); handResetAll(); if (v !== 'off' && HW_NATIVE()) { const s = HW.status || {}; if (s.tr !== 'ready' || s.en !== 'ready') try { KenarNative.inkPrepare(); } catch (e) { } } showSt(); }), true),
+      rangeRow('sHWait', 'Düzelt düğmesi çıkmadan önce bekle', .5, 8, .5, S.hand.wait || 1.5, v => String(v).replace('.', ',') + ' sn', v => { S.hand.wait = v; saveSettings(); }),
       sRow('Hangi belgede çalışsın', 'Ana belge: soldaki (ya da tek açık) belge · Yan belge: “Yan yana belge” ile açılan ikinci belge', handWhereSeg(), true),
       sRow('Dil', null, segRow([['auto', 'Otomatik'], ['tr', 'Türkçe'], ['en', 'İngilizce']], S.hand.lang, v => { S.hand.lang = v; saveSettings(); }), true),
       HW_NATIVE() ? sRow('Cihazda okuma', 'Kelime kelime: her kelime ayrı okunur, önceki kelimeler bağlam olarak verilir; sonra birleştirilir (tek tek düzeltmenin aynısı). Kelimeler aralarındaki boşluktan ayrılır.', segRow([['word', 'Kelime kelime'], ['chunk', '3–4 kelime'], ['line', 'Tüm satır']], S.hand.seg || 'word', v => { S.hand.seg = v; saveSettings(); }, 'Cihazda okuma'), true) : null

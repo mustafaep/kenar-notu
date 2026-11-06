@@ -201,6 +201,20 @@ async function noteBodyFp(note, bytes) {
   const body = JSON.stringify({ src: note.srcHash || '', pages: note.pages.map(p => [p.k, p.i || 0, p.bg || '', Math.round(p.w), Math.round(p.h)]), anns });
   return 'b' + (await knSha(new TextEncoder().encode(body))).slice(0, 40);
 }
+/* Yalnız PDF'ten ibaret bir notun (telefon) /KNBody değeri — kaynağı eski biçimde yazılmış (KNBody'siz) dosyalarda bu değer
+   kaynak dosyanın özetinden üretilir; tablet aynı hesabı kendi yazdığı dosyanın özetiyle yapıp telefonun yalnız not
+   değiştirdiğini anlayabilir (noteBodyFp ile birebir aynı hesap) */
+async function pristineFp(srcHash, pages) {
+  const body = JSON.stringify({ src: srcHash || '', pages: pages.map(p => [p.k, p.i || 0, p.bg || '', Math.round(p.w), Math.round(p.h)]), anns: pages.map(() => 0) });
+  return 'b' + (await knSha(new TextEncoder().encode(body))).slice(0, 40);
+}
+/* Dosyadaki Kenar Notu bilgileri güvenilir mi? Başka bir uygulama (Acrobat, Edge…) dosyayı kaydederken /ModDate'i değiştirir
+   ama bizim /KNBody, /KNSrc değerlerimizi olduğu gibi bırakabilir. /KNMod, yazdığımız /ModDate'in kopyasıdır. */
+function knTrusted(info) {
+  const cu = (info && info.Custom) || {};
+  if (typeof cu.KNMod !== 'string') return true;   // 2.7.0 ve öncesi: denetlenemez
+  return !info.ModDate || info.ModDate === cu.KNMod;
+}
 /* senkronizasyon tabanı: son eşitlemede notların durumu (üç yönlü birleştirme için) */
 const stickySig = n => [n.text || '', Math.round(n.x), Math.round(n.y), Math.round(n.w || 0), n.open !== false ? 1 : 0, n.color || '', n.title || ''].join('\u0001');
 function stickyBase(note) { const b = {}; note.pages.forEach((p, pi) => { const A = note.ann[p.id]; for (const n of (A && A.n) || []) b[n.id] = { sig: stickySig(n), pi }; }); return b; }
@@ -272,6 +286,11 @@ async function buildPdfWith(note, bytes, onProg, lastTry) {
     const body = await noteBodyFp(note, bytes);
     info.set(PDFName.of('KNNotes'), PDFNumber.of(cnt)); info.set(PDFName.of('KNBody'), PDFString.of(body));
     if (note._rev) info.set(PDFName.of('KNRev'), PDFString.of(note._rev));
+    // yalnız PDF + notlar (telefon): hangi dosyadan türediği → tablet kendi yazdığı dosyayı tanır
+    if (notePristine(note) && note.srcHash) info.set(PDFName.of('KNSrc'), PDFString.of(note.srcHash));
+    const d = new Date(), z = v => String(v).padStart(2, '0');
+    const ds = `D:${d.getUTCFullYear()}${z(d.getUTCMonth() + 1)}${z(d.getUTCDate())}${z(d.getUTCHours())}${z(d.getUTCMinutes())}${z(d.getUTCSeconds())}Z`;
+    info.set(PDFName.of('ModDate'), PDFString.of(ds)); info.set(PDFName.of('KNMod'), PDFString.of(ds));
     lastBuildInfo.body = body;
   } catch (e) { }
   return out.save();

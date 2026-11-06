@@ -1,5 +1,5 @@
 /* Kenar Notu · çevrimdışı çalışma için hizmet çalışanı */
-const VERSION = 'kenar-notu-v2.7.0';
+const VERSION = 'kenar-notu-v2.7.1';
 const CORE = [
   './',
   'index.html',

@@ -111,7 +111,7 @@ async function knImportInto(note, doc, bytes) {
       kn.pages.forEach((list, i) => { const p = note.pages[i]; if (p && list.length) { const A = note.ann[p.id] || (note.ann[p.id] = { s: [], t: [], i: [], n: [] }); A.n = list; } });
     } catch (e) { }
   }
-  if (note.od) { note.od.base = stickyBase(note); note.od.bodyKey = await noteBodyFp(note, bytes); }
+  if (note.od) { note.od.base = stickyBase(note); pushBody(note.od, await noteBodyFp(note, bytes)); }
 }
 async function importPdf(file) {
   if (!file) return;

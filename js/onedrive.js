@@ -185,11 +185,12 @@ function resolveConflict(note, bytes) {
   const saf = note.od.kind === 'saf';
   modal({
     title: 'OneDrive’daki dosya değişmiş',
-    text: saf ? 'Bu PDF başka bir yerde, notlar dışında da değişmiş (ör. bilgisayarda düzenlenmiş) ya da güncel sürümü okunamadı. Kendiliğinden birleştirmedim, hiçbir şeyin üzerine yazmadım. Ne yapalım?'
+    text: saf ? 'Bu PDF başka bir yerde, notlar dışında da değişmiş (ör. bilgisayarda düzenlenmiş) ya da güncel sürümü okunamadı. Kendiliğinden birleştirmedim, hiçbir şeyin üzerine yazmadım. Öbür cihazda yalnız not eklediyseniz “Dosyadaki notları al” yeterli: notlar birleşir, bu cihazdaki çizimler korunur (dosyada notlar dışında yapılan değişiklikler kaybolur).'
       : 'Bu PDF siz açtıktan sonra başka bir yerde (bilgisayar, başka bir cihaz) güncellenmiş görünüyor. Ne yapalım?',
     actions: [
       { label: 'Vazgeç' },
       saf ? { label: 'Yeniden dene', onClick: async () => { note.od.state = 'pending'; const r = await syncNote(note, bytes); if (r === 'conflict') resolveConflict(note, ed.note === note ? ed.pdfBytes : bytes); } } : null,
+      saf && window.safTakeNotes ? { label: 'Dosyadaki notları al, çizimlerim kalsın', kind: 'primary', onClick: () => safTakeNotes(note, bytes) } : null,
       { label: 'Notlu kopya kaydet', onClick: async () => { note.od.mode = 'copy'; const r = await syncNote(note, bytes); if (r === 'ok' && note.od.kind !== 'saf') toast('“' + (note.od.copyName || 'notlu kopya') + '” olarak kaydedildi', 3500); } },
       saf && window.safOpenRemote ? { label: 'Dosyadaki sürümü aç', onClick: () => safOpenRemote(note) } : null,
       { label: 'Üzerine yaz (dosyadaki değişiklikler kaybolur)', kind: saf ? 'danger' : 'primary', onClick: async () => { const r = await syncNote(note, bytes, { force: true }); if (r === 'ok') toast('OneDrive’daki dosya güncellendi'); } }
