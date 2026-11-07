@@ -556,6 +556,16 @@ public class MainActivity extends Activity {
                 }
                 Uri u = DocumentsContract.buildDocumentUriUsingTree(t, id);
                 byte[] b = text.getBytes("UTF-8");
+                // Bazı sağlayıcılar (OneDrive) "wt" kipinde dosyayı kısaltmıyor: yeni metin eskisinden kısaysa sonda
+                // eski içerikten artık kalır ve JSON bozulur. Sona boşluk eklenip boy eskisine eşitlenir (JSON'da geçerli).
+                long cur = treeStatObj(t, id).optLong("size", -1);
+                if (cur > b.length && cur - b.length < 16L * 1024 * 1024) {
+                    byte[] p = new byte[(int) cur];
+                    System.arraycopy(b, 0, p, 0, b.length);
+                    java.util.Arrays.fill(p, b.length, p.length, (byte) ' ');
+                    p[p.length - 1] = (byte) '\n';
+                    b = p;
+                }
                 try (OutputStream out = getContentResolver().openOutputStream(u, "wt")) {
                     if (out == null) throw new IOException("Dosyaya yazılamadı");
                     out.write(b); out.flush();

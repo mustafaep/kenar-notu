@@ -219,6 +219,12 @@ async function syncSaf(note, bytes, opt = {}) {
     delete note._adopted;
     od.rev = (od.rev || 0) + 1; note._rev = knDevId() + ':' + od.rev;
     let out; try { out = await buildPdf(note, bytes); } finally { delete note._rev; }
+    if (od.mode !== 'copy') {
+      // dosya kısaltılamazsa sonda artık kalmasın: yeni içerik, dosyanın şimdiki boyuna doldurulur (padPdfTo)
+      let cur = -1; try { const m = JSON.parse(Native.docInfo(od.id) || '{}'); if (m && m.size >= 0) cur = +m.size; } catch (e) { }
+      const target = Math.max(cur, od.size || 0);
+      if (target > out.length && target - out.length < 64 * 1024 * 1024) out = padPdfTo(out, target);
+    }
     const body = lastBuildInfo.body; const blob = new Blob([out], { type: 'application/pdf' });
     const hash = await sha256Hex(out);
     if (od.mode !== 'copy' && hash && od.hash === hash && !opt.force) {

@@ -1,6 +1,6 @@
 KENAR NOTU — ANDROID KURULUM NOTLARI
 =====================================
-Sürüm 2.9.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
+Sürüm 2.9.1 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
 
 
 A) APK'YI OLUŞTURMA (bilgisayarda, bir kez)
@@ -112,6 +112,19 @@ G) YENİ (2.2.0)
   (ya da "Araç çubuğunu düzenle" listesinden "Kaldır").
 - PDF renklerini ters çevirme: ⋯ → "PDF renklerini ters çevir" (gece okuma). İsterseniz araç çubuğuna da
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
+
+
+CC) DÜZELTME (2.9.1) — tablette kaydedilen PDF bilgisayarda (Edge) açılmıyordu
+-------------------------------------------------------------------------------
+- Sebep: OneDrive'ın Android uygulaması, dosyanın üzerine yazılırken "önce boşalt" isteğini kabul edip dosyayı
+  kısaltmıyor. Yeni PDF eskisinden kısaysa (ör. bir notu silince) dosyanın sonunda eski sürümden bir parça kalıyordu.
+  Tabletteki okuyucu bunu görmezden geliyordu; Edge, Acrobat gibi okuyucular dosyayı sondan okuduğu için açamıyordu.
+- Düzeltme: Yeni PDF eskisinden kısaysa, içine zararsız bir boşluk yorumu eklenip boyu dosyanın şimdiki boyuna
+  eşitleniyor; böylece sağlayıcı kısaltsa da kısaltmasa da geride artık kalmıyor. Aynı önlem tuvalin .canvas
+  dosyası için de var (sona boşluk). Dosya bu yüzden hiç küçülmez; en büyük hâlinde kalır.
+- Daha önce bozulmuş dosyalar: dosyayı tablette bir kez açıp kaydetmek onarır (yeni içerik artığın tamamının
+  üzerine yazılır). Bilgisayardaki "English Vocabulary in Use.pdf" ayrıca elle onarılabilir.
+- APK'yı APK-OLUSTUR.bat ile yeniden oluşturun (Android tarafında da değişiklik var).
 
 
 BB) YENİ (2.9.0) — sayfayı sağa-sola kaydırma, gizlenen üst çubuk ve kenar düğmeleri, yeni tuval

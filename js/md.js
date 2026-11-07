@@ -470,7 +470,8 @@ async function refreshFromVault(n, manual) {
 }
 /* tuval dosyası: belgenin yanında “Ad.canvas” */
 const cvName = n => (n.vault.name || n.name).replace(/\.(md|markdown|pdf)$/i, '') + '.canvas';
-async function shaText(t) { return knSha(te.encode(t)); }
+// sondaki boşluklar sayılmaz: Android dosyayı kısaltamayınca .canvas'ın sonu boşlukla doldurulur (treeWrite)
+async function shaText(t) { return knSha(te.encode(String(t).replace(/\s+$/, ''))); }
 async function vaultCanvasRead(n) {
   const v = n.vault; v.cv = v.cv || {};
   if (!v.cv.doc) { const f = treeList(v.tree, v.parent).find(x => !x.dir && x.name === cvName(n)); if (f) v.cv.doc = f.id; }

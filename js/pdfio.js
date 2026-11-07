@@ -307,6 +307,36 @@ async function shareBlob(name, blob) {
   if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); return true; } catch (e) { if (e && e.name === 'AbortError') return true; } }
   return false;
 }
+/* Dosyayı yerinde yeniden yazarken yeni PDF eskisinden kısaysa, son çapraz başvuru bölümünün önüne zararsız
+   bir PDF yorumu (% ve boşluk) eklenip boyu eskisine eşitlenir. Neden: OneDrive'ın Android sağlayıcısı "wt"
+   (önce boşalt) kipini kabul edip dosyayı kısaltmıyor; kısa içerik uzun dosyanın üzerine yazılınca sonda eski
+   sürümden artık kalıyor, Edge/Acrobat gibi okuyucular dosyayı sondan okuduğu için açamıyordu.
+   Yalnız son "startxref" sayısı kayar; nesnelerin konumları değişmez. */
+function padPdfTo(out, target) {
+  const u = out instanceof Uint8Array ? out : new Uint8Array(out);
+  let P = target - u.length;
+  if (!(P > 0)) return u;
+  const tailStart = Math.max(0, u.length - 256), tail = new TextDecoder('latin1').decode(u.subarray(tailStart));
+  const m = /startxref\s+(\d+)\s+%%EOF\s*$/.exec(tail);
+  if (!m) return u;
+  const N = +m[1]; if (!(N > 0 && N < u.length)) return u;
+  const numAt = tailStart + m.index + m[0].indexOf(m[1]), oldLen = m[1].length;
+  let num = String(N + P);
+  // sayının basamak sayısı değişirse boyu tutturmak için dolguyu ayarla
+  for (let k = 0; k < 3; k++) { const d = String(N + P).length - oldLen; const P2 = target - u.length - d; if (P2 === P) break; P = Math.max(1, P2); }
+  num = String(N + P);
+  const pad = new Uint8Array(P); pad.fill(32);
+  for (let i = 0; i < P; i += 80) pad[i] = 37;          // her satır % ile başlar (yorum)
+  for (let i = 79; i < P; i += 80) pad[i] = 10;
+  pad[P - 1] = 10;
+  if (P === 1) pad[0] = 10;
+  const head = u.subarray(0, N), mid = u.subarray(N, numAt), rest = u.subarray(numAt + oldLen);
+  const enc = new TextEncoder().encode(num);
+  const r = new Uint8Array(head.length + P + mid.length + enc.length + rest.length);
+  let o = 0; r.set(head, o); o += head.length; r.set(pad, o); o += P; r.set(mid, o); o += mid.length; r.set(enc, o); o += enc.length; r.set(rest, o);
+  return r;
+}
+window.padPdfTo = padPdfTo;
 async function exportNote(note, bytes, share) {
   const pr = progress('PDF hazırlanıyor…');
   try {
