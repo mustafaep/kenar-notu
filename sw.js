@@ -1,5 +1,5 @@
 /* Kenar Notu · çevrimdışı çalışma için hizmet çalışanı */
-const VERSION = 'kenar-notu-v2.9.2';
+const VERSION = 'kenar-notu-v3.0.0';
 const CORE = [
   './',
   'index.html',
@@ -13,6 +13,7 @@ const CORE = [
   'vendor/pdfjs/pdf.worker.min.js',
   'js/util.js',
   'js/ink.js',
+  'js/covers.js',
   'js/pdfio.js',
   'js/onedrive.js',
   'js/library.js',
@@ -36,6 +37,7 @@ const CORE = [
   'js/mdparse.js',
   'js/canvas.js',
   'js/md.js',
+  'js/notebook.js',
   'js/edgeui.js',
   'fonts/kalam-latin-300-normal.woff2',
   'fonts/kalam-latin-ext-300-normal.woff2',

@@ -76,7 +76,8 @@ function newMeta(note, thumb, old) {
     id: note.id, name: note.name, created: note.created, updated: note.updated, opened: (old && old.opened) || note.opened || note.updated,
     pageCount: note.pages.length, hasPdf: note.pages.some(p => p.k === 'pdf'), thumb: thumb !== undefined ? thumb : (old && old.thumb) || null,
     sample: !!note.sample, fav: !!(old && old.fav), folder: old ? (old.folder || null) : (note.folder !== undefined ? note.folder : curFolder()), odId: note.od ? note.od.id : null, odETag: note.od ? note.od.eTag : null,
-    odState: note.od ? note.od.state || null : null
+    odState: note.od ? note.od.state || null : null,
+    cover: !!(note.cover || (note.pages && note.pages[0] && note.pages[0].bg === 'cover'))
   };
 }
 async function persistNoteRecord(note, thumb) {
@@ -230,7 +231,7 @@ async function renderLibrary() {
   for (const m of list) {
     const more = h('button', { class: 'ibtn', type: 'button', 'aria-label': m.name + ' seçenekleri' }, icon(IC.dotsV));
     more.addEventListener('click', e => { e.stopPropagation(); noteMenu(more, m); });
-    const thumb = h('div', { class: 'thumb' }, m.thumb ? h('img', { src: m.thumb, alt: '' }) : h('span', { class: 'ph' }, 'Önizleme yok'));
+    const thumb = h('div', { class: 'thumb' + (m.cover ? ' book' : '') }, m.thumb ? h('img', { src: m.thumb, alt: '' }) : h('span', { class: 'ph' }, 'Önizleme yok'));
     if (m.sample) thumb.append(h('span', { class: 'badge' }, 'Örnek'));
     if (m.kind === 'md') thumb.append(h('span', { class: 'kindb' }, 'MD'));
     if (m.fav) thumb.append(h('span', { class: 'starb', title: 'Favori' }, icon(IC.star)));
@@ -264,6 +265,7 @@ function renderSelBar() {
 function noteMenu(anchor, m) {
   openPop(anchor, () => menu([
     { label: 'Yeniden adlandır', icon: IC.rename, onClick: () => renameNote(m) },
+    window.coverForNote ? { label: m.cover ? 'Kapağı değiştir' : 'Kapak ekle', icon: IC.cover, sub: m.hasPdf || m.kind === 'md' ? 'PDF’e dokunmadan kitaplıkta görünür' : 'Defterin ilk sayfası olur', onClick: () => coverForNote(m.id) } : null,
     { label: m.fav ? 'Favorilerden çıkar' : 'Favorilere ekle', icon: IC.star, onClick: async () => { m.fav = !m.fav; await Store.put('meta', m); renderLibrary(); } },
     { label: 'Klasöre taşı…', icon: IC.folder, sub: folderById(m.folder) ? 'Şu an: ' + folderById(m.folder).name : 'Klasörsüz', onClick: () => folderPicker(`“${m.name}” nereye taşınsın?`, null, fid => moveNotesTo([m.id], fid)) },
     { label: 'Seç', icon: IC.checkSq, onClick: () => { libState.sel = new Set([m.id]); renderLibrary(); } },

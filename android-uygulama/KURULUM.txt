@@ -1,6 +1,6 @@
 KENAR NOTU — ANDROID KURULUM NOTLARI
 =====================================
-Sürüm 2.9.2 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
+Sürüm 3.0.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
 
 
 A) APK'YI OLUŞTURMA (bilgisayarda, bir kez)
@@ -112,6 +112,29 @@ G) YENİ (2.2.0)
   (ya da "Araç çubuğunu düzenle" listesinden "Kaldır").
 - PDF renklerini ters çevirme: ⋯ → "PDF renklerini ters çevir" (gece okuma). İsterseniz araç çubuğuna da
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
+
+
+EE) YENİ (3.0.0) — kapaklar ve sayfa şablonları
+------------------------------------------------
+- YENİ DEFTER: Kitaplık → Yeni → "Yeni defter". Solda canlı önizleme, sağda iki sekme:
+  · Kapak: defterin adı, alt başlık (isteğe bağlı), yıl; 9 kapak ve 8 renk takımı ya da "Kapaksız".
+    Kapaklar: Ebru, Bez cilt, Kraft (lastik bantlı, el yazısı etiket), Kompozisyon, Çini, Sözlük (harf sekmeli),
+    Topoğrafya, Kütüphane kartı, Sade. Renkler: Lacivert, Bordo, Zümrüt, Hardal, Gül kurusu, Antrasit,
+    Çini mavisi, Adaçayı. Son seçimin hatırlanır.
+  · Sayfa şablonu: Temel (boş, çizgili, kareli, noktalı) · Ders (Cornell, okuma notları, zihin haritası) ·
+    Dil (kelime defteri tekrar halkalarıyla, gramer, yazma/essay) · Sınav (hata defteri) ·
+    Plan (haftalık, günlük, görüşme/toplantı).
+  Kapaklı defter açılınca yazmaya ilk sayfadan başlanır; kapak defterin ilk sayfasıdır ve kitaplıkta cilt
+  görünümüyle durur.
+- VAR OLAN NOTLARA KAPAK: Kitaplıkta notun ⋮ menüsü → "Kapak ekle / Kapağı değiştir"; açık notta ⋯ → "Kapak ekle";
+  sayfalar panelinde ilk sayfanın menüsü → "Kapağı düzenle". "Kapağı kaldır" da var.
+  · Kendi defterlerinde kapak ilk sayfa olarak eklenir.
+  · PDF ve Markdown notlarında kapak YALNIZ KİTAPLIKTA görünür; PDF dosyasına (OneDrive'daki kitaplarına)
+    dokunulmaz. İstersen "Kapağı ilk sayfa olarak da ekle" ile PDF'e sayfa olarak da eklenir.
+- SAYFA EKLERKEN: Sayfa ekle menüsünde bütün şablonlar kategorili; en üstte "Öncekiyle aynı" (ör. kelime
+  defterine yeni kelime sayfası tek dokunuşla).
+- PDF'e aktarırken kapak ve şablon sayfaları yüksek çözünürlüklü resim olarak gider (kapak JPEG, şablon PNG).
+- Tasarımlar uygulamanın kendi çizim koduyla çizilir (covers.js); ekranda, küçük resimde ve PDF'te aynıdır.
 
 
 DD) DÜZELTME (2.9.2) — ayarlar kaydedilmiyordu, arama paneli kapanmıyordu

@@ -53,6 +53,18 @@ function bgToPdf(page, meta, rgb) {
   if (bg === 'grid') { for (let x = 20; x < meta.w; x += 20) page.drawLine({ start: { x, y: 0 }, end: { x, y: H }, thickness: .6, color: rgb(.86, .886, .925) }); for (let y = 20; y < H; y += 20) page.drawLine({ start: { x: 0, y: H - y }, end: { x: meta.w, y: H - y }, thickness: .6, color: rgb(.86, .886, .925) }); }
   if (bg === 'dots') { for (let x = 20; x < meta.w; x += 20) for (let y = 20; y < H; y += 20) page.drawCircle({ x, y: H - y, size: .9, color: rgb(.725, .765, .82) }); }
 }
+/* Kapak ve şablon sayfaları (covers.js) resim olarak gömülür: kapak JPEG, ince çizgili şablonlar PNG */
+async function bgToPdfAny(out, page, meta) {
+  const bg = meta.bg || 'plain';
+  if (bg !== 'cover' && !(window.TPLS && TPLS[bg])) return bgToPdf(page, meta, PDFLib.rgb);
+  const cover = bg === 'cover', sc = cover ? 2.6 : 3;
+  const c = document.createElement('canvas'); c.width = Math.ceil(meta.w * sc); c.height = Math.ceil(meta.h * sc);
+  drawBg(c.getContext('2d'), meta, sc);
+  const blob = await new Promise(r => c.toBlob(r, cover ? 'image/jpeg' : 'image/png', .9));
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const img = cover ? await out.embedJpg(bytes) : await out.embedPng(bytes);
+  page.drawImage(img, { x: 0, y: 0, width: meta.w, height: meta.h });
+}
 /* Bir dikdörtgeni (sayfa koordinatı) raster olarak çizer; döndürülmüş sayfalar için resmi önceden çevirir */
 async function rasterToPdf(out, page, T, rot, x, y, w, hgt, paint, scale = 4) {
   let c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w * scale)); c.height = Math.max(1, Math.ceil(hgt * scale));
@@ -256,7 +268,7 @@ async function buildPdfWith(note, bytes, onProg, lastTry) {
     try {
       let page;
       if (myCi >= 0) { const cp = copied ? copied[myCi] : (await out.copyPages(src, [meta.i - 1]))[0]; page = out.addPage(cp); stripStickyAnnots(out, page); }
-      else { page = out.addPage([meta.w, meta.h]); bgToPdf(page, meta, PDFLib.rgb); }
+      else { page = out.addPage([meta.w, meta.h]); await bgToPdfAny(out, page, meta); }
       const M = meta.k === 'pdf' && meta.m ? meta.m : [1, 0, 0, -1, 0, meta.h]; const inv = invert(M);
       const T = (x, y) => [inv[0] * x + inv[2] * y + inv[4], inv[1] * x + inv[3] * y + inv[5]];
       await drawAnnotationsTo(out, page, meta, A, T, meta.k === 'pdf' ? (meta.rot || 0) : 0);

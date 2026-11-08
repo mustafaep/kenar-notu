@@ -10,7 +10,7 @@ function newMenu(anchor) {
   openPop(anchor, () => menu([
     { label: 'PDF ekle', icon: IC.fileIn, sub: DV.Daki + ' dosyalardan', onClick: () => $('#fileIn').click() },
     { label: 'OneDrive’dan aç', icon: IC.cloud, sub: 'Değişiklikler dosyaya yazılır', onClick: () => openOneDrive() },
-    { label: 'Boş not', icon: IC.blank, sub: 'Çizgili, kareli, noktalı', onClick: () => blankMenu(anchor) },
+    { label: 'Yeni defter', icon: IC.blank, sub: 'Kapak ve sayfa şablonu seç', onClick: () => blankMenu(anchor) },
     { label: 'Klasör', icon: IC.folderPlus, sub: curFolder() ? 'Bu klasörün içinde' : 'Notlarınızı gruplayın', onClick: () => newFolder(curFolder()) }
   ]));
 }

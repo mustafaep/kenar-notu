@@ -130,6 +130,7 @@ function pageMenu(anchor, i) {
   const pv = ed.pvs[i]; if (!pv) return; const n = ed.pvs.length;
   openPop(anchor, () => menu([
     { label: 'Sayfaya git', icon: IC.chevR, sub: `Sayfa ${i + 1} / ${n}`, onClick: () => { closePgrid(); goToPage(i); afterJump(); } },
+    i === 0 && !EMBED && window.coverForNote ? { label: pv.meta.bg === 'cover' ? 'Kapağı düzenle' : 'Kapak ekle', icon: IC.cover, sub: pv.meta.bg === 'cover' ? 'Başlık, desen, renk' : 'Deftere kapak sayfası', onClick: () => { if (typeof closePgrid === 'function' && pgridEl) closePgrid(); coverForNote(ed.note.id); } } : null,
     { label: 'Sonrasına sayfa ekle…', icon: IC.plus, onClick: () => addPagePicker(anchor.isConnected ? anchor : $('#pagesBtn'), i + 1) },
     { label: 'Önüne sayfa ekle…', icon: IC.plus, onClick: () => addPagePicker(anchor.isConnected ? anchor : $('#pagesBtn'), i) },
     { label: 'Sayfayı düzelt', icon: IC.fixText, sub: 'El yazısını yapay zekâ ile oku ve düzelt', onClick: () => { if (typeof closePgrid === 'function') closePgrid(); goToPage(i); setTimeout(() => pageFixStart(ed.pvs[i]), 200); } },

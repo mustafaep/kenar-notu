@@ -213,6 +213,13 @@ Notlar belgenin yanındaki `Ad.canvas` tuvaline (Obsidian Canvas / JSON Canvas b
 PDF sayfasına bağlı kartlar belgede işaretlenir. Tuval sayfanın üzerinde kayan, boyutlanan bir pencerede açılır. Yazmadan önce
 dosya okunur ve kart kart birleştirilir. İkinci belge de istenirse aynı kayan pencerede açılır.
 
+### Kapaklar ve şablonlar
+
+Yeni → **Yeni defter**: 9 kapak (ebru, bez cilt, kraft, kompozisyon, çini, sözlük, topoğrafya, kütüphane kartı, sade),
+8 renk takımı ve 14 sayfa şablonu (Cornell, kelime defteri, gramer, yazma, hata defteri, okuma notları, zihin haritası,
+haftalık/günlük plan, görüşme notu ve temel kâğıtlar). Var olan notlara da kapak eklenir; PDF'lerde kapak yalnız
+kitaplıkta görünür, dosyaya dokunulmaz.
+
 ### Sayfa kaydırma ve kenar düğmeleri
 
 Sayfa ekrana sığsa da parmakla yana sürüklenir ya da alttaki konum şeridiyle sağa-sola kaydırılır (yön kilidi sayesinde
