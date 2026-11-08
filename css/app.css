@@ -1252,3 +1252,18 @@ html:not(.phone) .bartab[data-st=busy]::after{background:var(--accent)}
 .nball{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink)}
 .nball input{width:18px;height:18px;accent-color:var(--accent)}
 @media (max-width:720px){.nbptg{grid-template-columns:1fr}.nbprow>.nblab{width:auto}.nbpage.big canvas{width:140px!important;height:198px!important}.nbpv .nbpage.big{display:flex}}
+/* 3.2: kalem stilleri */
+.stylepick .seg,.selstyle .seg{flex-wrap:wrap}
+.stylecell{display:flex;align-items:stretch;gap:2px}
+.stylecell .styleitem{flex:1;min-width:0}
+.stylecell .styleedit{width:38px;height:auto;align-self:stretch;border-radius:10px;color:var(--muted)}
+.stylecell .styleedit:hover{color:var(--ink);background:var(--chrome-2)}
+.styleed{min-width:300px;max-width:400px}
+.styleprev{min-height:58px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;border:1px solid var(--line);padding:8px 14px;overflow:hidden}
+.prechips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.prechip{min-width:36px;height:34px;padding:0 9px;border-radius:9px;border:1px solid var(--line);background:var(--chrome);color:var(--ink);font:500 14px var(--f-ui,system-ui);cursor:pointer}
+.prechip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.prechips input{width:110px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--chrome);color:var(--ink);padding:0 8px;font:inherit}
+.selstyle{min-width:300px;max-width:420px}
+.selqk{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.selsz{min-width:56px;text-align:center;font-variant-numeric:tabular-nums;color:var(--muted)}

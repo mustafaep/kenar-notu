@@ -213,6 +213,13 @@ Notlar belgenin yanındaki `Ad.canvas` tuvaline (Obsidian Canvas / JSON Canvas b
 PDF sayfasına bağlı kartlar belgede işaretlenir. Tuval sayfanın üzerinde kayan, boyutlanan bir pencerede açılır. Yazmadan önce
 dosya okunur ve kart kart birleştirilir. İkinci belge de istenirse aynı kayan pencerede açılır.
 
+### Kalem stilleri
+
+Stiller takımlar hâlinde: İngilizce / dil, Ders notu (başlık, madde, tanım, önemli, soru, kural, özet…), Toplantı ve plan
+(gündem, karar, yapılacak, kişi/tarih) ve kendi stillerin. Her stil düzenlenebilir (renk, yazı tipi, kalınlık, boyut,
+satır başı işareti). Düzeltilmiş yazılar kementle seçilip başka stile geçirilebilir ya da klavyeyle düzenlenebilir;
+Sayfayı düzelt "Not türü"ne göre genel notları da doğru görevlerle yazar.
+
 ### Kapaklar ve şablonlar
 
 Yeni → **Yeni defter**: 9 kapak (ebru, bez cilt, kraft, kompozisyon, çini, sözlük, topoğrafya, kütüphane kartı, sade),

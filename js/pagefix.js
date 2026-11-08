@@ -142,7 +142,7 @@ function pfPicker(pre) {
     const pvs = [...sel].sort((a, b) => a - b).map(i => ed.pvs[i]).filter(Boolean);
     if (!pvs.length) return;
     pfPickClose();
-    const job = await pageFixRun(pvs, { dest, boost: { ...B, ask: askOpen ? B.ask : '' } });
+    const job = await pageFixRun(pvs, { dest, kind: S.pageFix.kind || 'auto', boost: { ...B, ask: askOpen ? B.ask : '' } });
     if (!job) return;
     if (S.pageFix.review === false && (!job.sheet || plSheetReady(job))) plApply(job); else plOpen(job);
   });
@@ -155,6 +155,8 @@ function pfPicker(pre) {
     grid,
     h('div', { class: 'pgrid-foot pfpfoot' },
       h('div', { class: 'pfopts' },
+        h('div', { class: 'pfdest' }, h('span', { class: 'lbl' }, 'Not türü'), segRow(PL_KINDS, S.pageFix.kind || 'auto', v => { S.pageFix.kind = v; saveSettings(); }, 'Not türü'),
+          h('small', { class: 'muted' }, 'Yazılar bu türün kalem stilleriyle yazılır (Otomatik: yapay zekâ sayfaya bakıp seçer, stiller araç çubuğundaki seçili takımdan)')),
         h('div', { class: 'pfdest' }, h('span', { class: 'lbl' }, 'Düzenlenen yazı'), destWrap, hint),
         h('div', { class: 'pfdest pfboost' }, h('span', { class: 'lbl' }, icon(IC.spark), 'Geliştir'), h('span', { class: 'pfbs' }, cEx, cExp, cSheet, cAsk), bhint),
         askIn),
@@ -173,7 +175,7 @@ async function pageFixRun(pvs, opts = {}) {
   const list = [...new Set(pvs)].filter(pv => ed.pvs.includes(pv)).sort((a, b) => ed.pvs.indexOf(a) - ed.pvs.indexOf(b)).slice(0, PF_MAX);
   if (!list.length) return null;
   // kendiliğinden düzeltmede (quiet) geliştirme ve çalışma kağıdı yok
-  const job = PF.job = plNewJob(list, opts.dest || (opts.quiet ? (S.pageFix.dest === 'new' ? 'new' : 'replace') : pfDest()), opts.quiet ? null : opts.boost);
+  const job = PF.job = plNewJob(list, opts.dest || (opts.quiet ? (S.pageFix.dest === 'new' ? 'new' : 'replace') : pfDest()), opts.quiet ? null : opts.boost, opts.kind || S.pageFix.kind || 'auto');
   job.reading = true;
   const total = list.length;
   const chip = opts.quiet ? null : pfBusyChip(total > 1 ? total + ' sayfa okunuyor…' : 'Sayfa okunuyor…', () => plStop(job));
@@ -250,7 +252,7 @@ window.pageFixReset = () => { clearTimeout(PF.autoT); pfPickClose(); pfClose(); 
 
 /* ---------- ayarlar ---------- */
 function pageFixSettingsGroups() {
-  const c = aiCfg(), P = S.pageFix, B = P.boost, M = plStyleMap();
+  const c = aiCfg(), P = S.pageFix, B = P.boost, M = plStyleMap(plKindSet(P.kind || 'auto'));
   const askIn = h('input', { type: 'text', class: 'pfask', maxlength: '400', 'aria-label': 'Kendi isteğin', placeholder: 'Ör. eş anlamlılarını da yaz · B1 seviyesinde olsun' });
   askIn.value = B.ask; askIn.addEventListener('input', () => { B.ask = askIn.value; saveSettings(); });
   const gsel = h('select', { 'aria-label': 'Gemini modeli' }, ...G_MODELS.map(([v, l]) => h('option', { value: v }, l)));
@@ -262,6 +264,8 @@ function pageFixSettingsGroups() {
   const sample = s => h('span', { class: 'plsw', style: { color: s.color, fontFamily: FONTS[s.font] || FONTS.sans, fontWeight: String(s.wt) } }, (s.prefix ? s.prefix + ' ' : '') + 'Aa');
   return [
     sGroup('Düzen', [
+      sRow('Not türü', 'Yapay zekâ yazıların görevini bu türe göre seçer; yazılar bu türün kalem stili takımıyla yazılır. Otomatik: sayfaya bakıp kendisi anlar.',
+        segRow(PL_KINDS, P.kind || 'auto', v => { P.kind = v; saveSettings(); }, 'Not türü'), true),
       sRow('Düzenlenen yazı nereye', 'Yazının yerine: el yazısı silinir, temiz yazı aynı sayfadan başlar (art arda seçilen sayfalar birlikte akar; PDF sayfalarında ardından gelen yeni sayfaya yazılır). Yeni sayfalara: seçilen sayfalar olduğu gibi kalır.',
         segRow([['replace', 'Yazının yerine'], ['new', 'Yeni sayfalara'], ...(B.sheet ? [['none', 'Yalnız çalışma kağıdı']] : [])], pfDest(), v => { P.dest = v; saveSettings(); }, 'Düzenlenen yazı nereye'), true),
       toggleRow('pfFixes', 'Düzeltmeleri sonuna yaz', P.fixes !== false, v => { P.fixes = v; saveSettings(); }, 'Kırmızı kalemle: ✗ yazdığın · ✓ doğrusu · kısa açıklama'),
@@ -276,7 +280,7 @@ function pageFixSettingsGroups() {
       sRow('Kendi isteğin', 'Sayfa seçme ekranında “Kendi isteğin” açıkken gönderilir', askIn, true)
     ], 'Bunları sayfa seçme ekranındaki Geliştir düğmeleriyle de açıp kapatabilirsin. Çalışma kağıdında sorular Metin, şıklar Anlamı, yönergeler Açıklama stiliyle yazılır. Sayfadan çıkınca kendiliğinden düzeltmede geliştirme yapılmaz.'),
     sGroup('Görevler ve kalem stilleri', PL_ROLES.map(([r, lab]) => { const s = M[r]; return sRow(lab, s.borrowed ? s.name + ' stiliyle' : s.name, sample(s)); }),
-      'Yapay zekâ her yazının görevini söyler, uygulama o görevin kalem stilini kullanır. Stiller kalem favorilerinden gelir (adında başlık, terim, anlam, örnek, çeviri, ipucu geçenler); bulunamayan görev için hazır ders notu stili kullanılır.'),
+      'Yapay zekâ her yazının görevini söyler, uygulama o görevin kalem stilini kullanır. Stiller seçili not türünün takımından gelir (araç çubuğu → Stiller); takımda olmayan görev için öbür takımlardaki en yakın stil kullanılır. Stilleri orada düzenleyebilirsin.'),
     sGroup('Ne zaman', [
       sRow('Sayfa ne zaman düzeltilsin', 'Sayfadan çıkınca: yazdığın sayfadan çıktığında o sayfa arka planda hazırlanır', segRow([['manual', 'Ben isteyince'], ['leave', 'Sayfadan çıkınca']], P.when || 'manual', v => { P.when = v; saveSettings(); }, 'Ne zaman'), true)
     ]),

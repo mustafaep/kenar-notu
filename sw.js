@@ -1,5 +1,5 @@
 /* Kenar Notu · çevrimdışı çalışma için hizmet çalışanı */
-const VERSION = 'kenar-notu-v3.1.0';
+const VERSION = 'kenar-notu-v3.2.0';
 const CORE = [
   './',
   'index.html',
@@ -38,7 +38,16 @@ const CORE = [
   'js/canvas.js',
   'js/md.js',
   'js/notebook.js',
+  'js/styles.js',
   'js/edgeui.js',
+  'fonts/onest-latin-700-normal.woff2',
+  'fonts/onest-latin-ext-700-normal.woff2',
+  'fonts/literata-latin-400-normal.woff2',
+  'fonts/literata-latin-ext-400-normal.woff2',
+  'fonts/literata-latin-400-italic.woff2',
+  'fonts/literata-latin-ext-400-italic.woff2',
+  'fonts/patrick-hand-latin-400-normal.woff2',
+  'fonts/patrick-hand-latin-ext-400-normal.woff2',
   'fonts/kalam-latin-300-normal.woff2',
   'fonts/kalam-latin-ext-300-normal.woff2',
   'fonts/kalam-latin-400-normal.woff2',

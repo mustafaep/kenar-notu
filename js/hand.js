@@ -873,7 +873,7 @@ function handSettingsRows() {
     h('small', { class: 'segcap' }, 'Dil'),
     segRow([['auto', 'Otomatik'], ['tr', 'Türkçe'], ['en', 'İngilizce']], S.hand.lang, v => { S.hand.lang = v; saveSettings(); }),
     h('small', { class: 'segcap' }, 'Düzeltilen metnin yazı tipi'),
-    segRow([['hand', 'El yazısı'], ['kalam', 'Kalam'], ['sans', 'Yalın'], ['serif', 'Tırnaklı']], S.hand.font, v => { S.hand.font = v; saveSettings(); }),
+    segRow(FONT_OPTS, S.hand.font, v => { S.hand.font = v; saveSettings(); }),
     rangeRow('hScale', 'Metin boyutu', 50, 200, 5, S.hand.scale, v => '%' + Math.round(v), v => { S.hand.scale = v; saveSettings(); }),
     toggleRow('hCont', 'Metnin devamına ekle', S.hand.cont !== false, v => { S.hand.cont = v; saveSettings(); showSt(); }, 'Düzeltilmiş bir metnin yanına ya da altına yazdığın devam o metne eklenir'),
     S.hand.style ? h('p', { class: 'notice' }, 'Seçili kalem stili: ' + S.hand.style.name + ' (' + (FONT_LABEL[S.hand.style.font] || '') + ' ' + String(S.hand.style.size).replace('.', ',') + ' pt). Yazı tipi ve boyut bu stilden gelir; araç çubuğundaki stil düğmesinden değiştirin.') : null,
@@ -908,7 +908,7 @@ function handSettingsGroups() {
       HW_NATIVE() ? sRow('Cihazda okuma', 'Kelime kelime: her kelime ayrı okunur, önceki kelimeler bağlam olarak verilir; sonra birleştirilir (tek tek düzeltmenin aynısı). Kelimeler aralarındaki boşluktan ayrılır.', segRow([['word', 'Kelime kelime'], ['chunk', '3–4 kelime'], ['line', 'Tüm satır']], S.hand.seg || 'word', v => { S.hand.seg = v; saveSettings(); }, 'Cihazda okuma'), true) : null
     ], st),
     sGroup('Düzeltilen metin', [
-      sRow('Yazı tipi', S.hand.style ? 'Seçili kalem stili kullanılıyor: ' + S.hand.style.name : null, segRow([['hand', 'El yazısı'], ['kalam', 'Kalam'], ['sans', 'Yalın'], ['serif', 'Tırnaklı']], S.hand.font, v => { S.hand.font = v; saveSettings(); }), true),
+      sRow('Yazı tipi', S.hand.style ? 'Seçili kalem stili kullanılıyor: ' + S.hand.style.name : null, segRow(FONT_OPTS, S.hand.font, v => { S.hand.font = v; saveSettings(); }), true),
       rangeRow('sHScale', 'Metin boyutu', 50, 200, 5, S.hand.scale, v => '%' + Math.round(v), v => { S.hand.scale = v; saveSettings(); }),
       toggleRow('sHCont', 'Metnin devamına ekle', S.hand.cont !== false, v => { S.hand.cont = v; saveSettings(); showSt(); }, 'Düzeltilmiş bir metnin yanına ya da altına yazdığın devam, ayrı kutu olmadan o metnin arkasına eklenir'),
       toggleRow('sScratch', 'Karalayarak sil', S.feel.scratch !== false, v => { S.feel.scratch = v; saveSettings(); }, 'Yazının üzerini zikzakla karalayınca silinir')

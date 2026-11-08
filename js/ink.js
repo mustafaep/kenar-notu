@@ -161,11 +161,13 @@ function drawBg(ctx, meta, s) {
 }
 
 /* Metin kutuları */
-const FONTS = { sans: 'Onest, system-ui, sans-serif', serif: 'Literata, Georgia, serif', hand: 'Caveat, "Segoe Print", cursive', kalam: 'Kalam, "Segoe Print", cursive' };
-const FONT_LABEL = { sans: 'Yalın', serif: 'Tırnaklı', hand: 'El yazısı', kalam: 'Kalam' };
+const FONTS = { sans: 'Onest, system-ui, sans-serif', serif: 'Literata, Georgia, serif', hand: 'Caveat, "Segoe Print", cursive', kalam: 'Kalam, "Segoe Print", cursive', print: '"Patrick Hand", Kalam, "Segoe Print", cursive' };
+const FONT_LABEL = { sans: 'Yalın', serif: 'Tırnaklı', hand: 'El yazısı', kalam: 'Kalam', print: 'Okunaklı' };
+/* yazı tipi seçenekleri (seçim listelerinde bu sırayla) */
+const FONT_OPTS = [['print', 'Okunaklı'], ['kalam', 'Kalam'], ['hand', 'El yazısı'], ['sans', 'Yalın'], ['serif', 'Tırnaklı']];
 const tWeight = t => t.wt || (t.bold ? 700 : 400);
 async function loadFonts() {
-  try { if (!document.fonts) return; await Promise.race([Promise.all(['400 16px Onest', '700 16px Onest', '600 16px Literata', '700 16px Literata', '400 16px Caveat', '700 16px Caveat', '300 16px Kalam', '400 16px Kalam', '700 16px Kalam'].map(f => document.fonts.load(f, 'ğüşıöçİ'))), new Promise(r => setTimeout(r, 2500))]); } catch (e) { }
+  try { if (!document.fonts) return; await Promise.race([Promise.all(['400 16px Onest', '700 16px Onest', '600 16px Literata', '700 16px Literata', '400 16px Caveat', '700 16px Caveat', '300 16px Kalam', '400 16px Kalam', '700 16px Kalam', '400 16px "Patrick Hand"', '400 16px Literata', 'italic 400 16px Literata', '700 16px Onest'].map(f => document.fonts.load(f, 'ğüşıöçİ'))), new Promise(r => setTimeout(r, 2500))]); } catch (e) { }
 }
 function wrapLines(ctx, text, maxW) {
   const out = [];

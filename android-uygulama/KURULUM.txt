@@ -1,6 +1,6 @@
 KENAR NOTU — ANDROID KURULUM NOTLARI
 =====================================
-Sürüm 3.1.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
+Sürüm 3.2.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
 
 
 A) APK'YI OLUŞTURMA (bilgisayarda, bir kez)
@@ -112,6 +112,29 @@ G) YENİ (2.2.0)
   (ya da "Araç çubuğunu düzenle" listesinden "Kaldır").
 - PDF renklerini ters çevirme: ⋯ → "PDF renklerini ters çevir" (gece okuma). İsterseniz araç çubuğuna da
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
+
+
+GG) YENİ (3.2.0) — kalem stilleri takımları, düzeltilmiş yazıyı değiştirme, genel notlar için Sayfayı düzelt
+-------------------------------------------------------------------------------------------------------------
+- KALEM STİLLERİ TAKIMLAR HÂLİNDE (araç çubuğu → Stiller): üstte takım seçilir.
+  · İngilizce / dil: önceki stiller (sayfa başlığı, terim, anlamı, İngilizce örnek, Türkçe çeviri, ipucu…).
+  · Ders notu (yeni): Başlık, Bölüm, Alt başlık, Metin, • Madde, Tanım, ! Önemli, ? Soru, Örn. Örnek,
+    ▸ Kural / formül, → Özet, Not.
+  · Toplantı ve plan (yeni): Toplantı başlığı, Gündem, • Not satırı, ✓ Karar, ☐ Yapılacak, @ Kişi / tarih, ! Risk / dikkat.
+  · Kendi stillerim: "Yeni stil" ile eklediklerin ve önceden kaydettiğin adlı favoriler.
+- STİL DÜZENLEYİCİ: her stilin yanındaki kalemle: ad, renk, yazı tipi, kalınlık (ince/normal/kalın), boyut (pt),
+  satır başı işareti (•, –, →, ▸, ★, !, ?, ✓, ✗, ☐, ↳, @, Örn. ya da kendi işaretin), takımı. Sil ve
+  "Hazır stilleri geri yükle" (o takım için) de var.
+- YENİ YAZI TİPLERİ: "Okunaklı" (Patrick Hand: düzgün, okunaklı el yazısı; Türkçe harflerle) ders notu
+  stillerinin varsayılanı. Tırnaklı yazı artık normal kalınlıkta da (Literata 400); Yalın'ın kalını eklendi.
+- DÜZELTİLMİŞ YAZIYI DEĞİŞTİRME: Kement ile metin kutularını (düzeltilmiş yazılar) seç:
+  · "Stil": takımdan bir stil seç → yazı tipi, boyut, kalınlık, renk ve satır başı işareti birlikte değişir
+    (seçimdeki el yazısı da stilin rengini alır). Altında yalnız yazı tipi, A− / A+, Kalın ve "İşareti kaldır".
+  · "Metni düzenle" (tek kutu seçiliyken): yazıyı klavyeyle düzelt. Hepsi Geri al ile geri alınır.
+- SAYFAYI DÜZELT GENEL NOTLAR İÇİN: "Not türü" (seçim ekranında ve Ayarlar'da): Otomatik / İngilizce / dil /
+  Ders notu / Toplantı ve plan. Yapay zekâ artık şu görevleri de tanır: alt başlık, madde, tanım (kavram: açıklama),
+  önemli, soru, kural/formül, özet, yapılacak, karar, kişi/tarih. Yazılar seçilen türün stil takımıyla yazılır;
+  takımda olmayan görev için öbür takımlardaki en yakın stil kullanılır. Önizlemede her yazının görevi değiştirilebilir.
 
 
 FF) YENİ (3.1.0) — ayarlanabilir kâğıtlar ve yeni kâğıt türleri

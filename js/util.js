@@ -199,7 +199,7 @@ const DEF = {
   lastTool: 'pen', panelOpen: false, libView: 'all', sort: 'updated',
   hand: { mode: 'off', lang: 'auto', font: 'hand', scale: 100, grammar: false, asked: false, style: null, ai: 'off', cont: true, where: 'both', model: 'best', mig: 0, engine: 'local', split: true, seg: 'word', wait: 1.5 },
   voice: { hold: true, rate: 0.95, name: '', lang: 'en-GB' }, favSeed: 0,
-  pageFix: { first: 'gemini', fallback: true, gmodel: '', cmodel: '', when: 'manual', review: true, dest: 'replace', fixes: true,
+  pageFix: { first: 'gemini', fallback: true, gmodel: '', cmodel: '', when: 'manual', review: true, dest: 'replace', fixes: true, kind: 'auto',
     boost: { ex: false, explain: false, sheet: false, ask: '', answers: true, mark: true } },
   usage: { gFree: false, range: '30d' }
 };
@@ -216,7 +216,35 @@ const STYLE_FAVS = [
   { name: 'Hatalı', color: '#c0392b', text: { font: 'kalam', wt: 400, size: 12, prefix: '✗' } },
   { name: 'Doğru', color: '#1b6e3c', text: { font: 'kalam', wt: 400, size: 12, prefix: '✓' } },
   { name: 'Düzeltme açıklaması', color: '#8e2a20', text: { font: 'kalam', wt: 300, size: 11.5 } }
-].map(f => ({ type: 'fountain', size: f.size || 1.8, o: 1, ...f }));
+].map(f => ({ type: 'fountain', size: f.size || 1.8, o: 1, set: 'dil', ...f }));
+/* 3.2: stil takımları. Her takım bir not türü için (dil çalışması, genel ders notu, toplantı ve plan).
+   Stil = kalem rengi + düzeltilen yazının yazı tipi/kalınlığı/boyutu/satır başı işareti. */
+const STYLE_SET_NAMES = { dil: 'İngilizce / dil', ders: 'Ders notu', plan: 'Toplantı ve plan', mine: 'Kendi stillerim' };
+const STYLE_SET_ORDER = ['dil', 'ders', 'plan', 'mine'];
+const STYLE_DERS = [
+  { name: 'Başlık', color: '#1f2f5c', text: { font: 'print', wt: 400, size: 28 }, size: 2.6 },
+  { name: 'Bölüm', color: '#1f2f5c', text: { font: 'print', wt: 400, size: 19 }, size: 2.2 },
+  { name: 'Alt başlık', color: '#2c5aa0', text: { font: 'print', wt: 400, size: 15.5 }, size: 2 },
+  { name: 'Metin', color: '#25324d', text: { font: 'print', wt: 400, size: 13 } },
+  { name: 'Madde', color: '#25324d', text: { font: 'print', wt: 400, size: 13, prefix: '•' } },
+  { name: 'Tanım', color: '#1b6e3c', text: { font: 'print', wt: 700, size: 13 } },
+  { name: 'Önemli', color: '#c0392b', text: { font: 'print', wt: 700, size: 13, prefix: '!' } },
+  { name: 'Soru', color: '#6b3fa0', text: { font: 'print', wt: 400, size: 13, prefix: '?' } },
+  { name: 'Örnek', color: '#167a7a', text: { font: 'print', wt: 400, size: 12.5, prefix: 'Örn.' } },
+  { name: 'Kural / formül', color: '#8a5a00', text: { font: 'print', wt: 400, size: 13, prefix: '▸' } },
+  { name: 'Özet', color: '#1b6e3c', text: { font: 'print', wt: 400, size: 13, prefix: '→' } },
+  { name: 'Not', color: '#6b7280', text: { font: 'print', wt: 400, size: 11.5 } }
+].map(f => ({ type: 'fountain', size: f.size || 1.8, o: 1, set: 'ders', ...f }));
+const STYLE_PLAN = [
+  { name: 'Toplantı başlığı', color: '#1f2f5c', text: { font: 'sans', wt: 600, size: 22 }, size: 2.4 },
+  { name: 'Gündem', color: '#1f2f5c', text: { font: 'sans', wt: 600, size: 14.5 }, size: 2 },
+  { name: 'Not satırı', color: '#25324d', text: { font: 'sans', wt: 400, size: 12, prefix: '•' } },
+  { name: 'Karar', color: '#1b6e3c', text: { font: 'sans', wt: 600, size: 12, prefix: '✓' } },
+  { name: 'Yapılacak', color: '#2c5aa0', text: { font: 'sans', wt: 400, size: 12, prefix: '☐' } },
+  { name: 'Kişi / tarih', color: '#6b7280', text: { font: 'sans', wt: 400, size: 10.5, prefix: '@' } },
+  { name: 'Risk / dikkat', color: '#c0392b', text: { font: 'sans', wt: 600, size: 12, prefix: '!' } }
+].map(f => ({ type: 'fountain', size: f.size || 1.8, o: 1, set: 'plan', ...f }));
+const STYLE_ALL = [...STYLE_FAVS, ...STYLE_DERS, ...STYLE_PLAN];
 /* Kayıtlı ayarlar varsayılanlarla birleştirilir. Varsayılanlarda olmayan ayarlar da korunur (2.9.2'ye kadar atılıyordu:
    sonradan eklenen sağa-sola kaydırma, konum şeridi, çubuk dili, kenar düğmeleri, pencere yerleri vb. her açılışta sıfırlanıyordu). */
 function merge(d, s) {
@@ -233,6 +261,16 @@ if (!S.favSeed) {
   S.fav = [...STYLE_FAVS.filter(f => !have.has(f.name)), ...S.fav].slice(0, 20);
   S.favSeed = 1; try { localStorage.setItem('kn.settings', JSON.stringify(S)); } catch (e) { }
 }
+/* 3.2: adlı stillere takım bilgisi; yeni takımlar (ders notu, toplantı ve plan) eklenir */
+if ((S.favSeed || 0) < 2) {
+  const dilNames = new Set(STYLE_FAVS.map(f => f.name));
+  for (const f of S.fav) if (f.name && !f.set) f.set = dilNames.has(f.name) ? 'dil' : 'mine';
+  const have = new Set(S.fav.filter(f => f.name).map(f => f.set + '|' + f.name));
+  S.fav = [...S.fav, ...[...STYLE_DERS, ...STYLE_PLAN].filter(f => !have.has(f.set + '|' + f.name)).map(f => JSON.parse(JSON.stringify(f)))];
+  S.favSeed = 2; try { localStorage.setItem('kn.settings', JSON.stringify(S)); } catch (e) { }
+}
+const styleSetOf = f => f.set || 'mine';
+function activeStyleSet() { const k = S.prefs.styleSet; return STYLE_SET_NAMES[k] ? k : 'dil'; }
 let saveST = 0;
 function saveSettings() { clearTimeout(saveST); saveST = setTimeout(() => { try { localStorage.setItem('kn.settings', JSON.stringify(S)); } catch (e) { } }, 250); }
 function penCfg(type) { return type === 'hl' ? S.hl : S.pen[type]; }

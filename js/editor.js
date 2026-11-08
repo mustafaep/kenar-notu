@@ -596,7 +596,7 @@ function penPanel(tool) {
   wrap.append(toggleRow('pShape', 'Bekletince şekle dönüştür', S.feel.shape, v => { S.feel.shape = v; saveSettings(); }, 'Çizgi, daire, üçgen, dörtgen'));
   if (!isHl) wrap.append(toggleRow('pScratch', 'Karalayarak sil', S.feel.scratch !== false, v => { S.feel.scratch = v; saveSettings(); }, 'Yazının üzerini zikzakla karalayınca silinir'));
   const favRow = h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-    h('button', { type: 'button', class: 'btn small', onclick: () => { const c = cfg(); S.fav = [{ type: type(), size: c.size, color: c.color, o: c.o }, ...S.fav].slice(0, 20); saveSettings(); refreshToolbar(); toast('Favori kalemlere eklendi', 1500); } }, icon(IC.star), 'Favorilere ekle'));
+    h('button', { type: 'button', class: 'btn small', onclick: () => { const c = cfg(); S.fav = [{ type: type(), size: c.size, color: c.color, o: c.o }, ...S.fav.filter(f => !f.name).slice(0, 19), ...S.fav.filter(f => f.name)]; saveSettings(); refreshToolbar(); toast('Favori kalemlere eklendi', 1500); } }, icon(IC.star), 'Favorilere ekle'));
   if (S.fav.length) { const clr = h('button', { type: 'button', class: 'btn small' }, 'Favorileri temizle'); clr.addEventListener('click', () => { S.fav = []; saveSettings(); refreshToolbar(); clr.remove(); }); favRow.append(clr); }
   wrap.append(favRow);
   if (!isHl && window.handSettingsRows) wrap.append(handSettingsRows());
@@ -621,7 +621,7 @@ function textPanel() {
   const applyT = () => { if (ed.editing) { Object.assign(ed.editing.t, { font: S.text.font, size: S.text.size, color: S.text.color, bold: S.text.bold, wt: S.text.wt || 0 }); styleTbox(ed.editing.el, ed.editing.t); } saveSettings(); refreshToolbar(); };
   return h('div', { class: 'col' },
     h('h3', null, 'Metin'),
-    segRow([['sans', 'Yalın'], ['serif', 'Tırnaklı'], ['hand', 'El yazısı'], ['kalam', 'Kalam']], S.text.font, v => { S.text.font = v; S.text.wt = 0; applyT(); }),
+    segRow(FONT_OPTS, S.text.font, v => { S.text.font = v; S.text.wt = 0; applyT(); }),
     rangeRow('tSize', 'Yazı boyutu', 8, 60, 1, S.text.size, v => Math.round(v) + ' pt', v => { S.text.size = v; applyT(); }),
     toggleRow('tBold', 'Kalın', S.text.bold, v => { S.text.bold = v; S.text.wt = 0; applyT(); }),
     h('div', { class: 'lbl' }, 'Renk'),

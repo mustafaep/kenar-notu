@@ -27,6 +27,16 @@ Görevler ("r"):
   ceviri   örneğin ya da terimin çevirisi (genellikle Türkçe)
   ipucu    ipucu, kural, dikkat notu
   aciklama kısa açıklama ya da ek bilgi
+  altbaslik bölümün içindeki küçük başlık
+  madde    madde işaretli (•, -, *) ya da numaralı liste satırı (numarayı metinde bırak)
+  tanim    bir kavramın tanımı; kavram ve tanımı aynı satırdaysa kavramı "t", tanımı "m" alanına yaz
+  onemli   önemli, altı çizili, yıldızlı ya da "dikkat" diye vurgulanmış yazı
+  soru     soru, merak edilen şey
+  kural    kural, formül, denklem, ilke
+  ozet     özet, sonuç, kısaca
+  yapilacak yapılacak iş (kişi ve tarih metinde kalsın)
+  karar    alınan karar
+  kisi     kişi, tarih, yer, kaynak gibi kısa künye bilgisi
   metin    bunların hiçbiri olmayan düz yazı
 Kurallar:
 - Yazıları sayfadaki sırayla ver (yukarıdan aşağıya; aynı satırda soldan sağa). Sırayı değiştirme, hiçbir yazıyı atlama.
@@ -43,8 +53,13 @@ Yalnızca şu biçimde geçerli JSON döndür, başka hiçbir şey yazma:
 {"items":[{"r":"bolum","t":"Kelime öğrenmek"},{"r":"terim","t":"notice","m":"fark etmek, dikkat etmek"},{"r":"ornek","t":"Notice how words commonly go together."},{"r":"ceviri","t":"Kelimelerin genellikle nasıl birlikte kullanıldığına dikkat et."},{"r":"ipucu","t":"Fiil **pronounce**, isim **pronunciation**."},{"draw":1}],"fixes":[{"wrong":"The software make it possible","right":"The software makes it possible","note":"Özne tekil → fiile -s gelir."}]}`;
 
 /* ---------- görevler ---------- */
-const PL_ROLES = [['title', 'Sayfa başlığı', 'baslik'], ['section', 'Bölüm başlığı', 'bolum'], ['term', 'Terim', 'terim'], ['meaning', 'Anlamı', 'anlam'], ['example', 'Örnek cümle', 'ornek'],
-  ['trans', 'Çeviri', 'ceviri'], ['tip', 'İpucu', 'ipucu'], ['note', 'Açıklama', 'aciklama'], ['plain', 'Metin', 'metin']];
+const PL_ROLES = [['title', 'Sayfa başlığı', 'baslik'], ['section', 'Bölüm başlığı', 'bolum'], ['sub', 'Alt başlık', 'altbaslik'], ['term', 'Terim', 'terim'], ['meaning', 'Anlamı', 'anlam'], ['example', 'Örnek cümle', 'ornek'],
+  ['trans', 'Çeviri', 'ceviri'], ['tip', 'İpucu', 'ipucu'], ['note', 'Açıklama', 'aciklama'], ['bullet', 'Madde', 'madde'], ['def', 'Tanım', 'tanim'], ['important', 'Önemli', 'onemli'],
+  ['question', 'Soru', 'soru'], ['rule', 'Kural / formül', 'kural'], ['summary', 'Özet', 'ozet'], ['todo', 'Yapılacak', 'yapilacak'], ['decision', 'Karar', 'karar'], ['meta', 'Kişi / tarih', 'kisi'],
+  ['plain', 'Metin', 'metin']];
+/* not türü → hangi stil takımı */
+const PL_KINDS = [['auto', 'Otomatik'], ['dil', 'İngilizce / dil'], ['ders', 'Ders notu'], ['plan', 'Toplantı ve plan']];
+const plKindSet = k => k === 'dil' || k === 'ders' || k === 'plan' ? k : activeStyleSet();
 const PL_ROLE_ALIAS = { sayfabasligi: 'title', anabaslik: 'title', title: 'title', heading: 'title', bolumbasligi: 'section', altbaslik: 'section', konu: 'section', section: 'section', subtitle: 'section', subheading: 'section',
   kelime: 'term', kalip: 'term', term: 'term', word: 'term', anlami: 'meaning', meaning: 'meaning', definition: 'meaning', ornekcumle: 'example', cumle: 'example', example: 'example', sentence: 'example',
   turkce: 'trans', translation: 'trans', dikkat: 'tip', kural: 'tip', tip: 'tip', hint: 'tip', not: 'note', note: 'note', duz: 'plain', normal: 'plain', text: 'plain', madde: 'plain', plain: 'plain' };
@@ -55,6 +70,19 @@ const plRoleName = r => (PL_ROLES.find(x => x[0] === r) || [0, r])[1];
 /* ---------- kalem stilleri: görev → stil ---------- */
 function plRole(name, prefix, size) {
   const n = (name || '').toLocaleLowerCase('tr'), p = prefix || '', z = size || 12;
+  if (/karar/.test(n)) return 'decision';
+  if (/yapılacak|görev/.test(n) || p === '☐') return 'todo';
+  if (/kişi|tarih|künye|kaynak/.test(n) || p === '@') return 'meta';
+  if (/önemli|risk/.test(n) || p === '!') return 'important';
+  if (/^soru/.test(n) || p === '?') return 'question';
+  if (/kural|formül/.test(n) || p === '▸') return 'rule';
+  if (/özet|sonuç/.test(n) || p === '→') return 'summary';
+  if (/tanım/.test(n)) return 'def';
+  if (/madde|not satırı/.test(n) || p === '•') return 'bullet';
+  if (/alt başlık/.test(n)) return 'sub';
+  if (/toplantı başlığı/.test(n)) return 'title';
+  if (/^bölüm$|gündem/.test(n)) return 'section';
+  if (/^not$/.test(n)) return 'note';
   if (p === '✗' || /hatal|yanlış/.test(n)) return 'wrong';
   if (p === '✓' || /doğru/.test(n)) return 'right';
   if (/düzeltme/.test(n)) return 'fixnote';
@@ -69,11 +97,17 @@ function plRole(name, prefix, size) {
   return 'plain';
 }
 function plStyleOf(f) { const prefix = f.text.prefix || ''; return { name: f.name, color: (f.color || '#1f2f5c').toLowerCase(), font: f.text.font || 'kalam', wt: f.text.wt || 400, size: f.text.size, prefix, role: plRole(f.name, prefix, f.text.size) }; }
-function plStyleMap() {
-  const user = S.fav.filter(f => f.name && f.text && f.text.size).map(plStyleOf), base = STYLE_FAVS.map(plStyleOf);
+/* görev → stil. set: hangi takımın stilleri önce (dil, ders, plan); bulunamazsa kendi stillerin, sonra öbür takımlar */
+function plStyleMap(set) {
+  set = set || activeStyleSet();
+  const tag = f => ({ ...plStyleOf(f), set: styleSetOf(f) });
+  const user = S.fav.filter(f => f.name && f.text && f.text.size).map(tag), base = STYLE_ALL.map(tag);
+  const order = [set, 'mine', ...STYLE_SET_ORDER.filter(k => k !== set && k !== 'mine')];
+  const pick = (list, r) => { for (const k of order) { const s = list.find(x => x.role === r && x.set === k); if (s) return s; } return null; };
   const M = {};
-  for (const r of [...PL_ROLES.map(x => x[0]), 'wrong', 'right', 'fixnote']) { const s = user.find(x => x.role === r) || base.find(x => x.role === r); if (s) M[r] = { ...s }; }
-  const fb = { title: ['section'], section: ['title'], term: ['example'], meaning: ['term'], example: ['meaning'], trans: ['meaning', 'example'], tip: ['trans'], note: ['tip', 'trans'], plain: ['example', 'meaning', 'term'] };
+  for (const r of [...PL_ROLES.map(x => x[0]), 'wrong', 'right', 'fixnote']) { const s = pick(user, r) || pick(base, r); if (s) M[r] = { ...s }; }
+  const fb = { title: ['section'], section: ['title'], sub: ['section'], term: ['def', 'example'], meaning: ['term'], example: ['meaning'], trans: ['meaning', 'example'], tip: ['important', 'trans'], note: ['tip', 'trans'],
+    bullet: ['plain'], def: ['term', 'important'], important: ['tip', 'def'], question: ['plain'], rule: ['tip'], summary: ['note', 'plain'], todo: ['bullet', 'plain'], decision: ['right', 'important'], meta: ['note'], plain: ['example', 'meaning', 'term'] };
   for (const r in fb) if (!M[r]) { const s = fb[r].map(x => M[x]).find(Boolean); if (s) M[r] = { ...s, prefix: '', borrowed: true }; }
   for (const [r, lab] of PL_ROLES) if (!M[r]) M[r] = { name: lab, color: '#1f2f5c', font: 'kalam', wt: 400, size: 12.5, prefix: '' };
   for (const [r] of PL_ROLES) M[r].role = r;
@@ -133,6 +167,7 @@ function plPageText(job, pg) {
   L.push(pg.kind === 'pdf'
     ? (pg.own ? 'Bu basılı bir PDF sayfası ve üzerinde kullanıcının notları var: yalnızca kullanıcının el yazısı notlarını ve metin kutularını al; basılı metni yalnızca okumayı kolaylaştıran bağlam olarak kullan.' : 'Bu bir PDF sayfası (taranmış ya da basılı). Sayfadaki yazıların hepsini al.')
     : 'Bu kullanıcının not sayfası: kalemle yazdıkları ve daha önce metne çevrilmiş metin kutuları var.');
+  L.push(PL_KIND_TEXT[job.kind] || PL_KIND_TEXT.auto);
   L.push('Kullanıcının mürekkep renkleri ve hangi görevde kullandığı:\n' + plLegend(job.map));
   if (pg.draws.length) L.push('Çizimler: ' + pg.draws.map(d => 'Ç' + d.id).join(', ') + ' (kırmızı çerçeveli). Ait oldukları yere {"draw": numara} koy.');
   L.push(job.wantFixes ? 'Düzeltme listesi (fixes) isteniyor.' : 'Düzeltme listesi istenmiyor; fixes boş olsun.');
@@ -140,6 +175,12 @@ function plPageText(job, pg) {
   L.push(b || 'Geliştirme istenmiyor: yalnızca sayfada yazanları ver.');
   return L.join('\n\n') + '\n\nJSON:';
 }
+const PL_KIND_TEXT = {
+  auto: 'Not türü: sayfaya bakıp sen anla. Yabancı dil kelime/cümle çalışmasıysa terim, anlam, ornek, ceviri, ipucu görevlerini; genel ders ya da konu notuysa altbaslik, madde, tanim, onemli, soru, kural, ozet görevlerini; toplantı ya da plan notuysa madde, karar, yapilacak, kisi görevlerini kullan.',
+  dil: 'Not türü: yabancı dil (İngilizce) çalışması. Öncelikle terim, anlam, ornek, ceviri, ipucu görevlerini kullan.',
+  ders: 'Not türü: genel ders / konu notu. altbaslik, madde, tanim, onemli, soru, kural, ozet, aciklama görevlerini kullan; terim, anlam, ornek, ceviri görevlerini yalnızca sayfada gerçekten yabancı dil kelime çalışması varsa kullan. Madde işaretli satırlar madde olur; tanımlar (kavram: açıklama) tanim olur.',
+  plan: 'Not türü: toplantı, görüşme ya da plan. bolum (gündem başlığı), madde, karar, yapilacak, kisi, onemli görevlerini kullan; dil çalışması görevlerini kullanma.'
+};
 /* geliştirme isteği (örnek cümle, kelimeleri anlat, kullanıcının kendi isteği) */
 function plBoostText(b) {
   const L = [];
@@ -154,11 +195,12 @@ function plBoostText(b) {
 /* ---------- okuma ---------- */
 const plClean = s => String(s == null ? '' : s).replace(/\r/g, '').replace(/^[\s↳★✗✓✔✘•·]+/, '').replace(/[ \t]+/g, ' ').trim();
 /* boost: { ex, explain, sheet, ask, answers, mark } ya da null (yalnız düzelt) */
-function plNewJob(pvs, dest, boost) {
+function plNewJob(pvs, dest, boost, kind) {
   const b = boost || {}, ask = String(b.ask || '').trim().slice(0, 400);
+  kind = kind || S.pageFix.kind || 'auto';
   const sheet = !!b.sheet, d = dest === 'new' ? 'new' : dest === 'none' && sheet ? 'none' : 'replace';
   const fixes = S.pageFix.fixes !== false && d !== 'none';
-  return { mode: 'pages', dest: d, map: plStyleMap(), wantFixes: fixes, showFixes: fixes,
+  return { mode: 'pages', dest: d, kind, map: plStyleMap(plKindSet(kind)), wantFixes: fixes, showFixes: fixes,
     boost: { ex: !!b.ex, explain: !!b.explain, ask }, enrich: d !== 'none' && !!(b.ex || b.explain || ask), mark: b.mark !== false, showAdded: true,
     sheet: sheet ? { items: null, answers: [], title: '', err: null, reading: false, tk: 0, answersOn: b.answers !== false, ask } : null,
     pages: pvs.map(pv => ({ pv, kind: pv.meta.k === 'pdf' ? 'pdf' : 'note', own: pfHasWriting(pv), items: null, fixes: [], err: null, draws: [], strokes: new Set(), texts: new Set(), tk: 0 })) };
@@ -183,8 +225,8 @@ async function plReadPage(job, pg, onStep) {
       if (x.draw != null) { const n = Number(String(x.draw).replace(/\D/g, '')), d = draws.find(d => d.id === n); if (!d || used.has(d)) return null; used.add(d); return { draw: d, on: true, pg }; }
       let r = plRoleOf(x.r || x.role || x.type), t = plClean(x.t != null ? x.t : x.text), m = plClean(x.m != null ? x.m : x.meaning);
       if (!t && m) { t = m; m = ''; if (r === 'term') r = 'meaning'; }
-      if (!m && r === 'term') { const k = t.search(/\s[:=–—-]\s/); if (k > 0) { m = plClean(t.slice(k + 2)); t = t.slice(0, k).trim(); } }
-      if (m && r !== 'term') r = 'term';
+      if (!m && (r === 'term' || r === 'def')) { const k = t.search(/\s[:=–—-]\s/); if (k > 0) { m = plClean(t.slice(k + 2)); t = t.slice(0, k).trim(); } }
+      if (m && r !== 'term' && r !== 'def') r = 'term';
       const ek = !!x.ek && x.ek !== '0' && x.ek !== 'false';
       return t ? { r, t, m, on: true, pg, ek } : null;
     }).filter(Boolean);
@@ -274,13 +316,20 @@ async function plSheetRead(job, onStep) {
 }
 
 /* ---------- yerleşim ---------- */
-const PL_INDENT = { title: 0, section: 0, term: 0, plain: 0, meaning: 1, example: 1, tip: 1, trans: 2, note: 2, wrong: 0, right: 0, q: 0, opt: 1, ins: 0, gap: 0 };
+const PL_INDENT = { title: 0, section: 0, term: 0, plain: 0, meaning: 1, example: 1, tip: 1, trans: 2, note: 2, wrong: 0, right: 0, q: 0, opt: 1, ins: 0, gap: 0,
+  sub: 0, bullet: 0, def: 0, important: 0, question: 0, rule: 1, summary: 0, todo: 0, decision: 0, meta: 1 };
 const PL_STEP = [0, 17, 31];
 const PL_LINE = 28, PL_MARK = '#8b5cf6';
 function plGap(prev, role) {
   if (!prev) return 0;
   if (role === 'title') return 18;
   if (role === 'section') return prev === 'title' ? 12 : 17;
+  if (role === 'sub') return prev === 'section' || prev === 'title' ? 5 : 11;
+  if (prev === 'sub') return 1;
+  if (role === 'bullet' && prev === 'bullet') return 1.5;
+  if (role === 'todo' && prev === 'todo') return 1.5;
+  if (role === 'meta' || role === 'rule') return prev === 'plain' || prev === 'bullet' ? -2 : 1;
+  if (role === 'summary') return 9;
   if (role === 'gap') return 0;
   if (role === 'q') return prev === 'section' ? 3 : prev === 'ins' ? 5 : 8;
   if (role === 'opt') return prev === 'opt' ? -3 : -1.5;
@@ -357,7 +406,7 @@ function plLayout(meta, items, M, fixes, o = {}) {
     if (it.r === 'gap') { const n = it.n || 1; rows.push({ role: 'gap', h: n * PL_LINE, n }); continue; }
     const r = M[it.r] ? it.r : 'plain', st = M[r], x = L + PL_STEP[PL_INDENT[r] || 0];
     let row = null;
-    if (it.m && it.t) row = plRowText(st, it.t, x, R, { role: r, m: it.m, mst: M.meaning || st });
+    if (it.m && it.t) row = plRowText(st, it.t, x, R, { role: r, m: it.m, mst: r === 'def' ? (M.plain || st) : (M.meaning || st) });
     else if (it.t || it.m) row = plRowText(st, it.t || it.m, x, R, { role: r });
     if (row) { row.ek = !!it.ek; rows.push(row); }
   }
