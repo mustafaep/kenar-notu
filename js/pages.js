@@ -21,6 +21,8 @@ function refreshPanel(force) {
   const tab = PTABS.some(t => t[0] === S.panelTab) ? S.panelTab : 'pages';
   const tabs = $('#ptabs'); tabs.innerHTML = '';
   for (const [id, name, ic] of PTABS) tabs.append(h('button', { type: 'button', role: 'tab', class: id === tab ? 'on' : '', 'aria-selected': id === tab ? 'true' : 'false', title: name, 'aria-label': name, onclick: () => { S.panelTab = id; saveSettings(); refreshPanel(true); } }, icon(ic)));
+  // kapatma düğmesi: panel yalnız üst çubuktaki küçük düğmeyle kapanıyordu (çubuk gizliyken hiç kapanmıyordu)
+  tabs.append(h('span', { class: 'ptsp', 'aria-hidden': 'true' }), h('button', { type: 'button', class: 'ptclose', title: 'Paneli kapat (Esc)', 'aria-label': 'Paneli kapat', onclick: () => setPanel(false) }, icon(IC.close)));
   $('#pfind').hidden = tab !== 'find';
   $('#pfoot').hidden = tab !== 'pages';
   if (tab === 'pages') renderPageList();

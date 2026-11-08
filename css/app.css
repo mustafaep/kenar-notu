@@ -390,7 +390,9 @@ html.embed .exbtn span{display:none}
 /* ---------- 2.3: sayfa paneli, ızgara, klasörler, pencere ---------- */
 .e-back{display:flex;align-items:center;gap:2px}
 .ppanel{width:204px}
-.ptabs{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:6px;border-bottom:1px solid var(--line)}
+.ptabs{display:grid;grid-template-columns:repeat(4,1fr) 1px 40px;gap:2px;padding:6px;border-bottom:1px solid var(--line);align-items:center}
+.ptabs .ptsp{width:1px;height:24px;background:var(--line);margin:0 2px}
+.ptabs .ptclose:hover{background:var(--chrome-2);color:var(--ink)}
 .ptabs button{height:40px;border:0;background:transparent;border-radius:10px;display:grid;place-items:center;color:var(--muted)}
 .ptabs button.on{background:var(--accent-soft);color:var(--accent)}
 .ptabs svg.i{width:20px;height:20px}

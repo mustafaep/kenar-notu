@@ -217,7 +217,15 @@ const STYLE_FAVS = [
   { name: 'Doğru', color: '#1b6e3c', text: { font: 'kalam', wt: 400, size: 12, prefix: '✓' } },
   { name: 'Düzeltme açıklaması', color: '#8e2a20', text: { font: 'kalam', wt: 300, size: 11.5 } }
 ].map(f => ({ type: 'fountain', size: f.size || 1.8, o: 1, ...f }));
-function merge(d, s) { if (Array.isArray(d)) return Array.isArray(s) ? s : d.slice(); if (typeof d !== 'object' || d === null) return s === undefined ? d : s; const o = {}; for (const k in d) o[k] = merge(d[k], s ? s[k] : undefined); return o; }
+/* Kayıtlı ayarlar varsayılanlarla birleştirilir. Varsayılanlarda olmayan ayarlar da korunur (2.9.2'ye kadar atılıyordu:
+   sonradan eklenen sağa-sola kaydırma, konum şeridi, çubuk dili, kenar düğmeleri, pencere yerleri vb. her açılışta sıfırlanıyordu). */
+function merge(d, s) {
+  if (Array.isArray(d)) return Array.isArray(s) ? s : d.slice();
+  if (typeof d !== 'object' || d === null) return s === undefined ? d : s;
+  const o = {}; for (const k in d) o[k] = merge(d[k], s ? s[k] : undefined);
+  if (s && typeof s === 'object' && !Array.isArray(s)) for (const k in s) if (!(k in o) && s[k] !== undefined) o[k] = s[k];
+  return o;
+}
 let S = merge(DEF, (() => { try { return JSON.parse(localStorage.getItem('kn.settings') || 'null'); } catch (e) { return null; } })());
 window.__getS = () => S;
 if (!S.favSeed) {

@@ -1375,7 +1375,7 @@ addEventListener('keydown', e => {
   if (edView.hidden || !ed.note) return;
   if (ed.capture) { if (e.key === 'Escape') captureEnd(); return; }
   const typing = ed.editing || ed.stickyEdit || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement && document.activeElement.tagName);
-  if (e.key === 'Escape') { if (ed.editing) finishText(); else if (ed.sel) clearSel(); else if (pgridEl) closePgrid(); else closePop(); return; }
+  if (e.key === 'Escape') { if (ed.editing) finishText(); else if (ed.sel) clearSel(); else if (pgridEl) closePgrid(); else if (typeof PF !== 'undefined' && PF.pick && typeof pfPickClose === 'function') pfPickClose(); else if (!$('#pop').hidden) closePop(); else if (!$('#ppanel').hidden) setPanel(false); else closePop(); return; }
   if (typing || document.querySelector('.modal-back, .od-back')) return;
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }

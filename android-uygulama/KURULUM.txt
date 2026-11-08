@@ -1,6 +1,6 @@
 KENAR NOTU — ANDROID KURULUM NOTLARI
 =====================================
-Sürüm 2.9.1 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
+Sürüm 2.9.2 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
 
 
 A) APK'YI OLUŞTURMA (bilgisayarda, bir kez)
@@ -112,6 +112,16 @@ G) YENİ (2.2.0)
   (ya da "Araç çubuğunu düzenle" listesinden "Kaldır").
 - PDF renklerini ters çevirme: ⋯ → "PDF renklerini ters çevir" (gece okuma). İsterseniz araç çubuğuna da
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
+
+
+DD) DÜZELTME (2.9.2) — ayarlar kaydedilmiyordu, arama paneli kapanmıyordu
+------------------------------------------------------------------------
+- Ayarlar: Sonradan eklenen ayarlar (sağa-sola kaydırma, konum şeridi, üst çubuk dili, kenar düğmeleri ve yerleri,
+  çubuğun gizli kalması, tuval arka planı/kılavuzlar/son renk, pencere yerleri) uygulama her açıldığında
+  sıfırlanıyordu: açılışta kayıtlı ayarlar yalnız eski ayar listesiyle birleştiriliyordu. Artık hepsi korunuyor.
+- Belgede ara / Sayfalar / İçindekiler / Yer imleri paneli: sekmelerin yanına × (kapat) düğmesi eklendi; Esc de
+  kapatır. Önceden yalnız üst çubuktaki küçük düğmeyle kapanıyordu, çubuk gizliyken hiç kapanmıyordu.
+- Sayfayı düzelt: sayfa seçme ekranı Esc ile de kapanır (× düğmesi zaten vardı).
 
 
 CC) DÜZELTME (2.9.1) — tablette kaydedilen PDF bilgisayarda (Edge) açılmıyordu
