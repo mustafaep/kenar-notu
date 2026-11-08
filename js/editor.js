@@ -657,6 +657,7 @@ function settingsPanel() {
       canFlow && !PHONE ? tile(IC.upArrow, 'Boşlukları kapat', () => W.flowPages()) : null,
       tile(IC.gridI, 'Tüm sayfalar', () => toolbarAction('pgrid')),
       tile(IC.search, 'Belgede ara', () => toolbarAction('find')),
+      !side && !EMBED && window.changePaper && cur && cur.meta.k === 'blank' && cur.meta.bg !== 'cover' ? tile(IC.blank, 'Kâğıdı değiştir', () => changePaper(ed.pvs.indexOf(cur))) : null,
       !side && !EMBED && window.coverForNote ? tile(IC.cover, window.coverOf && coverOf(ed.note) ? 'Kapağı değiştir' : 'Kapak ekle', () => coverForNote(ed.note.id)) : null,
       tile(IC.spark, 'Sözlük', () => openDict('')),
       EMBED || PHONE ? null : tile(IC.split, typeof splitOpen === 'function' && splitOpen() ? 'Yan belgeyi kapat' : 'Yan yana belge', () => toggleSplit()),

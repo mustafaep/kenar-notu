@@ -56,7 +56,8 @@ function bgToPdf(page, meta, rgb) {
 /* Kapak ve şablon sayfaları (covers.js) resim olarak gömülür: kapak JPEG, ince çizgili şablonlar PNG */
 async function bgToPdfAny(out, page, meta) {
   const bg = meta.bg || 'plain';
-  if (bg !== 'cover' && !(window.TPLS && TPLS[bg])) return bgToPdf(page, meta, PDFLib.rgb);
+  const paperNew = window.PAPERS && PAPERS[bg] && (meta.paper || !['plain', 'lined', 'grid', 'dots'].includes(bg));
+  if (bg !== 'cover' && !(window.TPLS && TPLS[bg]) && !paperNew) return bgToPdf(page, meta, PDFLib.rgb);
   const cover = bg === 'cover', sc = cover ? 2.6 : 3;
   const c = document.createElement('canvas'); c.width = Math.ceil(meta.w * sc); c.height = Math.ceil(meta.h * sc);
   drawBg(c.getContext('2d'), meta, sc);

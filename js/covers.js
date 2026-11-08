@@ -393,3 +393,171 @@ if (typeof drawBg === 'function') {
 }
 if (typeof BG_NAMES === 'object') { for (const k of TPL_ORDER) BG_NAMES[k] = TPLS[k].name; BG_NAMES.cover = 'Kapak'; }
 Object.assign(window, { CV_PALS, CV_PAL_ORDER, COVERS, COVER_ORDER, TPLS, TPL_ORDER, drawCover });
+
+/* =========================================================
+   Ayarlanabilir kâğıtlar (3.1): aralık, kâğıt ve çizgi rengi, kenar, başlık satırı, kalın çizgi.
+   Sayfa: { bg: 'lined' | 'milimetrik' | …, paper: { spi, pc, lc, mg, hd, mj } }
+   Gerçek ölçüyle (mm) çizilir; 1 mm = 2.8346 pt. Eski sayfalar (paper yok) eskisi gibi çizilir.
+   ========================================================= */
+const MM = 72 / 25.4;
+const PAPER_COLS = { beyaz: ['Beyaz', '#ffffff'], krem: ['Krem', '#fbf5e6'], sari: ['Sarı', '#fff5bf'], nane: ['Nane', '#eaf6ef'], gri: ['Gri', '#eef0f3'], gece: ['Gece', '#1e2229'] };
+const LINE_COLS = { mavi: ['Mavi gri', '#c3cfe2'], gri: ['Gri', '#cdd0d6'], yesil: ['Yeşil', '#9fd0ae'], sepya: ['Sepya', '#d9c2a2'], turuncu: ['Turuncu', '#f1b68c'] };
+const PAPERS = {
+  plain: { name: 'Boş', sps: null },
+  lined: { name: 'Çizgili', sps: [[6, 'Dar'], [7.1, 'Orta'], [8.7, 'Geniş'], [10, 'Çok geniş']], margin: true },
+  grid: { name: 'Kareli', sps: [[4, 'Dar'], [5, 'Orta'], [6.35, 'Geniş'], [10, 'Çok geniş']], major: true },
+  dots: { name: 'Noktalı', sps: [[4, 'Dar'], [5, 'Orta'], [6.35, 'Geniş'], [8, 'Çok geniş']], major: true },
+  milimetrik: { name: 'Milimetrik', sps: null, lc: 'turuncu' },
+  muhendislik: { name: 'Mühendislik', sps: [[5, '5 mm'], [6.35, '¼ inç']], lc: 'yesil', pc: 'nane' },
+  izometrik: { name: 'İzometrik', sps: [[5, 'Dar'], [7, 'Orta'], [10, 'Geniş']] },
+  altigen: { name: 'Altıgen', sps: [[4, 'Dar'], [6, 'Orta'], [9, 'Geniş']] },
+  yazi: { name: 'El yazısı alıştırma', sps: [[3.5, 'Küçük'], [5, 'Orta'], [7, 'Büyük'], [10, 'Çok büyük']], margin: true },
+  kaligrafi: { name: 'Kaligrafi', sps: [[5, 'İnce kalem'], [7, 'Orta'], [10, 'Geniş uç']] },
+  nota: { name: 'Nota', sps: [[1.8, 'Küçük'], [2.2, 'Orta'], [2.8, 'Büyük']] },
+  seyes: { name: 'Seyès (Fransız)', sps: null },
+  legal: { name: 'Legal (sarı)', sps: [[6, 'Dar'], [7.1, 'Orta'], [8.7, 'Geniş']], pc: 'sari' },
+  ikisutun: { name: 'İki sütun', sps: [[6, 'Dar'], [7.1, 'Orta'], [8.7, 'Geniş']] },
+  yarikareli: { name: 'Yarı kareli', sps: [[5, 'Dar'], [6.35, 'Orta'], [8, 'Geniş']] }
+};
+const PAPER_ORDER = ['plain', 'lined', 'grid', 'dots', 'milimetrik', 'muhendislik', 'izometrik', 'altigen', 'yazi', 'kaligrafi', 'nota', 'seyes', 'legal', 'ikisutun', 'yarikareli'];
+const PAPER_DEF = { spi: 1, mg: 'left', hd: false, mj: true };
+/* çözülmüş seçenekler: renkler, aralık (pt), koyu kâğıt */
+function paperOpts(bg, p) {
+  const T = PAPERS[bg] || PAPERS.lined, o = { ...PAPER_DEF, ...(p || {}) };
+  const pcKey = o.pc || T.pc || 'beyaz', lcKey = o.lc || T.lc || 'mavi';
+  const paper = (PAPER_COLS[pcKey] || PAPER_COLS.beyaz)[1], dark = pcKey === 'gece';
+  const base = (LINE_COLS[lcKey] || LINE_COLS.mavi)[1];
+  const sps = T.sps; const sp = sps ? sps[Math.min(sps.length - 1, Math.max(0, o.spi | 0))][0] * MM : 5 * MM;
+  return { ...o, pcKey, lcKey, paper, dark, sp, line: dark ? 'rgba(255,255,255,.17)' : base, faint: dark ? 'rgba(255,255,255,.08)' : hexA(base, .5), strong: dark ? 'rgba(255,255,255,.3)' : mixHex(base, '#3c4a63', .28), red: dark ? 'rgba(255,140,120,.45)' : '#f1a99c', mute: dark ? 'rgba(255,255,255,.45)' : '#8e9aae' };
+}
+function pLine(ctx, x1, y1, x2, y2, c, w) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+function pHeader(ctx, W, o) {
+  if (!o.hd) return 40;
+  ctx.font = `500 9.5px ${CV_FONT.sans}`; ctx.fillStyle = o.mute; ctx.textAlign = 'left';
+  ctx.fillText('Konu', 40, 46); pLine(ctx, 70, 48, W - 170, 48, o.line, .8);
+  ctx.fillText('Tarih', W - 154, 46); pLine(ctx, W - 124, 48, W - 40, 48, o.line, .8);
+  pLine(ctx, 40, 62, W - 40, 62, o.strong, 1);
+  return 76;
+}
+function pMargins(ctx, W, H, o, top) {
+  if (o.mg === 'left' || o.mg === 'both') pLine(ctx, 64, o.hd ? top - 10 : 0, 64, H, o.red, .8);
+  if (o.mg === 'right' || o.mg === 'both') pLine(ctx, W - 40, o.hd ? top - 10 : 0, W - 40, H, o.red, .8);
+}
+const PAPER_DRAW = {
+  plain(ctx, W, H, o) { pHeader(ctx, W, o); },
+  lined(ctx, W, H, o) { const top = pHeader(ctx, W, o); for (let y = top + (o.hd ? 18 : 56); y < H - 20; y += o.sp) pLine(ctx, 0, y, W, y, o.line, .7); pMargins(ctx, W, H, o, top); },
+  grid(ctx, W, H, o) {
+    const top = pHeader(ctx, W, o), s = o.sp, x0 = (W % s) / 2, y0 = top + ((H - top) % s) / 2;
+    for (let x = x0, i = 0; x <= W; x += s, i++) pLine(ctx, x, top - (o.hd ? 6 : 40), x, H, o.mj && i % 5 === 0 ? o.strong : o.line, o.mj && i % 5 === 0 ? .8 : .55);
+    for (let y = y0, i = 0; y <= H; y += s, i++) pLine(ctx, 0, y, W, y, o.mj && i % 5 === 0 ? o.strong : o.line, o.mj && i % 5 === 0 ? .8 : .55);
+  },
+  dots(ctx, W, H, o) {
+    const top = pHeader(ctx, W, o), s = o.sp, x0 = (W % s) / 2 || s / 2, y0 = top + 8;
+    for (let x = x0, i = 0; x < W; x += s, i++) for (let y = y0, j = 0; y < H - 6; y += s, j++) { const big = o.mj && i % 5 === 0 && j % 5 === 0; ctx.fillStyle = big ? o.strong : o.dark ? 'rgba(255,255,255,.28)' : mixHex(o.line.startsWith('#') ? o.line : '#c3cfe2', '#5b6b82', .25); ctx.beginPath(); ctx.arc(x, y, big ? 1.3 : .85, 0, Math.PI * 2); ctx.fill(); }
+  },
+  milimetrik(ctx, W, H, o) {
+    const top = pHeader(ctx, W, o), m = MM, x0 = (W % (10 * m)) / 2, y0 = top + ((H - top) % (10 * m)) / 2;
+    for (let i = 0, x = x0; x <= W + .1; x += m, i++) pLine(ctx, x, top - (o.hd ? 6 : 40), x, H, i % 10 === 0 ? o.strong : i % 5 === 0 ? o.line : o.faint, i % 10 === 0 ? .8 : i % 5 === 0 ? .55 : .3);
+    for (let i = 0, y = y0; y <= H + .1; y += m, i++) pLine(ctx, 0, y, W, y, i % 10 === 0 ? o.strong : i % 5 === 0 ? o.line : o.faint, i % 10 === 0 ? .8 : i % 5 === 0 ? .55 : .3);
+  },
+  muhendislik(ctx, W, H, o) {
+    const s = o.sp, top = 86;
+    ctx.font = `500 9.5px ${CV_FONT.sans}`; ctx.fillStyle = o.mute; ctx.textAlign = 'left';
+    const cells = [['Konu', 40, 330], ['Tarih', 340, 460], ['Sayfa', 470, W - 40]];
+    for (const [l, a, b] of cells) { ctx.fillText(l, a + 6, 48); pLine(ctx, a, 66, b, 66, o.strong, .9); }
+    pLine(ctx, 40, top - 8, W - 40, top - 8, o.strong, 1.4);
+    const x0 = 40, x1 = W - 40, cols = Math.floor((x1 - x0) / s), rows = Math.floor((H - 40 - top) / s);
+    for (let i = 0; i <= cols; i++) pLine(ctx, x0 + i * s, top, x0 + i * s, top + rows * s, i % 5 === 0 ? o.strong : o.line, i % 5 === 0 ? .8 : .5);
+    for (let j = 0; j <= rows; j++) pLine(ctx, x0, top + j * s, x0 + cols * s, top + j * s, j % 5 === 0 ? o.strong : o.line, j % 5 === 0 ? .8 : .5);
+  },
+  izometrik(ctx, W, H, o) {
+    const top = pHeader(ctx, W, o), s = o.sp, hgt = s * Math.sqrt(3) / 2;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, top - (o.hd ? 6 : 40), W, H); ctx.clip();
+    for (let y = top; y < H; y += hgt) pLine(ctx, 0, y, W, y, o.line, .5);
+    const t = Math.tan(Math.PI / 3), span = H / t;
+    for (let x = -span; x < W + span; x += s) { pLine(ctx, x, top, x + (H - top) / t, H, o.line, .5); pLine(ctx, x, top, x - (H - top) / t, H, o.line, .5); }
+    ctx.restore();
+  },
+  altigen(ctx, W, H, o) {
+    const top = pHeader(ctx, W, o), r = o.sp, w = r * 1.5, hh = r * Math.sqrt(3);
+    ctx.strokeStyle = o.line; ctx.lineWidth = .55;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, top - (o.hd ? 6 : 40), W, H); ctx.clip();
+    for (let c = 0, x = 0; x < W + r; x += w, c++) for (let y = top + (c % 2 ? hh / 2 : 0); y < H + hh; y += hh) {
+      ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; ctx.lineTo(x + r * Math.cos(a), y + r * Math.sin(a)); } ctx.closePath(); ctx.stroke();
+    }
+    ctx.restore();
+  },
+  yazi(ctx, W, H, o) {
+    // dört çizgi: üst (büyük harf), orta kesikli (x yüksekliği), taban (koyu), alt (kuyruk)
+    const top = pHeader(ctx, W, o), x = o.sp, G = x * 3, gap = x * 1.3;
+    for (let y = top + (o.hd ? 14 : 40); y + G < H - 20; y += G + gap) {
+      pLine(ctx, 0, y, W, y, o.faint, .6);
+      ctx.setLineDash([4, 4]); pLine(ctx, 0, y + x, W, y + x, o.line, .6); ctx.setLineDash([]);
+      pLine(ctx, 0, y + 2 * x, W, y + 2 * x, o.strong, .9);
+      pLine(ctx, 0, y + 3 * x, W, y + 3 * x, o.faint, .6);
+    }
+    pMargins(ctx, W, H, o, top);
+  },
+  kaligrafi(ctx, W, H, o) {
+    const top = pHeader(ctx, W, o), x = o.sp, G = x * 4, gap = x * 1.2;
+    for (let y = top + (o.hd ? 14 : 40); y + G < H - 20; y += G + gap) {
+      pLine(ctx, 0, y, W, y, o.faint, .5); pLine(ctx, 0, y + 1.5 * x, W, y + 1.5 * x, o.line, .5);
+      pLine(ctx, 0, y + 2.5 * x, W, y + 2.5 * x, o.strong, .8); pLine(ctx, 0, y + 4 * x, W, y + 4 * x, o.faint, .5);
+    }
+    // 55° eğim kılavuzları
+    ctx.save(); ctx.beginPath(); ctx.rect(0, top, W, H - top); ctx.clip();
+    const k = 1 / Math.tan(55 * Math.PI / 180);
+    for (let x0 = -H; x0 < W; x0 += 9 * MM) pLine(ctx, x0, H, x0 + (H - top) * k, top, o.faint, .45);
+    ctx.restore();
+  },
+  nota(ctx, W, H, o) {
+    const top = pHeader(ctx, W, o), g = o.sp, staff = g * 4, gap = Math.max(staff * 1.6, 13 * MM);
+    for (let y = top + (o.hd ? 20 : 50); y + staff < H - 30; y += staff + gap) {
+      for (let k = 0; k < 5; k++) pLine(ctx, 40, y + k * g, W - 40, y + k * g, o.strong, .6);
+      pLine(ctx, 40, y, 40, y + staff, o.strong, .8); pLine(ctx, W - 40, y, W - 40, y + staff, o.strong, .8);
+    }
+  },
+  seyes(ctx, W, H, o) {
+    const top = pHeader(ctx, W, o), big = 8 * MM, small = 2 * MM, ml = 30 * MM;
+    const purple = o.dark ? 'rgba(170,170,255,.35)' : '#8e8fd6', thin = o.dark ? 'rgba(170,170,255,.16)' : '#cfd0f1';
+    for (let x = ml + big; x < W; x += big) pLine(ctx, x, top, x, H, thin, .45);
+    for (let y = top + 40, i = 0; y < H - 10; y += small, i++) pLine(ctx, 0, y, W, y, i % 4 === 0 ? purple : thin, i % 4 === 0 ? .8 : .45);
+    pLine(ctx, ml, 0, ml, H, o.red, 1);
+  },
+  legal(ctx, W, H, o) {
+    const top = pHeader(ctx, W, o), s = o.sp;
+    pLine(ctx, 0, top + (o.hd ? 6 : 44), W, top + (o.hd ? 6 : 44), o.dark ? o.strong : '#9fb8d8', 1.2);
+    for (let y = top + (o.hd ? 6 : 44) + s; y < H - 20; y += s) pLine(ctx, 0, y, W, y, o.dark ? o.line : '#a9c0de', .6);
+    pLine(ctx, 66, 0, 66, H, o.red, .8); pLine(ctx, 70, 0, 70, H, o.red, .8);
+  },
+  ikisutun(ctx, W, H, o) {
+    const top = pHeader(ctx, W, o), mid = W / 2;
+    for (let y = top + (o.hd ? 18 : 56); y < H - 20; y += o.sp) { pLine(ctx, 30, y, mid - 12, y, o.line, .7); pLine(ctx, mid + 12, y, W - 30, y, o.line, .7); }
+    pLine(ctx, mid, top + (o.hd ? 4 : 30), mid, H - 20, o.strong, .6);
+  },
+  yarikareli(ctx, W, H, o) {
+    const top = pHeader(ctx, W, o), s = o.sp, split = top + (H - top) * .42, x0 = (W % s) / 2;
+    for (let x = x0; x <= W; x += s) pLine(ctx, x, top, x, split, o.line, .5);
+    for (let y = top; y <= split; y += s) pLine(ctx, 0, y, W, y, o.line, .5);
+    pLine(ctx, 0, split + 6, W, split + 6, o.strong, .9);
+    for (let y = split + 6 + 7.1 * MM; y < H - 20; y += 7.1 * MM) pLine(ctx, 0, y, W, y, o.line, .7);
+    pLine(ctx, 64, split + 6, 64, H, o.red, .8);
+  }
+};
+function drawPaper(ctx, W, H, bg, p) {
+  const o = paperOpts(bg, p);
+  ctx.fillStyle = o.paper; ctx.fillRect(0, 0, W, H);
+  (PAPER_DRAW[bg] || PAPER_DRAW.plain)(ctx, W, H, o);
+}
+/* drawBg: kâğıt seçenekleri olan ya da yeni kâğıt türündeki sayfalar gerçek ölçüyle çizilir */
+{
+  const prev = drawBg, LEGACY = new Set(['plain', 'lined', 'grid', 'dots']);
+  drawBg = function (ctx, meta, s) {
+    const bg = meta && meta.bg;
+    if (bg && PAPERS[bg] && (meta.paper || !LEGACY.has(bg))) { ctx.save(); ctx.scale(s, s); drawPaper(ctx, meta.w, meta.h, bg, meta.paper); ctx.restore(); return; }
+    return prev(ctx, meta, s);
+  };
+}
+for (const k of PAPER_ORDER) BG_NAMES[k] = PAPERS[k].name;
+const isDarkPaper = meta => !!(meta && PAPERS[meta.bg] && paperOpts(meta.bg, meta.paper).dark);
+Object.assign(window, { PAPERS, PAPER_ORDER, PAPER_COLS, LINE_COLS, PAPER_DEF, paperOpts, drawPaper, isDarkPaper });

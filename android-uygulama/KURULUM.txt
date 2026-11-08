@@ -1,6 +1,6 @@
 KENAR NOTU — ANDROID KURULUM NOTLARI
 =====================================
-Sürüm 3.0.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
+Sürüm 3.1.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
 
 
 A) APK'YI OLUŞTURMA (bilgisayarda, bir kez)
@@ -112,6 +112,27 @@ G) YENİ (2.2.0)
   (ya da "Araç çubuğunu düzenle" listesinden "Kaldır").
 - PDF renklerini ters çevirme: ⋯ → "PDF renklerini ters çevir" (gece okuma). İsterseniz araç çubuğuna da
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
+
+
+FF) YENİ (3.1.0) — ayarlanabilir kâğıtlar ve yeni kâğıt türleri
+-----------------------------------------------------------------
+- KÂĞIT AYARLARI (Yeni defter → Sayfa şablonu → Kâğıt grubundan bir kâğıt seçince altta açılır):
+  · Aralık: Dar / Orta / Geniş / Çok geniş (gerçek ölçü, mm). Çizgili: 6 · 7,1 · 8,7 · 10 mm;
+    Kareli: 4 · 5 · 6,35 · 10 mm; Noktalı: 4 · 5 · 6,35 · 8 mm.
+  · Kâğıt rengi: Beyaz, Krem, Sarı, Nane, Gri, Gece (koyu; açık renk kalem kullan).
+  · Çizgi rengi: Mavi gri, Gri, Yeşil, Sepya, Turuncu.
+  · Kenar çizgisi: Yok / Sol / Sağ / İki yan (çizgili kâğıtlarda).
+  · Başlık satırı (üstte konu ve tarih) · Her 5 karede koyu çizgi (kareli ve noktalıda).
+  Her kâğıt türü kendi ayarlarını ayrı hatırlar.
+- YENİ KÂĞIT TÜRLERİ: Milimetrik (1/5/10 mm) · Mühendislik (başlık kutulu, 5 mm, nane yeşili) ·
+  İzometrik (3B çizim) · Altıgen · El yazısı alıştırma (İngilizce dört çizgi: üst, kesikli orta, koyu taban, alt) ·
+  Kaligrafi (55° eğim kılavuzlu) · Nota (porte) · Seyès (Fransız) · Legal (sarı, çift kırmızı kenar) ·
+  İki sütun · Yarı kareli (üstte şekil/grafik için kareli, altta çizgili).
+- KÂĞIDI DEĞİŞTİR: Bir sayfanın kâğıdı sonradan değiştirilebilir: ⋯ → "Kâğıdı değiştir" ya da sayfalar
+  panelinde sayfa menüsü → "Kâğıdı değiştir…". Yazılar yerinde kalır. "Defterdeki bütün kâğıt sayfalarına uygula"
+  ile hepsi birden değişir.
+- Sayfa eklerken "Öncekiyle aynı" kâğıt ayarlarını da taşır; diğer kâğıtlar o türün son ayarıyla eklenir.
+- Eski sayfalar (önceki sürümlerde açılmış çizgili/kareli/noktalı) aynen kalır.
 
 
 EE) YENİ (3.0.0) — kapaklar ve sayfa şablonları

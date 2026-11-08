@@ -220,6 +220,10 @@ Yeni → **Yeni defter**: 9 kapak (ebru, bez cilt, kraft, kompozisyon, çini, s�
 haftalık/günlük plan, görüşme notu ve temel kâğıtlar). Var olan notlara da kapak eklenir; PDF'lerde kapak yalnız
 kitaplıkta görünür, dosyaya dokunulmaz.
 
+Kâğıtlar ayarlanabilir: aralık (mm), kâğıt rengi (gece dahil), çizgi rengi, kenar çizgisi, başlık satırı. Ayrıca milimetrik,
+mühendislik, izometrik, altıgen, el yazısı alıştırma, kaligrafi, nota, Seyès, legal, iki sütun ve yarı kareli kâğıtlar var;
+bir sayfanın kâğıdı sonradan da değiştirilebilir.
+
 ### Sayfa kaydırma ve kenar düğmeleri
 
 Sayfa ekrana sığsa da parmakla yana sürüklenir ya da alttaki konum şeridiyle sağa-sola kaydırılır (yön kilidi sayesinde

@@ -80,11 +80,11 @@ function pagesOp(mutate) {
   finishAll(); const b = ed.note.pages.slice(); mutate(ed.note.pages); const a = ed.note.pages.slice();
   ed.undo.push({ k: 'pages', b, a }); ed.redo.length = 0; rebuildAfterPages(); changed(null);
 }
-function addPageAt(idx, bg) {
+function addPageAt(idx, bg, paper) {
   const ref = (ed.pvs[Math.max(0, idx - 1)] || ed.pvs[0] || { meta: { w: 595, h: 842 } }).meta;
   const portrait = ref.w <= ref.h;
   const w = ref.k === 'pdf' ? (portrait ? 595 : 842) : ref.w, ht = ref.k === 'pdf' ? (portrait ? 842 : 595) : ref.h;
-  pagesOp(pages => pages.splice(idx, 0, { id: uid(), k: 'blank', w, h: ht, bg }));
+  pagesOp(pages => pages.splice(idx, 0, { id: uid(), k: 'blank', w, h: ht, bg, ...(paper ? { paper } : {}) }));
   requestAnimationFrame(() => goToPage(idx)); toast(`Sayfa ${idx + 1} eklendi`, 1400);
 }
 function addPagePicker(anchor, idx) {
@@ -130,6 +130,7 @@ function pageMenu(anchor, i) {
   const pv = ed.pvs[i]; if (!pv) return; const n = ed.pvs.length;
   openPop(anchor, () => menu([
     { label: 'Sayfaya git', icon: IC.chevR, sub: `Sayfa ${i + 1} / ${n}`, onClick: () => { closePgrid(); goToPage(i); afterJump(); } },
+    pv.meta.k === 'blank' && pv.meta.bg !== 'cover' && window.changePaper ? { label: 'Kâğıdı değiştir…', icon: IC.blank, sub: (BG_NAMES[pv.meta.bg || 'plain'] || 'Boş') + ' · aralık, renk, kenar', onClick: () => { if (typeof closePgrid === 'function' && pgridEl) closePgrid(); changePaper(i); } } : null,
     i === 0 && !EMBED && window.coverForNote ? { label: pv.meta.bg === 'cover' ? 'Kapağı düzenle' : 'Kapak ekle', icon: IC.cover, sub: pv.meta.bg === 'cover' ? 'Başlık, desen, renk' : 'Deftere kapak sayfası', onClick: () => { if (typeof closePgrid === 'function' && pgridEl) closePgrid(); coverForNote(ed.note.id); } } : null,
     { label: 'Sonrasına sayfa ekle…', icon: IC.plus, onClick: () => addPagePicker(anchor.isConnected ? anchor : $('#pagesBtn'), i + 1) },
     { label: 'Önüne sayfa ekle…', icon: IC.plus, onClick: () => addPagePicker(anchor.isConnected ? anchor : $('#pagesBtn'), i) },

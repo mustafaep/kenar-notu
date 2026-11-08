@@ -1232,3 +1232,23 @@ html:not(.phone) .bartab[data-st=busy]::after{background:var(--accent)}
   .nbhead .seg{order:3;width:100%}
   .nbcovers{grid-template-columns:repeat(3,1fr)}
 }
+/* 3.1: kâğıt ayarları */
+.nbpaper{margin:14px 0 4px;padding:14px 16px;border-radius:14px;background:var(--chrome-2);display:flex;flex-direction:column;gap:12px}
+.nbpaper[hidden]{display:none}
+.nbphead{display:flex;align-items:baseline;gap:10px}
+.nbphead b{font:700 15px var(--f-display)}
+.nbphead small{color:var(--muted)}
+.nbprow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.nbprow>.nblab{width:52px;flex:none}
+.nbprow .seg{flex-wrap:wrap}
+.nbsw{display:flex;gap:7px;flex-wrap:wrap}
+.nbswb{width:30px;height:30px;border-radius:50%;border:0;padding:3px;background:transparent;cursor:pointer;box-shadow:inset 0 0 0 1px var(--line)}
+.nbswb i{display:block;width:100%;height:100%;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+.nbswb.on{box-shadow:0 0 0 2.5px var(--accent)}
+.nbhint{color:var(--muted)}
+.nbptg{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
+.nbptg .toggle{margin:0}
+.nbpage.big canvas{width:208px!important;height:294px!important}
+.nball{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink)}
+.nball input{width:18px;height:18px;accent-color:var(--accent)}
+@media (max-width:720px){.nbptg{grid-template-columns:1fr}.nbprow>.nblab{width:auto}.nbpage.big canvas{width:140px!important;height:198px!important}.nbpv .nbpage.big{display:flex}}
