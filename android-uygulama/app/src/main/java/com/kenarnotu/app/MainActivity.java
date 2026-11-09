@@ -120,7 +120,7 @@ public class MainActivity extends Activity {
         // S Pen yan tuşu ve silgi ucu: Android'den doğrudan okunur, sayfaya bildirilir
         web.setOnTouchListener(new View.OnTouchListener() {
             @Override
-            public boolean onTouch(View v, MotionEvent e) { trackPen(e); return false; }
+            public boolean onTouch(View v, MotionEvent e) { trackPen(e); trackPalm(e); return false; }
         });
         web.setOnHoverListener(new View.OnHoverListener() {
             @Override
@@ -865,6 +865,17 @@ public class MainActivity extends Activity {
             }
         } catch (Exception e) {
             notifyJs(action, false, String.valueOf(e.getMessage()));
+        }
+    }
+
+    /* Avuç: Android 13+ avuç dokunuşunu sonradan FLAG_CANCELED ile iptal eder (ACTION_CANCEL / ACTION_POINTER_UP).
+       Web tarafı bunu ayırt edemez; sayfaya bildirilir, avucun yol açtığı kaydırma geri alınır. */
+    void trackPalm(MotionEvent e) {
+        if (Build.VERSION.SDK_INT < 33 || web == null) return;
+        int a = e.getActionMasked();
+        if ((a == MotionEvent.ACTION_CANCEL || a == MotionEvent.ACTION_POINTER_UP) && (e.getFlags() & MotionEvent.FLAG_CANCELED) != 0) {
+            int i = a == MotionEvent.ACTION_POINTER_UP ? e.getActionIndex() : 0;
+            if (e.getToolType(i) == MotionEvent.TOOL_TYPE_FINGER) web.evaluateJavascript("window.__palm && window.__palm()", null);
         }
     }
 

@@ -735,7 +735,39 @@ function lastPenAny() {
   try { const sw = typeof sideWin === 'function' && sideWin(); if (sw && sw.__ed) t = Math.max(t, sw.__ed.lastPenAt || 0); } catch (e) { }
   return t;
 }
-function isPalm(e) { return Date.now() - lastPenAny() < 700 || (e.width > 44 && e.height > 44); }
+/* ---------- avuç koruması (3.3) ----------
+   Avuç çoğu zaman kalemden ÖNCE değer; o arada başlayan kaydırma, kalem görülünce (havada ya da ekranda) ya da Android
+   dokunuşu avuç diye iptal edince (pointercancel / FLAG_CANCELED) geri alınır. Kalem kullanan biri için tek parmakla
+   kaydırma küçük bir eşikten sonra başlar; Güçlü modda yavaş kayan temas (avuç) hiç kaydırmaz; İki parmak modunda
+   tek parmak sayfayı oynatmaz. */
+const PALM = { normal: { win: 1500, slop: 8, big: 44 }, strong: { win: 4000, slop: 14, big: 36 }, two: { win: 1500, slop: 8, big: 44 } };
+function palmMode() { return PALM[S.prefs.palm] ? S.prefs.palm : 'normal'; }
+function palmCfg() { return PALM[palmMode()]; }
+function bigTouch(e) { const c = palmCfg(); return (e.width > c.big && e.height > c.big) || Math.max(e.width || 0, e.height || 0) > c.big * 2; }
+function isPalm(e) { return Date.now() - lastPenAny() < palmCfg().win || bigTouch(e); }
+function penUser() { return S.prefs.penSeen && !fingerDraws(); }
+/* avuçla başlayan kaydırmayı/yakınlaştırmayı geri al ve o temasları yok say */
+function palmCancel(why) {
+  const v0 = ed.tv0; let undoView = false;
+  if (ed.fingerTool) { const ft = ed.fingerTool, s = ft.st; if (s.g === 'draw' && s.live) { clearTimeout(s.live.holdT); if (ed.live === s.live) { ed.live = null; renderLive(); } } ed.fingerTool = null; }
+  if (ed.touches.size) {
+    const started = Math.min(...[...ed.touches.values()].map(t => t.t0 || 0)), moved = Math.max(...[...ed.touches.values()].map(t => Math.hypot(t.x - t.sx, t.y - t.sy)));
+    undoView = why === 'pen-down' || why === 'android' || why === 'big' ? now() - started < 3500 : now() - started < 1500 || moved < 60;
+    for (const id of ed.touches.keys()) ed.ptrs.set(id, { g: 'ignore' });
+    ed.touches.clear(); ed.pinch = null; clearTimeout(ed.lpT);
+    if (ed.textSelPtr != null) { ed.textSelPtr = null; textSelClear(); }
+  } else if (why === 'android' && v0 && now() - v0.at < 2500) undoView = true; // dokunuş bitmiş olabilir: Android sonradan söyledi
+  if (undoView && v0 && (v0.z !== ed.view.z || v0.tx !== ed.view.tx || v0.ty !== ed.view.ty)) {
+    stopInertia();
+    const a = { ...ed.view }, t0 = now(), dur = 140;
+    const step = () => { const k = Math.min(1, (now() - t0) / dur), e = 1 - Math.pow(1 - k, 3); setView(a.z + (v0.z - a.z) * e, a.tx + (v0.tx - a.tx) * e, a.ty + (v0.ty - a.ty) * e); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+    ed.palmFixes = (ed.palmFixes || 0) + 1;
+  } else if (why === 'android') stopInertia();
+  ed.tv0 = null;
+}
+window.__palm = () => { if (ed.note) palmCancel('android'); };
+function penSeenNow(down) { if (ed.touches.size || (ed.fingerTool && down)) palmCancel(down ? 'pen-down' : 'pen-hover'); }
 function eventsOf(e) { let a = []; try { a = e.getCoalescedEvents ? e.getCoalescedEvents() : []; } catch (er) { } return a.length ? a : [e]; }
 function pressureOf(e) { if (e.pointerType === 'pen') return e.pressure > 0 ? e.pressure : (e.buttons ? .5 : 0); if (e.pointerType === 'touch') return e.pressure > .05 && e.pressure < .95 ? e.pressure : .5; return .5; }
 function tiltOf(e) {
@@ -751,7 +783,7 @@ addEventListener('pointermove', onMove, { passive: false });
 addEventListener('pointerup', onUp);
 addEventListener('pointercancel', e => onUp(e, true));
 stage.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') hideCursor(); });
-stage.addEventListener('pointerover', e => { if (e.pointerType === 'pen') { ed.lastPen = now(); ed.lastPenAt = Date.now(); } });
+stage.addEventListener('pointerover', e => { if (e.pointerType === 'pen') { ed.lastPen = now(); ed.lastPenAt = Date.now(); penSeenNow(false); } });
 
 function onDown(e) {
   if (!ed.note || ed.capture) return;
@@ -763,7 +795,7 @@ function onDown(e) {
   if (ed.aiArea) aiAreaClear();
   if (ed.readout) renderReadout(e);
   const pt = e.pointerType;
-  if (pt === 'pen') { ed.lastPen = now(); ed.lastPenAt = Date.now(); if (!S.prefs.penSeen) { S.prefs.penSeen = true; saveSettings(); } }
+  if (pt === 'pen') { ed.lastPen = now(); ed.lastPenAt = Date.now(); penSeenNow(true); if (!S.prefs.penSeen) { S.prefs.penSeen = true; saveSettings(); } }
   if (e.target.closest('.selh')) { e.preventDefault(); capture(e); startSelHandle(e, e.target.closest('.selh').dataset.h); return; }
   if (e.target.closest('.tgrip')) { e.preventDefault(); capture(e); startGrip(e); return; }
   if (ed.tool === 'text' && e.target.closest('.tbox')) { const el = e.target.closest('.tbox'); if (!el.classList.contains('editing')) { e.preventDefault(); ed.ptrs.set(e.pointerId, { g: 'tboxtap', el, sx: e.clientX, sy: e.clientY }); capture(e); } return; }
@@ -796,7 +828,7 @@ function startTool(e, tool) {
 function onMove(e) {
   if (!ed.note || edView.hidden || ed.capture) return;
   const st = ed.ptrs.get(e.pointerId);
-  if (e.pointerType === 'pen') { ed.lastPen = now(); ed.lastPenAt = Date.now(); if (ed.readout) renderReadout(e); }
+  if (e.pointerType === 'pen') { ed.lastPen = now(); ed.lastPenAt = Date.now(); if (ed.touches.size) penSeenNow(!!(e.buttons & 1)); if (ed.readout) renderReadout(e); }
   if (!st) {
     if (e.pointerType === 'pen' && !(e.buttons & 1) && e.target && stage.contains(e.target)) { ed.rect = ed.rect || stage.getBoundingClientRect(); showCursor(e, (penBtnNative || (e.buttons & 2)) && S.prefs.side === 'eraser' ? 'eraser' : undefined); }
     else if (e.pointerType === 'touch' && ed.touches.has(e.pointerId)) touchMove(e);
@@ -835,9 +867,10 @@ function onUp(e, cancel) {
 function touchDown(e) {
   if (isPalm(e)) { ed.ptrs.set(e.pointerId, { g: 'ignore' }); return; }
   capture(e); stopInertia();
-  ed.touches.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY });
+  const twoOnly = palmMode() === 'two' && penUser();
+  ed.touches.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t0: now(), go: !penUser(), noPan: twoOnly });
   const n = ed.touches.size;
-  if (n === 1) { ed.tapStart = now(); ed.tapMoved = 0; ed.touchMax = 1; ed.panSamples = []; }
+  if (n === 1) { ed.tapStart = now(); ed.tapMoved = 0; ed.touchMax = 1; ed.panSamples = []; ed.tv0 = { z: ed.view.z, tx: ed.view.tx, ty: ed.view.ty, at: now() }; }
   ed.touchMax = Math.max(ed.touchMax, n);
   if (n === 1) {
     if (fingerDraws() || (ed.sel && insideSel(local(ed.sel.pv, toWorld(e.clientX, e.clientY))))) {
@@ -848,6 +881,7 @@ function touchDown(e) {
     }
     ed.pinch = null;
     clearTimeout(ed.lpT);
+    if (twoOnly || (palmMode() === 'strong' && Date.now() - lastPenAny() < 10000)) return; // avucun basılı tutması metin seçmesin
     const id = e.pointerId, lx = e.clientX, ly = e.clientY;
     ed.lpT = setTimeout(async () => {
       const t = ed.touches.get(id); if (!t || ed.touches.size !== 1 || ed.tapMoved > 10) return;
@@ -889,9 +923,19 @@ function touchMove(e) {
   e.preventDefault();
   if (ed.fingerTool && ed.fingerTool.id === e.pointerId) { const st = ed.fingerTool.st; if (st.g === 'draw') moveDraw(e, st); else if (st.g === 'erase') moveErase(e, st); else if (st.g === 'lasso') moveLasso(e, st); else if (st.g.startsWith('sel')) moveSel(e, st); return; }
   if (ed.textSelPtr === e.pointerId) { t.x = e.clientX; t.y = e.clientY; textSelMove(e.clientX, e.clientY); return; }
-  const dx = e.clientX - t.x, dy = e.clientY - t.y; t.x = e.clientX; t.y = e.clientY;
+  if (penUser() && bigTouch(e)) { palmCancel('big'); return; } // temas büyüdü: avuç
+  let dx = e.clientX - t.x, dy = e.clientY - t.y; t.x = e.clientX; t.y = e.clientY;
   ed.tapMoved = Math.max(ed.tapMoved, Math.hypot(t.x - t.sx, t.y - t.sy));
   if (ed.tapMoved > 10) clearTimeout(ed.lpT);
+  if (ed.touches.size === 1) {
+    if (t.noPan) return;
+    if (!t.go) { // kalem kullanıcısı: küçük titremeler sayfayı oynatmaz
+      const c = palmCfg(), d = Math.hypot(t.x - t.sx, t.y - t.sy);
+      if (d < c.slop) return;
+      if (palmMode() === 'strong' && Date.now() - lastPenAny() < 10000 && now() - t.t0 > 260) { t.noPan = true; return; } // yavaş kayan temas = avuç
+      t.go = true; dx = dy = 0;
+    }
+  }
   if (ed.touches.size >= 2 && ed.pinch) {
     const ts = [...ed.touches.values()].slice(0, 2);
     const c = { x: (ts[0].x + ts[1].x) / 2, y: (ts[0].y + ts[1].y) / 2 }, d = Math.max(10, Math.hypot(ts[0].x - ts[1].x, ts[0].y - ts[1].y));
@@ -915,6 +959,7 @@ function touchUp(e, cancel) {
     else if (s.g === 'texttap' && !cancel && Math.hypot(e.clientX - s.sx, e.clientY - s.sy) < 12) newText(s.pv, s.P);
     return;
   }
+  if (ed.touches.size === 0 && cancel && penUser()) { palmCancel('android'); return; } // Android avuç dedi: kaydırmayı geri al, atalet yok
   if (ed.touches.size === 0) {
     const quick = now() - ed.tapStart < 320 && ed.tapMoved < 14;
     if (quick && S.prefs.twoTap && !cancel) { if (ed.touchMax === 2) { if (ed.undo.length) { undo(); toast('Geri alındı', 900); } } else if (ed.touchMax === 3) { if (ed.redo.length) { redo(); toast('Yinelendi', 900); } } }

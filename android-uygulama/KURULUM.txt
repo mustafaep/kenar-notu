@@ -1,6 +1,6 @@
 KENAR NOTU — ANDROID KURULUM NOTLARI
 =====================================
-Sürüm 3.2.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
+Sürüm 3.3.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
 
 
 A) APK'YI OLUŞTURMA (bilgisayarda, bir kez)
@@ -113,6 +113,33 @@ G) YENİ (2.2.0)
 - PDF renklerini ters çevirme: ⋯ → "PDF renklerini ters çevir" (gece okuma). İsterseniz araç çubuğuna da
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
 
+
+HH) YENİ (3.3.0) — Çizim (ücretsiz Gemini ile şema ve grafik), avuç koruması
+-------------------------------------------------------------------------------
+- ÇİZİM (araç çubuğu → Çizim (YZ)): ne çizileceğini yaz, "Çiz" de. Türler: akış şeması, döngü, zaman çizelgesi,
+  Venn, tablo, ağaç / hiyerarşi, zihin haritası, fonksiyon grafiği, çubuk grafik, serbest çizim (Otomatik seçer).
+  · Ücretsiz Gemini resim üretmez: çizimi JSON olarak tarif eder, uygulama kendisi çizer. Sonuç sayfaya NORMAL
+    KALEM ÇİZGİLERİ ve METİN KUTULARI olarak eklenir: seçili gelir; taşı, büyüt-küçült, rengini ya da yazı
+    stilini değiştir, istediğin parçayı sil. PDF'e keskin gider. Geri al tek adımda kaldırır.
+  · Görünüm: "El çizimi" (hafif titrek çizgi, Okunaklı yazı) ya da "Düzgün"; "Renkli" ya da "Tek renk"
+    (kalemin rengi).
+  · "Bu sayfanın içeriğinden yararlan": sayfanın görüntüsü de gönderilir (ör. "bu konuyu zihin haritası yap").
+  · FONKSİYON GRAFİĞİ ANAHTARSIZ: "y = x² − 4" ya da "y = sin(x); 2x+1" yazınca yapay zekâ kullanılmadan
+    uygulama çizer (eksenler, ızgara, sayılar, birden çok eğri).
+  · Gemini anahtarı Ayarlar → Yapay zekâ'dakiyle aynıdır (ücretsiz katman yeterli).
+- TEMİZE ÇİZ: Alanı çevrele ile kabaca çizdiğin şemayı/tabloyu/grafiği seç → "Temize çiz". Aynı yapının düzgün
+  hâli gösterilir; "Yerine koy" kaba çizimi kaldırıp yenisini aynı yere koyar (Geri al ile döner).
+- AVUÇ KORUMASI (Ayarlar → Kalem): elin ekrana değince sayfanın kayması azaltıldı.
+  · Avuç genelde kalemden ÖNCE değer: kalem ekrana yaklaşınca (havada) ya da dokununca, avucun o ana kadar yaptığı
+    kaydırma/yakınlaştırma geri alınır ve o temas yok sayılır.
+  · Android avucu sonradan "yanlışlıkla dokunma" diye iptal edince (Android 13+) kaydırma geri alınır, sayfa
+    kaymaya devam etmez (APK güncellemesi gerekir).
+  · Kalem kullanan biri için tek parmak kaydırma küçük bir eşikten sonra başlar: elin titremesi sayfayı oynatmaz.
+    Avuç gibi büyük temas her an yok sayılır; kalemden sonraki 1,5 sn dokunuşlar da.
+  · Güçlü: yazarken yavaşça kayan temas (avuç) sayfayı hiç oynatmaz; hızlı parmak kaydırması çalışır; basılı tutup
+    metin seçme yazarken kapalı.
+  · İki parmakla kaydır: kalem kullanırken tek parmak sayfayı hiç oynatmaz; iki parmakla kaydır ve yakınlaştır.
+- APK'yı yeniden oluşturmak gerekir (avuç iptalini Android'den okuyan kod eklendi).
 
 GG) YENİ (3.2.0) — kalem stilleri takımları, düzeltilmiş yazıyı değiştirme, genel notlar için Sayfayı düzelt
 -------------------------------------------------------------------------------------------------------------

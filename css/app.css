@@ -1267,3 +1267,16 @@ html:not(.phone) .bartab[data-st=busy]::after{background:var(--accent)}
 .selstyle{min-width:300px;max-width:420px}
 .selqk{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .selsz{min-width:56px;text-align:center;font-variant-numeric:tabular-nums;color:var(--muted)}
+/* Çizim (3.3) */
+.modal.nbbox.drbox{width:min(920px,calc(100vw - 32px))}
+.drbox .nbmain{grid-template-columns:366px minmax(0,1fr)}
+.drpv{gap:14px;padding:18px}
+.drpv canvas{border-radius:10px;box-shadow:0 1px 0 var(--line),0 6px 22px rgba(20,30,50,.10);background:#fff;max-width:100%;height:auto}
+.drlook{display:flex;flex-direction:column;gap:8px;width:100%;max-width:330px}
+.drlook .seg{width:100%}
+.drlook .seg button{flex:1}
+.drtypes{display:flex;flex-wrap:wrap;gap:6px}
+.drbox textarea{width:100%;min-height:76px;resize:vertical;font:15px/1.4 var(--f-ui,system-ui)}
+.drstat{min-height:1.4em;margin:6px 0 0;font-size:13.5px;color:var(--muted)}
+.drnote{font-size:12.5px}
+@media (max-width:760px){.drbox .nbmain{grid-template-columns:1fr}.drpv{flex-direction:column}}

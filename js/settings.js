@@ -4,7 +4,7 @@
    Solda bölümler, sağda o bölümün ayarları (gruplu kartlar). Dar ekranda bölümler üstte yatay sekme olur.
    Düzenleyicideki ⋯ paneli yalnızca sık kullanılan işlemleri gösterir; ayrıntılar buradadır.
    ========================================================= */
-const APP_VERSION = '3.2.0';
+const APP_VERSION = '3.3.0';
 const SET_SECTIONS = [
   { id: 'view', name: 'Görünüm', ic: 'moon', lead: 'Tema, düzenleyici göstergeleri ve yan yana belge.' },
   { id: 'pen', name: 'S Pen ve dokunma', ic: 'pen', lead: 'Parmakla çizim, yan tuş ve hareketler.' },
@@ -71,6 +71,7 @@ function setBuild(id, close) {
   if (id === 'pen') return [
     sGroup('Kalem', [
       sRow('Parmakla çizim', 'Otomatik: S Pen algılanınca parmak yalnızca kaydırır', segRow([['auto', 'Otomatik'], ['pen', 'Yalnız S Pen'], ['finger', 'Parmak da çizer']], S.prefs.finger, v => { S.prefs.finger = v; saveSettings(); }), true),
+      sRow('Avuç koruması', 'Normal: kalem görülünce avucun kaydırması geri alınır · Güçlü: yazarken yavaş kayan temas sayfayı hiç oynatmaz · İki parmak: kalem kullanırken tek parmak sayfayı oynatmaz, iki parmakla kaydır', segRow([['normal', 'Normal'], ['strong', 'Güçlü'], ['two', 'İki parmakla kaydır']], S.prefs.palm || 'normal', v => { S.prefs.palm = v; saveSettings(); }, 'Avuç koruması'), true),
       sRow('S Pen yan tuşu', 'Basılı tutarken geçici olarak çalışan araç', segRow([['eraser', 'Silgi'], ['lasso', 'Seçim'], ['hl', 'Fosforlu'], ['off', 'Kapalı']], S.prefs.side, v => { S.prefs.side = v; saveSettings(); }), true)
     ]),
     sGroup('Hareketler', [
