@@ -4,7 +4,7 @@
    Solda bölümler, sağda o bölümün ayarları (gruplu kartlar). Dar ekranda bölümler üstte yatay sekme olur.
    Düzenleyicideki ⋯ paneli yalnızca sık kullanılan işlemleri gösterir; ayrıntılar buradadır.
    ========================================================= */
-const APP_VERSION = '3.3.0';
+const APP_VERSION = '3.4.0';
 const SET_SECTIONS = [
   { id: 'view', name: 'Görünüm', ic: 'moon', lead: 'Tema, düzenleyici göstergeleri ve yan yana belge.' },
   { id: 'pen', name: 'S Pen ve dokunma', ic: 'pen', lead: 'Parmakla çizim, yan tuş ve hareketler.' },
@@ -21,7 +21,10 @@ function openSettings(section) {
   document.querySelectorAll('.setback').forEach(x => x.remove());
   closePop && closePop();
   const back = h('div', { class: 'modal-back setback' });
-  const close = () => { back.remove(); };
+  const onKey = e => { if (e.key !== 'Escape' || !back.isConnected) return; if (pop && !pop.hidden) return; if ([...document.querySelectorAll('.modal-back')].pop() !== back) return; e.preventDefault(); e.stopPropagation(); close(); };
+  const close = () => { back.remove(); removeEventListener('keydown', onKey, true); };
+  addEventListener('keydown', onKey, true);
+  back._close = close;
   const nav = h('nav', { class: 'setnav', 'aria-label': 'Ayar bölümleri' });
   const main = h('div', { class: 'setmain' });
   const show = id => {

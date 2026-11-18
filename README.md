@@ -50,6 +50,8 @@ aynı APK telefonda kalemsiz bir okuma ve not görünümüyle açılıyor.
 **S Pen ile yazma**
 - Basınç ve eğim duyarlı dolma, tükenmez, kurşun, kaligrafi, fırça ve fosforlu kalem.
 - Yan tuşla geçici silgi, havada imleç, titremeyi azaltma.
+- **Kenardaki geri hareketine karşı koruma:** kalemin hizasındaki kenar şeridi Android'in geri hareketinden muaf;
+  yazarken gelen geri yok sayılır, notu kapatan geri iki kez istenir.
 - **Avuç koruması:** avuç kalemden önce değip sayfayı kaydırırsa, kalem yaklaşınca kayma geri alınır; Android'in
   avuç iptali de okunur. Güçlü mod yavaş kayan teması yok sayar; "İki parmakla kaydır" modunda tek parmak sayfayı oynatmaz.
 - Bekletince şekle dönüştürme (çizgi, daire, üçgen, dörtgen).
@@ -57,6 +59,8 @@ aynı APK telefonda kalemsiz bir okuma ve not görünümüyle açılıyor.
 - Kement ile seç, taşı, büyüt/küçült, döndür, rengini değiştir. Metne ya da görsele basılı tutunca da seçilir.
 - **Kaydırma düğmeleri** (üst çubukta → ve ↓; istenirse dört yön): yazarken diğer elle dokununca sayfa kayar,
   basılı tutunca kaymaya devam eder. Kalemle yazarken parmakla sürüklemek avuç içi sayıldığı için düğmeler daha rahat.
+- **Kenar düğmeleri:** üst çubuk gizliyken seçilen düğmeler (kalem, silgi, geri al…) ve istenirse **favori kalemler**
+  sayfanın köşesinde/kenarında durur.
 
 **Çizim (ücretsiz Gemini)**
 - Yazarak iste: akış şeması, döngü, zaman çizelgesi, Venn, tablo, ağaç, zihin haritası, çubuk grafik, serbest çizim.
@@ -133,6 +137,8 @@ olduğu için (A4 = 595 × 842 pt) boyutlar birebir aynıdır.
 
 **Okuma ve yapay zekâ**
 - PDF metninde kelimeye basılı tut: seç, kopyala, fosforla, paylaş, **Dinle**, **Anlamı**, **Çevir**.
+  Menüde hangi düğmelerin hangi sırayla görüneceği Ayarlar'dan seçilir (varsayılan: Kopyala, Dinle, Anlamı, Çevir;
+  diğerleri "⋯" altında).
 - **Alanı çevrele:** bir paragrafın ya da tablonun etrafını çiz → Açıkla / Çevir / Not yapıştır.
   Taranmış sayfalarda alanın görüntüsü gönderilir.
 - Sözlük ve sohbet penceresi: taşınabilir, boyutlandırılabilir; kalemle soru yazılabilir.
@@ -184,6 +190,8 @@ js/                  Uygulama kodu
   split.js           Yan yana belge
   onedrive.js        OneDrive (Graph) ve eşitleme
   native.js          Android köprüsü (dosyaya yazma, paylaşma, OneDrive SAF)
+  selmenu.js         Metne basılı tutunca açılan menü (ayarlanabilir)
+  backguard.js       Yazarken geri hareketine karşı koruma
   draw.js            Çizim: Gemini tarifi → şema/grafik yerleşimi, yerel fonksiyon grafiği, Temize çiz
 fonts/               Onest, Literata, Caveat, Kalam (çevrimdışı)
 vendor/              PDF.js, pdf-lib, MSAL, qpdf (wasm)

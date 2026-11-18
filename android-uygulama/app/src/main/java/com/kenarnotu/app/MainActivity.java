@@ -8,6 +8,9 @@ import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Color;
+import android.graphics.Rect;
+import android.os.Handler;
+import android.os.Looper;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -42,6 +45,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -174,7 +178,7 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (web == null) { super.onBackPressed(); return; }
-        web.evaluateJavascript("(window.kenarBack && window.kenarBack()) ? '1' : '0'", new ValueCallback<String>() {
+        web.evaluateJavascript("((window.kenarBackGuard && window.kenarBackGuard()) || (window.kenarBack && window.kenarBack())) ? '1' : '0'", new ValueCallback<String>() {
             @Override
             public void onReceiveValue(String v) {
                 if (v == null || !v.contains("1")) finish();
@@ -462,6 +466,14 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public boolean isImmersive() { return immersive; }
+
+        @JavascriptInterface
+        public void setEdgeGuard(final boolean on) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() { edgeGuard = on; if (!on) clearGuard.run(); }
+            });
+        }
 
         @JavascriptInterface
         public void copyText(final String text) {
@@ -879,9 +891,37 @@ public class MainActivity extends Activity {
         }
     }
 
+    /* Kenar koruması: kalem ekrandayken/havadayken kalemin hizasındaki kenar şeridi sistemin geri hareketinden muaf.
+       Android kenar başına en fazla 200 dp'ye izin verir; şerit kalemle birlikte yukarı-aşağı kayar. */
+    boolean edgeGuard = true;
+    int guardTop = -1;
+    final Handler guardH = new Handler(Looper.getMainLooper());
+    final Runnable clearGuard = new Runnable() {
+        @Override
+        public void run() {
+            guardTop = -1;
+            if (Build.VERSION.SDK_INT >= 29 && web != null) web.setSystemGestureExclusionRects(new ArrayList<Rect>());
+        }
+    };
+    void guardEdges(float y) {
+        if (!edgeGuard || Build.VERSION.SDK_INT < 29 || web == null) return;
+        float d = getResources().getDisplayMetrics().density;
+        int H = web.getHeight(), W = web.getWidth();
+        if (H <= 0 || W <= 0) return;
+        int band = (int) (196 * d), top = (int) (y - 80 * d);
+        top = Math.max(0, Math.min(top, H - band));
+        guardH.removeCallbacks(clearGuard);
+        guardH.postDelayed(clearGuard, 4000);
+        if (guardTop >= 0 && Math.abs(top - guardTop) < 24 * d) return;
+        guardTop = top;
+        int ew = (int) (40 * d);
+        web.setSystemGestureExclusionRects(Arrays.asList(new Rect(0, top, ew, top + band), new Rect(W - ew, top, W, top + band)));
+    }
+
     void trackPen(MotionEvent e) {
         int tool = e.getToolType(0);
         if (tool != MotionEvent.TOOL_TYPE_STYLUS && tool != MotionEvent.TOOL_TYPE_ERASER) return;
+        guardEdges(e.getY());
         boolean pressed = tool == MotionEvent.TOOL_TYPE_ERASER
                 || (e.getButtonState() & (MotionEvent.BUTTON_STYLUS_PRIMARY | MotionEvent.BUTTON_SECONDARY)) != 0;
         if (pressed != penButton) {

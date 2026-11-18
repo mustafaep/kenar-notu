@@ -9,7 +9,7 @@
    ========================================================= */
 const DOCK_SPOTS = ['tl', 'tr', 'l', 'r', 'bl', 'br'];
 const SPOT_NAMES = { tl: 'Sol üst', tr: 'Sağ üst', l: 'Sol kenar', r: 'Sağ kenar', bl: 'Sol alt', br: 'Sağ alt' };
-const DOCK_EXTRA = { undo: { name: 'Geri al', ic: IC.undo }, redo: { name: 'Yinele', ic: IC.redo } };
+const DOCK_EXTRA = { undo: { name: 'Geri al', ic: IC.undo }, redo: { name: 'Yinele', ic: IC.redo }, favs: { name: 'Favori kalemler', ic: '<path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>' } };
 const GRIP_IC = '<circle cx="9" cy="7" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="7" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="1.3" fill="currentColor" stroke="none"/>';
 const dockItem = id => TB_ITEMS[id] || DOCK_EXTRA[id] || null;
 function dockPins() {
@@ -70,7 +70,43 @@ if (barTab) {
 }
 
 /* ---------- 2) kenar düğmeleri ---------- */
+/* favori kalemler kenarda: her favori bir düğme (dokun: o kalem; basılı tut: favori menüsü). Stilli favoriler tek "Stiller" düğmesinde. */
+function dockFavs() {
+  const box = h('div', { class: 'dfavs', 'data-item': 'favs', role: 'group', 'aria-label': 'Favori kalemler' });
+  renderDockFavs(box);
+  return box;
+}
+function favIsCurrent(fv) {
+  if (fv.name) return false;
+  const t = fv.type === 'hl' ? S.hl : S.pen[fv.type]; if (!t) return false;
+  const tool = fv.type === 'hl' ? 'hl' : 'pen';
+  return ed.tool === tool && (fv.type === 'hl' || S.pen.type === fv.type) && (t.color || '').toLowerCase() === (fv.color || '').toLowerCase() && Math.abs((t.size || 0) - (fv.size || 0)) < .01 && !S.hand.style;
+}
+function renderDockFavs(box) {
+  box.innerHTML = '';
+  const pens = S.fav.map((fv, i) => [fv, i]).filter(([fv]) => !fv.name).slice(0, 8);
+  if (S.fav.some(x => x.name)) {
+    const st = S.hand.style, cur = st && S.fav.find(x => x.name === st.name);
+    const b = h('button', { class: 'tool dfav dstyle' + (cur ? ' on' : ''), type: 'button', 'aria-label': 'Kalem stili: ' + (cur ? cur.name : 'seç'), title: 'Kalem stilleri' + (cur ? ' · ' + cur.name : '') }, h('i', { class: 'dot', style: { background: cur ? cur.color : 'conic-gradient(#1f2f5c 0 25%,#1b6e3c 0 50%,#167a7a 0 75%,#6b3fa0 0)' } }));
+    b.addEventListener('click', () => openPop(b, stylePicker));
+    box.append(b);
+  }
+  if (!pens.length && !box.childElementCount) { box.append(h('button', { class: 'tool dfav', type: 'button', 'aria-label': 'Favori kalem yok', title: 'Kalem panelinde ☆ ile favori ekle', onclick: () => toast('Favori eklemek için kalem panelindeki ☆ düğmesine dokun', 2200) }, icon(DOCK_EXTRA.favs.ic))); return; }
+  for (const [fv, i] of pens) {
+    const cv = h('canvas', { width: 30, height: 30 });
+    const b = h('button', { class: 'tool dfav' + (favIsCurrent(fv) ? ' on' : ''), type: 'button', 'aria-label': 'Favori ' + (PEN_NAMES[fv.type] || 'kalem') + ' ' + (i + 1), title: (PEN_NAMES[fv.type] || '') + ' · favori (basılı tut: seçenekler)' }, cv);
+    let lt = 0, long = false;
+    b.addEventListener('pointerdown', () => { long = false; clearTimeout(lt); lt = setTimeout(() => { long = true; favMenu(b, i); }, 520); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => b.addEventListener(t, () => clearTimeout(lt)));
+    b.addEventListener('contextmenu', e => { e.preventDefault(); long = true; favMenu(b, i); });
+    b.addEventListener('click', () => { if (!long) applyFav(fv); long = false; });
+    box.append(b);
+    requestAnimationFrame(() => miniStroke(cv, fv.type, { size: Math.min(fv.size, fv.type === 'hl' ? 8 : 4), color: fv.color, o: fv.o }));
+  }
+}
+{ const rt = refreshToolbar; refreshToolbar = function (...a) { const r = rt.apply(this, a); $$('#ui .edock .dfavs').forEach(renderDockFavs); return r; }; }
 function dockBtn(id) {
+  if (id === 'favs') return dockFavs();
   const it = dockItem(id);
   const b = h('button', { class: 'tool', type: 'button', 'aria-label': it.name, title: it.name + ' (basılı tut: yerini değiştir)', 'data-item': id, 'data-dock': '1' }, icon(it.ic));
   if (it.tool) {
@@ -97,7 +133,7 @@ function buildDocks() {
   if (EMBED) return;
   if (!(barIsUp() || S.prefs.dockAlways)) return;
   const pins = dockPins(), groups = {};
-  const order = [...new Set([...tbCfg().order, ...Object.keys(TB_ITEMS), 'undo', 'redo'])];
+  const order = [...new Set([...tbCfg().order, ...Object.keys(TB_ITEMS), 'undo', 'redo', 'favs'])];
   for (const id of order) { const sp = pins[id]; if (sp && DOCK_SPOTS.includes(sp) && dockAllowed(id)) (groups[sp] = groups[sp] || []).push(id); }
   for (const sp of DOCK_SPOTS) {
     const ids = groups[sp]; if (!ids) continue;
@@ -179,7 +215,7 @@ window.pinMenu = pinMenu;
 function pinManager() {
   const pins = dockPins(), wrap = h('div', { class: 'col pinman' });
   wrap.append(h('h3', null, 'Kenar düğmeleri'), h('p', { class: 'notice' }, 'Üst çubuğu ortadaki dille gizleyince seçtiğin düğmeler sayfanın kenarında kalır. Bir düğmeye basılı tutarak da yerini seçebilirsin.'));
-  const ids = [...new Set([...tbCfg().order, 'undo', 'redo'])].filter(dockAllowed);
+  const ids = [...new Set([...tbCfg().order, 'undo', 'redo', 'favs'])].filter(dockAllowed);
   const list = h('div', { class: 'tblist' });
   for (const id of ids) {
     const it = dockItem(id);

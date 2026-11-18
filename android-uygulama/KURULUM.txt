@@ -1,6 +1,6 @@
 KENAR NOTU — ANDROID KURULUM NOTLARI
 =====================================
-Sürüm 3.3.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
+Sürüm 3.4.0 · Paket adı: com.kenarnotu.app · Android 8.0 ve üstü (Galaxy Tab için hazırlandı)
 
 
 A) APK'YI OLUŞTURMA (bilgisayarda, bir kez)
@@ -113,6 +113,25 @@ G) YENİ (2.2.0)
 - PDF renklerini ters çevirme: ⋯ → "PDF renklerini ters çevir" (gece okuma). İsterseniz araç çubuğuna da
   ay simgesi olarak ekleyebilirsiniz. Kaydedilen PDF'in renkleri değişmez.
 
+
+II) YENİ (3.4.0) — basılı tutma menüsü ayarı, kenarda favori kalemler, kenardaki geri hareketine karşı koruma
+---------------------------------------------------------------------------------------------------------
+- METNE BASILI TUTUNCA AÇILAN MENÜ AYARLANIR (Ayarlar → S Pen ve dokunma → Metne basılı tutunca):
+  Kopyala, Dinle, Anlamı, Çevir, Tuvale not, Fosforla, Paylaş: her biri açılıp kapatılır, oklarla sıralanır,
+  üstte önizleme görünür. Varsayılan: Kopyala, Dinle, Anlamı, Çevir. Kapalı olanlar menüde "⋯" altında durur
+  (istenirse "⋯" de kapatılır). PDF metninde ve Markdown/Obsidian notlarında aynı ayar geçerlidir.
+- KENARDA FAVORİ KALEMLER: Üst çubuk gizliyken kenarda duran düğmelere "Favori kalemler" eklenebilir
+  (bir düğmeye basılı tut → yer seç, ya da Kenar düğmelerini düzenle → Favori kalemler → köşe).
+  Her favori kalem ayrı düğmedir: dokun → o kalem; basılı tut → favori menüsü. Kalem stilleri tek düğmede.
+  Kullanılan favori vurgulanır. İsteğe bağlıdır; varsayılan olarak kapalı.
+- KENARDAKİ GERİ HAREKETİNE KARŞI KORUMA (Ayarlar → S Pen ve dokunma → Hareketler; varsayılan açık):
+  · Kalem ekrana yaklaşınca, kalemin hizasındaki ~200 dp'lik kenar şeridi Android'in geri hareketinden muaf
+    tutulur; avuç kenara değse de geri tetiklenmez. Şerit kalemle birlikte yukarı-aşağı kayar, kalem 4 sn
+    kullanılmayınca kalkar (Android 10+, hareketle gezinme; Android kenar başına en fazla 200 dp'ye izin verir).
+  · Yine de gelen geri (alttaki geri tuşuna avuç değmesi dahil): kalem son 1,5 sn içinde kullanıldıysa yok sayılır;
+    notu kapatacak geri, kalem son 20 sn içinde kullanıldıysa "Notu kapatmak için tekrar geri" der.
+- Ayarlar penceresi Esc ile kapanır.
+- APK'yı yeniden oluşturmak gerekir (kenar şeridi ve geri koruması Android tarafında).
 
 HH) YENİ (3.3.0) — Çizim (ücretsiz Gemini ile şema ve grafik), avuç koruması
 -------------------------------------------------------------------------------

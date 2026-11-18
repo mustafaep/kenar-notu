@@ -1280,3 +1280,23 @@ html:not(.phone) .bartab[data-st=busy]::after{background:var(--accent)}
 .drstat{min-height:1.4em;margin:6px 0 0;font-size:13.5px;color:var(--muted)}
 .drnote{font-size:12.5px}
 @media (max-width:760px){.drbox .nbmain{grid-template-columns:1fr}.drpv{flex-direction:column}}
+/* 3.4: kenarda favori kalemler */
+.edock .dfavs{display:contents}
+.edock .dfav{display:grid;place-items:center}
+.edock .dfav canvas{width:30px;height:30px;pointer-events:none}
+.edock .dfav .dot{width:20px;height:20px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--ring)}
+.edock .dfav.on{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.edock .dfavs:not(:first-child)::before{content:"";flex:none;align-self:center;width:1px;height:26px;background:var(--line);margin:0 3px}
+.edock.d-l .dfavs:not(:first-child)::before,.edock.d-r .dfavs:not(:first-child)::before{width:26px;height:1px;margin:3px 0}
+/* 3.4: metne basılı tutma menüsü ayarı */
+.selcfg{display:flex;flex-direction:column;gap:10px;padding:10px 14px 12px}
+.selprevw{display:flex;flex-direction:column;gap:6px}
+.selprevw small{color:var(--muted);font-size:12px}
+.selprev{display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-radius:12px;background:var(--chrome);border:1px solid var(--line);box-shadow:var(--shadow);align-self:flex-start;max-width:100%}
+.selprev span{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;font-size:13.5px}
+.selprev span.pm{padding:6px}
+.sellist .tbrow label{flex:1;min-width:0;font-size:14px}
+.sellist .tbrow label{cursor:pointer}
+.sellist .ibtn:disabled{opacity:.3}
+.selcfg .toggle{padding:4px 0}
+.edock .dgrip+.dfavs::before{display:none}
